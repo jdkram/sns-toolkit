@@ -30,7 +30,7 @@ The current branch is **`master`** (Django 5.2 LTS, Wagtail 6.3, Python 3, no Ce
 - Known pre-existing (not introduced by this consolidation, not yet fixed): the real personal email above also appears as the git **author/committer identity** on ~150 historical commits already public on GitHub (`s+s`, `s+s+nosix`, `master`). Fixing that means rewriting commit hashes on already-published branches — a separate, bigger decision, not done as part of this work.
 - Also known and unrelated to the above: `toolkit/devserver_settings.py`'s hardcoded `SECRET_KEY` is *also* already present, unredacted, in this repo's own `master`/`sns_2026_overhaul`/`s+s`/`s+s+nosix` branches and already pushed to public GitHub. It's a dev-only settings file, but worth rotating/removing the hardcoded fallback at some point — flagged, not yet actioned.
 
-The original standalone directories were renamed to `sns-production-mirror-old` / `sns-live-toolkit-old` (not deleted) as a grace-period safety net; each still has a little uncommitted state from before the consolidation (see their own `git status`) — review before deleting.
+The original standalone directories (`sns-production-mirror-old` / `sns-live-toolkit-old`) were reviewed and deleted 2026-07-28 — their uncommitted state was either already superseded in the canonical worktrees or, in one case, safe to discard (a stray empty `sns_production.db`; the real data lives at `~/backups/sns/sns_production.db` and `~/sync/sns-toolkit/sns_production.sql`). A restic snapshot of `~/code` was taken beforehand as a safety net.
 
 ---
 
