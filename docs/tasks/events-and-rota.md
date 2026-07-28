@@ -28,7 +28,9 @@ Feature specs for the diary, event creation, programming pipeline, rota, room bo
 [9.72 Role deletion](#972--role-deletion-cascades-silently-to-all-historical-rota-entries-) ·
 [9.73 Outside hire badge](#973--display-outside-hire-flag-prominently-on-rota-) ·
 [9.75 Starred events](#975--starred-and-shadowed-events-on-the-rota-) ·
-[9.76 Rota date nav](#976--rota-date-navigation-and-orientation-)
+[9.76 Rota date nav](#976--rota-date-navigation-and-orientation-) ·
+[9.165 Historical rota visibility](#9165--decide-and-fix-historical-rota-archive-visibility-) ·
+[9.166 Whole-day rota edit window](#9166--allow-rota-note-edits-for-the-whole-showing-day-not-just-until-start-time-)
 
 **Room bookings and calendar:**
 [9.7 Multi-room bookings](#97-room-booking--multi-room-and-clash-detection) ·
@@ -4183,3 +4185,298 @@ post-event, which defeats the point.
 the Monday meeting), 9.9 (break-even calculator), 9.14 (post-screening
 checklist), 9.54 (structured deal terms — sibling, not superseded), 9.92
 (dashboard widget pattern), `volunteer_export.py` (CSV export pattern).
+
+---
+
+### 9.162 — Bridge programming-queue approval and showing confirmation 🟡 M
+
+**Source:** Live workflow report, 2026-07-28 (see Bug AR).
+
+**Problem.**
+`Event.programming_status` (draft/proposed/active/rejected — the Monday-meeting
+queue) and `Showing.confirmed` (whether a booking is public-facing, gated by
+`Event.terms_satisfied()`) are two independent state machines. Approving an
+event in the queue (`make_active` action,
+`toolkit/diary/edit_views/site_config.py:295-298`) only flips
+`programming_status`. It doesn't touch `confirmed`, doesn't check
+`terms_satisfied()`, and the event simply drops out of the queue view — the
+one place a programmer was tracking it. If its showing is still unconfirmed
+(the normal case: showings are created unconfirmed by default), the event is
+now invisible on the public/logged-in-volunteer diary
+(`Showing.objects.public()`,
+`toolkit/diary/models/showing.py:102-111`, requires `confirmed=True`), even
+though it's still visible — just styled differently — on the internal staff
+calendar (`edit_views/diary_overview.py`, `s_unconfirmed` CSS class). See
+Bug AR for the full symptom writeup.
+
+**Design goal.**
+Don't auto-confirm on approval — terms may genuinely not be ready yet, and
+confirming is meant to be a deliberate act (9.109). Instead, make the
+*remaining* step visible so leaving the queue never reads as "done" when
+it isn't:
+
+- Surface an explicit "approved but not yet confirmed" indicator on the
+  Event Hub (`view_event_privatedetails.html`) for events with
+  `programming_status="active"` and any future unconfirmed, non-cancelled
+  showing — reusing the existing `unconfirmed_future_count` computation
+  (`edit_views/events.py:177-179`).
+- Evaluate whether this also needs a persistent "needs finishing" view
+  (a second, small queue distinct from the proposal queue at
+  `/diary/edit/programming-queue/`) so a programmer has one place to see
+  everything of theirs still awaiting a final step, not just events still
+  *in* the meeting pipeline. Weigh this against just relying on the Event
+  Hub indicator plus the existing internal calendar styling — a second queue
+  view is more discoverable but adds another thing to check.
+- If terms aren't satisfied yet (`Event.terms_satisfied()` returns `False`),
+  the indicator should say so specifically ("terms outstanding"), not just
+  "unconfirmed" — the two blockers need different next actions from the
+  programmer.
+
+**Out of scope (this task).**
+- The notification-on-decision email — see 9.164, deliberately split out
+  since it depends on 9.163's `created_by` field to know who to email.
+- Changing what `confirmed` means, or the `public()` queryset's filter —
+  it's working as designed (public visitors shouldn't see unfinished
+  bookings); the gap is the missing bridge, not the filter.
+
+**Related:** 9.109 (confirm-button UX; explicitly scoped out any
+notification), 8.7/9.113 (programming pipeline MVP — this task closes one of
+its "still open" gaps), 9.164 (approval-outcome email, split out as a
+dependent follow-on), Bug AR (symptom writeup).
+
+---
+
+### 9.163 — Event/showing audit trail + real created-by/booked-for fields 🟡 M
+
+**Source:** Live workflow report, 2026-07-28 — a volunteer specifically
+requested a "creation date" field after a dispute over who booked a slot
+first.
+
+**Problem.**
+`Showing.booked_by` (`showing.py:130`) is a free-text `CharField`, not a link
+to a user account — it's populated from a form field, sometimes pre-filled
+with `request.user.get_full_name()` as a *suggested* default
+(`edit_views/events.py:745`), but never enforced or queryable as "the account
+that created this". There is no `created_by` field on `Event` or `Showing`
+at all. When a dispute comes up about who booked something first, there's
+nothing authoritative to check beyond `created_at` (which exists) and
+whatever free text happened to be typed into `booked_by`.
+
+Separately, there's no audit trail of the *lifecycle* of an event — created,
+proposed, approved/returned, terms revised, confirmed/unconfirmed — visible
+to anyone without server/log access. The `toolkit.audit` app (built this
+cycle) currently covers only deletions (`DeletionLog`) and sent emails
+(`SentEmailLog`); `EventTermsRevision` separately snapshots terms/
+outside_hire/private changes on save. Nothing hooks creation, programming-
+status changes, or confirm/unconfirm.
+
+**Design.**
+
+*Fields:*
+- Add `Event.created_by` — FK to `settings.AUTH_USER_MODEL`, set once at
+  creation (`add_event`, `events.py:607-622`), null-on-delete, never edited
+  afterwards. This is the field that settles "who created this record and
+  when" disputes, paired with the existing `created_at`.
+- Keep a distinct **"booked for"** concept for who the slot is actually for
+  (may be an external hirer with no toolkit account) — this can stay free
+  text (or reuse/rename the existing `booked_by` field), since it answers a
+  different question than "who has the account that made this entry".
+- **Open question flagged during planning, not yet resolved:** if `created_by`
+  is the immutable creator FK, it's a fine target for a "this account made
+  the record" fact — but it may not be who a programming-decision email
+  (9.164) should go to, since the person completing a rota-side form isn't
+  always the actual proposing programmer. One option worth spec'ing further
+  in 9.164: give "booked for" (or a new explicit field) a proper FK to a
+  user account too — e.g. "Programmer" — so both the creator and the
+  responsible programmer can be notified when a decision is made at the
+  meeting, rather than assuming they're always the same person.
+
+*Audit panel:*
+- A collapsed/expandable panel (`<details>/<summary>`, matching the pattern
+  already used elsewhere for collectives' open-roles list per Bug AD) on the
+  Event Hub — not a permanently visible table, to respect how dense that
+  page already is. Shows: created (by/when), proposed/approved/returned
+  (from `programming_status_changed_at` + a new log row), terms revisions
+  (reuse `EventTermsRevision`), confirmed/unconfirmed (new log row), deleted
+  showings (reuse `DeletionLog`, already populated by `delete_showing`).
+- Implementation shape: extend `toolkit.audit` with one new lightweight
+  model (working name `EventAuditLog`: event FK, timestamp, actor FK,
+  action, free-text detail) written from the handful of call sites above,
+  rather than duplicating `toolkit.audit`'s existing patterns
+  (`DeletionLog`'s `via` choices, `SentEmailLog`'s `trigger_source`) in a
+  second app. The panel view assembles rows from `EventAuditLog` +
+  `EventTermsRevision` + `DeletionLog`, sorted by timestamp, rather than
+  forcing everything into one table.
+- Access: gate the panel the same way `toolkit/audit/views.py`'s
+  `email_log`/`deletion_log` pages are gated (`panopticon_required`) — this
+  is explicitly the privacy-minimising "quick win" version (creation/edit/
+  confirm/delete events on programming objects only), not exposure of full
+  server logs (logins, signups, etc. stay out of scope entirely). Update
+  the permissions-explainer page (`/toolkit/access/`) to document who can
+  see the new panel and what it shows, so the distinction from full log
+  access is stated somewhere a Panopticon can point to.
+
+**Out of scope (this task).**
+- Retroactively backfilling `created_by` for existing events (no reliable
+  source data — leave null for pre-existing rows).
+- The approval-outcome email itself — see 9.164.
+- Exposing login/signup/session logs through this panel.
+
+**Related:** `toolkit/audit/models.py` (`DeletionLog`, `SentEmailLog`, the
+`via`/`trigger_source` pattern to extend), `EventTermsRevision` (per-field
+snapshot prior art), 9.162 (the workflow gap this audit trail helps resolve
+disputes about), 9.164 (depends on `created_by` landing here first).
+
+---
+
+### 9.164 — Email the proposer when their event is approved / returned / rejected 🟢 XS – 🔵 S
+
+**Source:** Live workflow report, 2026-07-28.
+
+**Problem.**
+`update_event_programming_status` (`edit_views/site_config.py:267-338`)
+silently changes `programming_status` on `propose`/`make_active`/
+`return_for_changes`/`approve_at_meeting`. The person who proposed the event
+finds out only by checking the queue or Event Hub themselves — there's no
+notification of the outcome.
+
+**Blocked on 9.163.** There is currently no reliable, queryable "who proposed
+this" reference to email — `booked_by` is free text, and there's no
+`created_by` FK yet. This task should not start until 9.163's `created_by`
+field (and the open question there about whether a separate "programmer" FK
+is also needed for meeting-outcome notifications) has landed.
+
+**Design (once unblocked).**
+- Send an email on `propose` → confirmation the event entered the queue;
+  on `make_active`/`approve_at_meeting` → approved; on
+  `return_for_changes` → returned, including any `programming_notes`
+  appended in the same request.
+- Reuse existing mailer plumbing (`toolkit/mailer/`) rather than building a
+  new send path, and wrap the send in `toolkit.audit`'s `email_trigger`
+  context manager (`toolkit/audit/models.py`) so the send itself shows up
+  in `SentEmailLog` with a clear `trigger_source` (e.g. "Programming queue
+  decision").
+- Recipient: whichever field 9.163 settles on as the notifiable party (see
+  the open question in that task about creator vs. responsible programmer).
+
+**Out of scope (this task).**
+- Any notification for showing confirm/unconfirm itself (9.109 explicitly
+  scoped this out; still not this task's job either).
+- Simplelists/Mailman-style external mailing-list integration (unrelated;
+  see 9.87).
+
+**Size estimate:** 🟢 XS – 🔵 S once 9.163 lands — mostly a template plus
+one call site in `update_event_programming_status`.
+
+**Related:** 9.163 (blocking dependency), 9.162 (the workflow this closes
+the loop on), 9.109 (confirm-button UX, sibling scoping decision).
+
+---
+
+### 9.165 — Decide and fix historical rota archive visibility 🔵 S
+
+**Source:** Jonny, 2026-07-28, while auditing pre-rewrite repo state.
+
+**Problem.**
+The live (pre-rewrite) site has historical rota pages reachable at URLs like
+`/diary/rota/2019/12` that aren't linked from anywhere in the nav — accessible
+only to someone who already knows (or guesses) the URL pattern. That's a
+"security by obscurity" state: nobody has actually decided whether this data
+should be public, it's just never been addressed either way.
+
+On this rewritten codebase, the equivalent view is `view_event_field`
+(`toolkit/diary/edit_views/reports.py:112`, routed via the `rota|copy|terms|
+copy_summary` pattern in `toolkit/diary/urls.py:322-327`) reached through
+`edit/rota/<year>/<month>/<day>` for editing and the bare `rota/<year>/<month>`
+pattern for viewing. It's gated by `@feature_required("diary_reports")`
+(`toolkit/toolkit_auth/decorators.py:74`), which redirects anonymous users to
+login and then checks `SiteConfiguration.perm_diary_reports` (default
+`PERM_PROGRAMMER`). So on this branch, at minimum, an anonymous visitor
+already can't hit it blind — but the three configurable levels
+(`PERM_VOLUNTEER`, `PERM_PROGRAMMER`, `PERM_PANOPTICON`, all in
+`toolkit/diary/models/site_config.py:641-647`) don't include a genuine "public,
+no login" option, so "make it properly public" isn't currently expressible
+through the same mechanism that gates everything else.
+
+**Decision needed (Jonny leans yes, but flag the tradeoff):**
+Should historical rota (who volunteered, on which date, doing what role) be
+visible to the public? Arguments for: transparency, low sensitivity once a
+shift is long past, useful public record of who's contributed. Arguments
+against: rota entries can carry free-text notes (`rota_notes`) that
+volunteers may not have written expecting a public audience, and some
+historical entries predate any expectation of publication.
+
+**Once decided, two possible directions — pick one, don't leave both live:**
+- **Enable properly:** add a `PERM_PUBLIC` (or similar) level to the
+  `perm_*` enum and wire it through `_passes_level`, then set
+  `perm_diary_reports` to it (or split "view" from "edit" — the edit routes
+  must stay gated regardless). Add a real nav link so it's discoverable, not
+  just guessable — the point is removing the obscurity, not just widening
+  the audience.
+- **Disable properly:** if the answer is no, leave `perm_diary_reports` at
+  its current minimum (`PERM_VOLUNTEER`) or tighten it, and treat the
+  question as closed rather than leaving a permission level nobody chose on
+  purpose.
+
+**Out of scope (this task).** Auditing whether *other* `feature_required`-gated
+views have the same "reachable but unlinked" problem — this task is scoped
+to the rota archive specifically, flagged during the old-repo cleanup.
+
+**Related:** `toolkit/toolkit_auth/decorators.py` (`feature_required`,
+`panopticon_required`), `toolkit/diary/models/site_config.py` (`PERM_*`
+enum, `_passes_level`), `toolkit/diary/urls.py:317-355`.
+
+---
+
+### 9.166 — Allow rota note edits for the whole showing day, not just until start time 🟢 XS – 🔵 S
+
+**Source:** Jonny, 2026-07-28, recurring real-world complaint from volunteers.
+
+**Problem.**
+`Showing.in_past()` (`toolkit/diary/models/showing.py:313-314`) is
+`self.start < now` — nothing more. `edit_views/rota.py` uses it (lines 255,
+355) to block rota-note edits once a showing is "in the past", and
+`edit_rota.html` uses the same flag (`data-in-past`) to grey out the edit UI
+client-side. In both places, "in the past" means "at or after the showing's
+*start* time" — not accounting for `setup_time` (which precedes `start`) or
+the event's `duration`/`end_time` (which follows it, see `end_time` at
+`showing.py:265`).
+
+Concretely: a volunteer running late messages "my bike broke, 15 mins late"
+— but the moment the *scheduled start time* ticks over, everyone (including
+that volunteer) loses edit access to the rota note for that showing, even
+though the shift is clearly still in progress. This is worse the longer the
+setup-to-teardown window is: an AV tech arriving at 14:00 for a 19:00 doors
+event is already locked out of editing their own line the instant the clock
+hits whatever time is stored as `start` for that role, well before the event
+itself has finished.
+
+**Design (not yet built).**
+- Replace the `in_past()` check used for rota-edit gating with a
+  showing-day-scoped check: editable any time on the calendar day the
+  showing's `start` falls on (local time), not solely up to `start` itself.
+  This directly fixes the stated problem (day-wide edit window) without
+  requiring a new field.
+- Alternative/complementary: gate on `end_time` (already a property,
+  `showing.py:265`) rather than `start`, so the lock only kicks in once the
+  showing itself is actually over — closer to "can't edit the past" in the
+  literal sense. Needs a decision: whole-day window (simpler, matches how
+  people think about "today's shift") vs. end-time window (tighter, but
+  still too early for events with a long post-show pack-down).
+- Keep `in_past()` itself unchanged for anything unrelated to rota-edit
+  gating (e.g. showing/event display logic elsewhere) — introduce a
+  separate method (e.g. `Showing.rota_editable()`) rather than redefining
+  what "in the past" means everywhere, since other call sites may rely on
+  the current, stricter, start-time-based semantics.
+- Update both server-side gates (`edit_views/rota.py:255,355`) and the
+  client-side `data-in-past` flag/JS in `edit_rota.html` together — the
+  comment at `edit_views/rota.py:150` notes the server-side check is the
+  real enforcement, JS is UX only, but a mismatch between the two would
+  read as a bug (button appears enabled, save then 403s).
+
+**Out of scope (this task).** Any change to who *can* edit (permissions),
+only *when* — the audience for rota-note edits is unchanged.
+
+**Related:** `toolkit/diary/models/showing.py` (`in_past`, `end_time`,
+`setup_time`), `toolkit/diary/edit_views/rota.py:150,255,355`,
+`toolkit/diary/templates/edit_rota.html` (`data-in-past` usage).

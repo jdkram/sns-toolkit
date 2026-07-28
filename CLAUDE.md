@@ -12,6 +12,28 @@ The current branch is **`master`** (Django 5.2 LTS, Wagtail 6.3, Python 3, no Ce
 
 ---
 
+## Repo layout: worktrees, not separate clones (as of 2026-07-28)
+
+`~/code/sns-toolkit` is the single `.git` for all locally-relevant lineages of this codebase. Two sibling directories are **git worktrees** of this same repo, not separate clones:
+
+| Directory | Branch | What it is |
+|---|---|---|
+| `~/code/sns-toolkit` | `sns_2026_overhaul` (usually) | The active rewrite. |
+| `~/code/sns-production-mirror` | `production_snapshot_04_2026` | Rsync-based filesystem snapshot of the live server, imported from the old standalone `sns-production-mirror` repo. `SECRET_KEY` in `devserver_settings.py` was scrubbed (`REDACTED_SECRET_KEY`) during import via `git filter-repo --replace-text` on a disposable clone — never touch that file's history without re-scrubbing first. |
+| `~/code/sns-live-toolkit` | `cube_upstream_master` | Ben Motz's actual current upstream `cubetoolkit` `master`, imported from the private production git source (`toolkit@cubecinema.com:/home/toolkit/repo`, access via Marcus). A real personal email (`marcus@marcusv.org`) was redacted to `"REDACTED"` in `toolkit/settings_ss.py` (and its two other settings variants) during import, matching the precedent already set on `s+s+nosix`. |
+
+**`s+s+nosix`** (existing branch, already on public GitHub) is the S+S-specific line within that same private source, already correctly redacted — no import needed for it.
+
+**Hard rules for `production_snapshot_04_2026` and `cube_upstream_master`:**
+- **Never push either to any remote.** A local `pre-push` hook (`.git/hooks/pre-push`, not versioned) blocks pushes of these two branch names — treat that as a backstop, not a substitute for care. Never `git push origin --all` / `--mirror` / `-f` without checking which branches are included.
+- **Never fetch-and-merge the private `cube-source` remote directly into a local branch.** There is deliberately no standing tracked remote for it. To refresh `cube_upstream_master` (or check `s+s+nosix` for upstream drift) later: clone `toolkit@cubecinema.com:/home/toolkit/repo` (or the current `sns-live-toolkit` if still around) to a **disposable** temp directory, run `git filter-repo --replace-text` with a rule mapping `marcus@marcusv.org==>REDACTED` (check `toolkit/settings_ss.py` and its variants for any other real personal emails first — a full `git grep` across all blobs is the reliable check, not just that one known file), verify with a full-history grep that the string is gone, *then* `git fetch <temp-clone> master:cube_upstream_master` into this repo.
+- Known pre-existing (not introduced by this consolidation, not yet fixed): the real personal email above also appears as the git **author/committer identity** on ~150 historical commits already public on GitHub (`s+s`, `s+s+nosix`, `master`). Fixing that means rewriting commit hashes on already-published branches — a separate, bigger decision, not done as part of this work.
+- Also known and unrelated to the above: `toolkit/devserver_settings.py`'s hardcoded `SECRET_KEY` is *also* already present, unredacted, in this repo's own `master`/`sns_2026_overhaul`/`s+s`/`s+s+nosix` branches and already pushed to public GitHub. It's a dev-only settings file, but worth rotating/removing the hardcoded fallback at some point — flagged, not yet actioned.
+
+The original standalone directories were renamed to `sns-production-mirror-old` / `sns-live-toolkit-old` (not deleted) as a grace-period safety net; each still has a little uncommitted state from before the consolidation (see their own `git status`) — review before deleting.
+
+---
+
 ## Django template comments — single line only
 
 **Never write multi-line `{# ... #}` comments in Django templates.** Django's template engine does not strip them reliably when they span multiple lines, and the raw comment text leaks into the rendered HTML.
@@ -101,6 +123,21 @@ An investigation plan covering compatibility with production data and three stag
 `~/notes/Community/sns/sns-investigation-plan.md`
 
 Also relevant: `~/notes/Community/sns/servers.md` for SSH aliases, server paths, and rsync/DB dump commands.
+
+---
+
+## Hosting/infrastructure decision pending (2026-08)
+
+XtreamLab (who host the live site) have proposed a revised hosting and support
+arrangement that would add a proper staging environment and standby mirror —
+decision expected at a S+S meeting on 2026-08-04. Contract terms and costs are
+sensitive and are **not** recorded in this repo; see
+`~/notes/Community/sns/meeting-prep-2026-08-04.md` for the current state.
+
+Once staging access exists, expect a "low-hanging fruit" phase of small,
+high-impact ports from this branch into production — the deletion-logging fix
+(9.159, already shipped here — see [CURRENT_WORK.md](CURRENT_WORK.md)) is the
+current first candidate, since it needs no further dev work, only deployment.
 
 ---
 
