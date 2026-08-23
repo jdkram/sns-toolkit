@@ -19,11 +19,12 @@ from toolkit.diary.models import (
     DiaryIdea,
     EventTemplate,
     MediaItem,
+    Room,
 )
 from toolkit.util.image import adjust_colour
 import toolkit.diary.edit_prefs
 
-from .common import DiaryTestsMixin
+from .common import DiaryTestsMixin, NowPatchMixin
 
 TINY_VALID_PNG = bytearray(
     b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08"

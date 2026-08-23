@@ -142,10 +142,10 @@ def edit_diary_list(request, year=None, day=None, month=None):
 
     enddatetime = startdatetime + datetime.timedelta(days=days_ahead)
 
-    # Get all showings in the date range
+    # Get all showings in the date range.
     showings = (
         Showing.objects.start_in_range(startdatetime, enddatetime)
-        .order_by("start")
+        .order_by("start", "room", "created_at")
         .select_related()
     )
     # Build two dicts, to hold the showings and the ideas. These dicts are
