@@ -8,6 +8,7 @@ import tempfile
 
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.test.utils import override_settings
@@ -454,6 +455,38 @@ class EditShowing(DiaryTestsMixin, TestCase):
         )
         self.assertTrue(any("Adminson" in message for message in logs.output))
 
+    @override_settings(VENUE={**settings.VENUE, "show_user_management": True})
+    @patch("django.utils.timezone.now")
+    def test_edit_showing_show_user_management(self, now_patch):
+        # When VENUE["show_user_management"] is set, booked_by should be
+        # taken from the logged in user, regardless of what was posted:
+        now_patch.return_value = self._fake_now
+
+        admin = User.objects.get(username="admin")
+        admin.last_name = "Adminson"
+        admin.save()
+
+        url = reverse("edit-showing", kwargs={"showing_id": 7})
+        with self.assertLogs("toolkit.diary.edit_views", level="INFO") as logs:
+            response = self.client.post(
+                url,
+                data={
+                    "start": "15/08/2013 19:30",
+                    "booked_by": "someone else entirely",
+                    "confirmed": "on",
+                    "role_1": "0",
+                },
+            )
+
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": 4}),
+        )
+
+        showing = Showing.objects.get(id=7)
+        self.assertEqual(showing.booked_by, "Adminson")
+        self.assertTrue(any("Adminson" in message for message in logs.output))
+
     @patch("django.utils.timezone.now")
     def tests_edit_showing_in_past(self, now_patch):
         now_patch.return_value = self._fake_now
@@ -768,6 +801,40 @@ class AddEventView(DiaryTestsMixin, TestCase):
         self.assert_redirect_to_index(response)
         self.assertTrue(any("Adminson" in message for message in logs.output))
 
+    @override_settings(VENUE={**settings.VENUE, "show_user_management": True})
+    @patch("django.utils.timezone.now")
+    def test_add_event_show_user_management(self, now_patch):
+        # When VENUE["show_user_management"] is set, booked_by should be
+        # taken from the logged in user, regardless of what was posted:
+        now_patch.return_value = self._fake_now
+
+        admin = User.objects.get(username="admin")
+        admin.last_name = "Adminson"
+        admin.save()
+
+        url = reverse("add-event")
+        with self.assertLogs("toolkit.diary.edit_views", level="INFO") as logs:
+            response = self.client.post(
+                url,
+                data={
+                    "start": "02/06/2013 20:00",
+                    "duration": "01:30:00",
+                    "number_of_bookings": "1",
+                    "event_name": "Evęnt of choicę",
+                    "event_template": "1",
+                    "booked_by": "someone else entirely",
+                    "private": "on",
+                    "outside_hire": "",
+                    "discounted": "on",
+                },
+            )
+        self.assert_redirect_to_index(response)
+
+        event = Event.objects.get(name="Evęnt of choicę")
+        showing = event.showings.get()
+        self.assertEqual(showing.booked_by, "Adminson")
+        self.assertTrue(any("Adminson" in message for message in logs.output))
+
     @patch("django.utils.timezone.now")
     def test_add_event_in_past(self, now_patch):
         now_patch.return_value = self._fake_now
@@ -945,6 +1012,38 @@ class EditDetailView(DiaryTestsMixin, TestCase):
             response = self.client.post(url, data)
 
         self.assertRedirects(response, url)
+        self.assertTrue(any("Adminson" in message for message in logs.output))
+
+    @override_settings(VENUE={**settings.VENUE, "show_user_management": True})
+    @patch("django.utils.timezone.now")
+    def test_add_showing_show_user_management(self, now_patch) -> None:
+        # When VENUE["show_user_management"] is set, booked_by should be
+        # taken from the logged in user, regardless of what was posted:
+        now_patch.return_value = self._fake_now
+
+        admin = User.objects.get(username="admin")
+        admin.last_name = "Adminson"
+        admin.save()
+
+        url = reverse(
+            "edit-event-details-view", kwargs={"event_id": self.e5.pk}
+        )
+        data = {
+            "form-TOTAL_FORMS": 1,
+            "form-INITIAL_FORMS": "0",
+            "form-0-id": "",
+            "form-0-start": self._fake_now + timedelta(days=10),
+            "form-0-booked_by": "someone else entirely",
+            "form-0-confirmed": "on",
+            "form-0-secret": "on",
+        }
+        with self.assertLogs("toolkit.diary.edit_views", level="INFO") as logs:
+            response = self.client.post(url, data)
+
+        self.assertRedirects(response, url)
+
+        new_showing = self.e5.showings.all()[1]
+        self.assertEqual(new_showing.booked_by, "Adminson")
         self.assertTrue(any("Adminson" in message for message in logs.output))
 
     @patch("django.utils.timezone.now")

@@ -35,6 +35,7 @@ VENUE = {
     "mailout_from_address": "info@starandshadow.org.uk",
     # email address shown when volunteer removes themselves from rota
     "vols_email": "volunteers@lists.starandshadow.org.uk",
+    # When enabled, use Django user data for booked_by data in Showings;
     "show_user_management": True,
 }
 

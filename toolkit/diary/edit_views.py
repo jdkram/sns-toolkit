@@ -380,7 +380,9 @@ def event_detail_view(request, event_id):
         pass
 
     if request.method == "POST":
-        showing_forms = diary_forms.ShowingFormSet(request.POST)
+        showing_forms = diary_forms.ShowingFormSet(
+            request.POST, form_kwargs={"user": request.user}
+        )
         if showing_forms.is_valid():
             showings = showing_forms.save(commit=False)
             for showing in showings:
@@ -415,7 +417,8 @@ def event_detail_view(request, event_id):
         )
     else:
         showing_forms = diary_forms.ShowingFormSet(
-            queryset=event.showings.start_in_future()
+            queryset=event.showings.start_in_future(),
+            form_kwargs={"user": request.user},
         )
     context = {
         "event": event,
@@ -441,7 +444,7 @@ def add_event(request):
     if request.method == "POST":
         # Get event data, plus template and showing time and number of showing
         # days from form. Uses template to set rota roles and tags.
-        form = diary_forms.NewEventForm(request.POST)
+        form = diary_forms.NewEventForm(request.POST, user=request.user)
         if form.is_valid():
             # Event constructor will pull things from the template as
             # appropriate (excluding many/many relation which can only be set
@@ -546,7 +549,8 @@ def add_event(request):
                 "start": event_start,
                 "duration": duration,
                 "room": room,
-            }
+            },
+            user=request.user,
         )
         context = {"form": form}
         return render(request, "form_new_event_and_showing.html", context)
@@ -560,7 +564,9 @@ def edit_showing(request, showing_id=None):
     RotaForm = diary_forms.rota_form_factory(showing)
 
     if request.method == "POST":
-        form = diary_forms.ShowingForm(request.POST, instance=showing)
+        form = diary_forms.ShowingForm(
+            request.POST, instance=showing, user=request.user
+        )
         rota_form = RotaForm(request.POST)
 
         if form.is_valid() and rota_form.is_valid():
@@ -590,7 +596,7 @@ def edit_showing(request, showing_id=None):
                 )
             )
     else:
-        form = diary_forms.ShowingForm(instance=showing)
+        form = diary_forms.ShowingForm(instance=showing, user=request.user)
         rota_form = RotaForm()
 
     context = {

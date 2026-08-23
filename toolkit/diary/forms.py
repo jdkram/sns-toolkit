@@ -4,6 +4,7 @@ import calendar
 from django import forms
 import django.db.models
 from django.conf import settings
+from django.contrib.auth.models import User
 from crispy_forms.helper import FormHelper
 
 # Custom form widgets:
@@ -179,10 +180,17 @@ class MediaItemForm(forms.ModelForm):
 
 
 class ShowingForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user: User | None = None, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         if not settings.MULTIROOM_ENABLED:
             del self.fields["room"]
+        if settings.VENUE["show_user_management"] and user is not None:
+            # Booked-by is taken from the logged in user, rather than being
+            # freely editable. Disabling the field (rather than just marking
+            # it read-only) means Django ignores any submitted value and
+            # always uses the initial value below:
+            self.fields["booked_by"].disabled = True
+            self.initial["booked_by"] = user.last_name
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.form_class = "form-horizontal"
@@ -326,10 +334,17 @@ class CloneShowingForm(forms.Form):
 
 
 class NewEventForm(forms.Form):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user: User | None = None, **kwargs):
         super().__init__(*args, **kwargs)
         if not settings.MULTIROOM_ENABLED:
             del self.fields["room"]
+        if settings.VENUE["show_user_management"] and user is not None:
+            # Booked-by is taken from the logged in user, rather than being
+            # freely editable. Disabling the field (rather than just marking
+            # it read-only) means Django ignores any submitted value and
+            # always uses the initial value below:
+            self.fields["booked_by"].disabled = True
+            self.initial["booked_by"] = user.last_name
 
         self.helper = FormHelper()
         self.helper.form_tag = False

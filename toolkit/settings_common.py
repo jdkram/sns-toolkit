@@ -39,6 +39,7 @@ VENUE = {
     "vols_email": "rota@cubecinema.com",
     # List of people to get notifications when new vols are added
     "vols_admin_address": ["volunteers-owner@cubecinema.com"],
+    # When enabled, use Django user data for booked_by data in Showings;
     "show_user_management": False,
 }
 
