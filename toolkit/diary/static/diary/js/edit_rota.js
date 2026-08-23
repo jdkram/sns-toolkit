@@ -9,7 +9,7 @@ function edit_rota(jQuery, rota_edit_base_url, edit_rota_notes_url_prefix, vol_e
         const toDate = toDatePicker.selectedDates[0];
         if(!fromDate || !toDate) {
             console.error("fromDate or toDate is null", fromDate, toDate);
-	    return;
+            return;
         }
         // Calculate days between those two dates:
         let daysAhead = Math.ceil(

@@ -326,6 +326,39 @@ class EditRotaNotes(DiaryTestsMixin, TestCase):
         showing = Showing.objects.get(pk=self.e4s3.pk)
         self.assertEqual(showing.rota_notes, "")
 
+    @patch("django.utils.timezone.now")
+    def test_post_max_length_notes(self, now_patch):
+        now_patch.return_value = self._fake_now
+
+        new_notes = "x" * 4096
+
+        url = reverse(
+            "edit-showing-rota-notes", kwargs={"showing_id": self.e4s3.pk}
+        )
+
+        response = self.client.post(url, data={"rota_notes": new_notes})
+        self.assertEqual(response.status_code, 200)
+
+        showing = Showing.objects.get(pk=self.e4s3.pk)
+        self.assertEqual(showing.rota_notes, new_notes)
+
+    @patch("django.utils.timezone.now")
+    def test_post_over_max_length_notes_rejected(self, now_patch):
+        now_patch.return_value = self._fake_now
+
+        original_notes = self.e4s3.rota_notes
+        too_long_notes = "x" * 4097
+
+        url = reverse(
+            "edit-showing-rota-notes", kwargs={"showing_id": self.e4s3.pk}
+        )
+
+        response = self.client.post(url, data={"rota_notes": too_long_notes})
+        self.assertEqual(response.status_code, 400)
+
+        showing = Showing.objects.get(pk=self.e4s3.pk)
+        self.assertEqual(showing.rota_notes, original_notes)
+
 
 class ViewRotaVacancies(DiaryTestsMixin, TestCase):
     """Test of view of upcoming vacancies"""
