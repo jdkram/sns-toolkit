@@ -545,6 +545,35 @@ def member_duplicates(request):
     return render(request, "dupes.html", context)
 
 
+@permission_required("toolkit.read")
+@require_safe
+def member_expired(request):
+    order = request.GET.get("order", "number")
+    sort_type = "number"
+
+    members = Member.objects.expired()
+
+    if "name" in order:
+        members = members.order_by("name")
+        sort_type = "name"
+    elif "email" in order:
+        members = members.order_by("email")
+        sort_type = "email"
+    elif "expires" in order:
+        members = members.order_by("membership_expires")
+        sort_type = "membership expiry date"
+    else:
+        members = members.order_by("number")
+
+    context = {
+        "sort_type": sort_type,
+        "members": members,
+        "member_count": members.count(),
+    }
+
+    return render(request, "member_expired.html", context)
+
+
 @require_safe
 def member_homepages(request):
     members = (

@@ -1,0 +1,69 @@
+{% extends 'base_admin.html' %}
+{% block title %}
+{{ VENUE.name }} Expired Members
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    $('form.delete').submit(
+        function(event) {
+            return confirm('Delete member? This cannot be undone.');
+        }
+    );
+});
+</script>
+{% endblock %}
+
+{% block body %}
+<p>
+<h2>{{ VENUE.name }} Expired Members ordered by {{ sort_type }}</h2>
+<p>Found {{ member_count }} expired members.</p>
+
+<div class="btn-group dropend">
+  <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+      Order by
+  </button>
+  <div class="dropdown-menu">
+      <a class="dropdown-item" href="{% url "member-expired" %}?order=number">Number</a>
+      <a class="dropdown-item" href="{% url "member-expired" %}?order=name">Name</a>
+      <a class="dropdown-item" href="{% url "member-expired" %}?order=email">Email</a>
+      <a class="dropdown-item" href="{% url "member-expired" %}?order=expires">Membership expiry date</a>
+  </div>
+</div>
+
+<table class="table table-sm table-striped">
+    <thead>
+      <tr>
+        <th>Number</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Membership expired</th>
+        <th>Mailout?</th>
+        <th></th>
+        <th></th>
+        <th>Volunteer?</th>
+      </tr>
+    </thead>
+
+{% for member in members %}
+<tr>
+    <td>{{ member.number }}</td>
+    <td>{{ member.name }}</td>
+    <td>{{ member.email|urlize }}</td>
+    <td class="expired">{{ member.membership_expires|date:"d/m/Y" }}</td>
+    <td>{{ member.mailout|yesno }}</td>
+    <td><form method="get" action="{% url "edit-member" member.pk %}"><input type="submit" value="Edit"></form></td>
+    <td><form class="delete" method="post" action="{% url "delete-member" member.pk %}">{% csrf_token %}<input type="submit" value="Delete"></form></td>
+    <td>{% if member.volunteer %}
+            {% if member.volunteer.active %}
+                <form method="get" action="{% url "edit-volunteer" member.volunteer.pk %}"><input type="submit" value="Edit"></form>
+            {% else %}
+                Retired
+            {% endif %}
+        {% endif %}</td>
+</tr>
+{% endfor %}
+</table>
+{% endblock %}

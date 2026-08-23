@@ -22,6 +22,7 @@ from toolkit.members.member_views import (
     delete_member,
     member_statistics,
     member_duplicates,
+    member_expired,
     member_homepages,
     unsubscribe_member,
     unsubscribe_member_right_now,
@@ -110,6 +111,7 @@ member_urls = [
     ),
     re_path(r"^statistics/$", member_statistics, name="member-statistics"),
     re_path(r"^duplicates/$", member_duplicates, name="member-duplicates"),
+    re_path(r"^expired/$", member_expired, name="member-expired"),
     # External:
     re_path(r"^homepages/$", member_homepages, name="member-homepages"),
     # Semi-external (see member_views.py for details)

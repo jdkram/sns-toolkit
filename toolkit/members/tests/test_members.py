@@ -95,6 +95,78 @@ class TestMemberModelManagerExpiryDisabled(
     pass
 
 
+@patch("toolkit.members.models.timezone_now")
+class TestMemberExpiredView(MembersTestsMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.assertTrue(
+            self.client.login(username="admin", password="T3stPassword!")
+        )
+
+    def test_lists_only_expired_members(self, now_mock):
+        now_mock.return_value.date.return_value = datetime.date(
+            day=1, month=6, year=2010
+        )
+
+        url = reverse("member-expired")
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "member_expired.html")
+        # mem_2 expired 31/5/2010, mem_3 doesn't expire until 1/6/2010, so
+        # only mem_2 has actually expired "now":
+        self.assertContains(response, self.mem_2.name)
+        self.assertNotContains(response, self.mem_3.name)
+        self.assertContains(response, "Found 1 expired members")
+
+    def test_post_not_allowed(self, now_mock):
+        now_mock.return_value.date.return_value = datetime.date(
+            day=1, month=6, year=2010
+        )
+
+        url = reverse("member-expired")
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 405)
+
+    def test_order_by_name(self, now_mock):
+        now_mock.return_value.date.return_value = datetime.date(
+            day=1, month=6, year=2015
+        )
+
+        url = reverse("member-expired", query={"order": "name"})
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "ordered by name")
+        members = list(response.context["members"])
+        self.assertEqual(members, sorted(members, key=lambda m: m.name))
+
+    def _make_admin_a_superuser(self):
+        # The "Members" nav dropdown (which the expired-members link lives
+        # in) is only shown to superusers:
+        admin = auth_models.User.objects.get(username="admin")
+        admin.is_superuser = True
+        admin.save()
+
+    def test_nav_link_shown_when_enabled(self, now_mock):
+        now_mock.return_value.date.return_value = datetime.date(
+            day=1, month=6, year=2010
+        )
+        self._make_admin_a_superuser()
+        with override_settings(MEMBERSHIP_EXPIRY_ENABLED=True):
+            response = self.client.get(reverse("default-edit"))
+        self.assertContains(response, reverse("member-expired"))
+
+    def test_nav_link_hidden_when_disabled(self, now_mock):
+        now_mock.return_value.date.return_value = datetime.date(
+            day=1, month=6, year=2010
+        )
+        self._make_admin_a_superuser()
+        with override_settings(MEMBERSHIP_EXPIRY_ENABLED=False):
+            response = self.client.get(reverse("default-edit"))
+        self.assertNotContains(response, reverse("member-expired"))
+
+
 class TestMemberModel(TestCase):
     def setUp(self):
         member_one = Member(

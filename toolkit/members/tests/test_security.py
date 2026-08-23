@@ -35,6 +35,8 @@ class SecurityTests(MembersTestsMixin, TestCase):
         "search-members": {},
         "view-member": {"member_id": 1},
         "member-statistics": {},
+        "member-duplicates": {},
+        "member-expired": {},
     }
 
     def _assert_need_login(self, views_to_test):
