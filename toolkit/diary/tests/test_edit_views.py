@@ -8,6 +8,7 @@ import tempfile
 
 from unittest.mock import patch
 
+from django.contrib.auth.models import User
 from django.test import TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
@@ -428,6 +429,32 @@ class EditShowing(DiaryTestsMixin, TestCase):
         self._test_edit_showing_common(now_patch, True)
 
     @patch("django.utils.timezone.now")
+    def test_edit_showing_logs_action(self, now_patch):
+        now_patch.return_value = self._fake_now
+
+        admin = User.objects.get(username="admin")
+        admin.last_name = "Adminson"
+        admin.save()
+
+        url = reverse("edit-showing", kwargs={"showing_id": 7})
+        with self.assertLogs("toolkit.diary.edit_views", level="INFO") as logs:
+            response = self.client.post(
+                url,
+                data={
+                    "start": "15/08/2013 19:30",
+                    "booked_by": "Yet Ănother Űser",
+                    "confirmed": "on",
+                    "role_1": "0",
+                },
+            )
+
+        self.assertRedirects(
+            response,
+            reverse("edit-event-details-view", kwargs={"event_id": 4}),
+        )
+        self.assertTrue(any("Adminson" in message for message in logs.output))
+
+    @patch("django.utils.timezone.now")
     def tests_edit_showing_in_past(self, now_patch):
         now_patch.return_value = self._fake_now
 
@@ -715,6 +742,33 @@ class AddEventView(DiaryTestsMixin, TestCase):
         self._test_add_event_common(now_patch, True)
 
     @patch("django.utils.timezone.now")
+    def test_add_event_logs_action(self, now_patch):
+        now_patch.return_value = self._fake_now
+
+        admin = User.objects.get(username="admin")
+        admin.last_name = "Adminson"
+        admin.save()
+
+        url = reverse("add-event")
+        with self.assertLogs("toolkit.diary.edit_views", level="INFO") as logs:
+            response = self.client.post(
+                url,
+                data={
+                    "start": "02/06/2013 20:00",
+                    "duration": "01:30:00",
+                    "number_of_bookings": "1",
+                    "event_name": "Evęnt of choicę",
+                    "event_template": "1",
+                    "booked_by": "Sŏmebŏdy",
+                    "private": "on",
+                    "outside_hire": "",
+                    "discounted": "on",
+                },
+            )
+        self.assert_redirect_to_index(response)
+        self.assertTrue(any("Adminson" in message for message in logs.output))
+
+    @patch("django.utils.timezone.now")
     def test_add_event_in_past(self, now_patch):
         now_patch.return_value = self._fake_now
 
@@ -866,6 +920,32 @@ class EditDetailView(DiaryTestsMixin, TestCase):
         self.assertEqual(new_showing.booked_by, "wombat")
         self.assertTrue(new_showing.confirmed)
         self.assertFalse(new_showing.cancelled)
+
+    @patch("django.utils.timezone.now")
+    def test_add_showing_logs_action(self, now_patch) -> None:
+        now_patch.return_value = self._fake_now
+
+        admin = User.objects.get(username="admin")
+        admin.last_name = "Adminson"
+        admin.save()
+
+        url = reverse(
+            "edit-event-details-view", kwargs={"event_id": self.e5.pk}
+        )
+        data = {
+            "form-TOTAL_FORMS": 1,
+            "form-INITIAL_FORMS": "0",
+            "form-0-id": "",
+            "form-0-start": self._fake_now + timedelta(days=10),
+            "form-0-booked_by": "wombat",
+            "form-0-confirmed": "on",
+            "form-0-secret": "on",
+        }
+        with self.assertLogs("toolkit.diary.edit_views", level="INFO") as logs:
+            response = self.client.post(url, data)
+
+        self.assertRedirects(response, url)
+        self.assertTrue(any("Adminson" in message for message in logs.output))
 
     @patch("django.utils.timezone.now")
     def test_add_showing_in_past_fails(self, now_patch) -> None:

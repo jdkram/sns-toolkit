@@ -393,6 +393,12 @@ def event_detail_view(request, event_id):
                 # after the showing is saved)
                 if is_new_showing:
                     showing.clone_or_reset_rota(latest_showing)
+                logger.info(
+                    f"{request.user.last_name} "
+                    f"{'added' if is_new_showing else 'updated'} showing on "
+                    f"{showing.start.strftime('%d/%m/%y at %H:%M')} for "
+                    f"event '{event.name}'"
+                )
             if showings:
                 messages.success(request, f"Updated bookings for {event.name}")
             else:
@@ -476,6 +482,11 @@ def add_event(request):
                     new_event.name,
                     new_showing.start.strftime("%d/%m/%y at %H:%M"),
                 ),
+            )
+            logger.info(
+                f"{request.user.last_name} added event "
+                f"'{new_event.name}' with showing at "
+                f"{new_showing.start.strftime('%H:%M on %d/%m/%y')}"
             )
             return _return_to_editindex(request)
         else:
@@ -566,6 +577,11 @@ def edit_showing(request, showing_id=None):
                     showing.event.name,
                     showing.start.strftime("%H:%M on %d/%m/%y"),
                 ),
+            )
+            logger.info(
+                f"{request.user.last_name} updated showing for "
+                f"'{showing.event.name}' at "
+                f"{showing.start.strftime('%H:%M on %d/%m/%y')}"
             )
             return HttpResponseRedirect(
                 reverse(
