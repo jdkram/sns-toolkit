@@ -204,6 +204,94 @@ class EditDiaryViews(DiaryTestsMixin, TestCase):
         self.assertTemplateUsed(response, "form_edit_roles.html")
 
 
+class EditDiaryListRoomsTests(DiaryTestsMixin, NowPatchMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+        self.room_1 = Room.objects.get(name="Room one")
+        self.url = reverse(
+            "day-edit",
+            kwargs={"year": 2013, "month": 6, "day": 3},
+        )
+
+    @override_settings(MULTIROOM_ENABLED=False)
+    def test_multiroom_disabled_no_room_column(self):
+        Showing(
+            start=datetime(2013, 6, 3, 18, 0, tzinfo=UTC),
+            event=self.e4,
+            booked_by="Tester",
+            room=self.room_1,
+        ).save(force=True)
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["multiroom_enabled"])
+        # the showing has a room;
+        self.assertNotContains(response, "No room")
+
+    @override_settings(MULTIROOM_ENABLED=True)
+    def test_multiroom_enabled_all_showings_have_room(self):
+        Showing(
+            start=datetime(2013, 6, 3, 18, 0, tzinfo=UTC),
+            event=self.e4,
+            booked_by="Tester one",
+            room=self.room_1,
+        ).save(force=True)
+        Showing(
+            start=datetime(2013, 6, 3, 20, 0, tzinfo=UTC),
+            event=self.e4,
+            booked_by="Tester two",
+            room=self.room_2,
+        ).save(force=True)
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        # all showings have a room;
+        self.assertNotContains(response, "No room")
+        self.assertContains(response, "Room one")
+        self.assertContains(response, "Room two")
+
+    @override_settings(MULTIROOM_ENABLED=True)
+    def test_multiroom_enabled_unassigned_room_shown_once(self):
+        Showing(
+            start=datetime(2013, 6, 3, 18, 0, tzinfo=UTC),
+            event=self.e4,
+            booked_by="Tester one",
+            room=self.room_1,
+        ).save(force=True)
+        Showing(
+            start=datetime(2013, 6, 3, 20, 0, tzinfo=UTC),
+            event=self.e4,
+            booked_by="Tester two",
+            room=None,
+        ).save(force=True)
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        # at least one showings has no room;
+        self.assertContains(response, "No room", count=1)
+
+    @override_settings(MULTIROOM_ENABLED=True)
+    def test_multiroom_header_repeats_per_month(self):
+        Showing(
+            start=datetime(2013, 6, 3, 18, 0, tzinfo=UTC),
+            event=self.e4,
+            booked_by="Tester one",
+            room=self.room_1,
+        ).save(force=True)
+        Showing(
+            start=datetime(2013, 7, 3, 18, 0, tzinfo=UTC),
+            event=self.e4,
+            booked_by="Tester two",
+            room=self.room_1,
+        ).save(force=True)
+
+        response = self.client.get(self.url + "?daysahead=35")
+        self.assertEqual(response.status_code, 200)
+        # Room headers row is output after each month name row;
+        self.assertContains(response, "Room one", count=2)
+
+
 class EditShowing(DiaryTestsMixin, TestCase):
     def setUp(self):
         super().setUp()

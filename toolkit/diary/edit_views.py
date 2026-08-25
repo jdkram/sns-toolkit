@@ -97,7 +97,6 @@ def edit_diary_list(request, year=None, day=None, month=None):
     # and 'ideas' fields in the range, even if they don't have any events in
     # them, yet.
 
-    context = {}
     # Sort out date range to display
 
     # If the query contained the number of days ahead to show then retrieve it
@@ -195,21 +194,27 @@ def edit_diary_list(request, year=None, day=None, month=None):
     ):
         ideas[startdate] = idea_list[0].ideas
 
-    context["ideas"] = ideas
-    context["dates"] = dates
-    # Page title:
-    context["event_list_name"] = "Diary for {} to {}".format(
-        startdatetime.strftime("%d-%m-%Y"), enddatetime.strftime("%d-%m-%Y")
-    )
-    context["start"] = startdatetime
-    context["end"] = enddatetime
-    context["edit_prefs"] = edit_prefs.get_preferences(request.session)
-    context["rooms"] = (
-        [None] + list(Room.objects.all())
-        if settings.MULTIROOM_ENABLED
-        else [None]
-    )
-    context["multiroom_enabled"] = settings.MULTIROOM_ENABLED
+    if settings.MULTIROOM_ENABLED:
+        rooms = list(Room.objects.all())
+        if any(showing.room_id is None for showing in showings):
+            rooms = [None] + rooms
+    else:
+        rooms = [None]
+
+    context = {
+        "ideas": ideas,
+        "dates": dates,
+        # Page title:
+        "event_list_name": "Diary for {} to {}".format(
+            startdatetime.strftime("%d-%m-%Y"),
+            enddatetime.strftime("%d-%m-%Y"),
+        ),
+        "start": startdatetime,
+        "end": enddatetime,
+        "edit_prefs": edit_prefs.get_preferences(request.session),
+        "rooms": rooms,
+        "multiroom_enabled": settings.MULTIROOM_ENABLED,
+    }
     return render(request, "edit_event_index.html", context)
 
 

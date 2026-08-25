@@ -221,19 +221,19 @@
     {% with room_columns=rooms|length %}
     <p><a href="{% url "add-event" %}">New event</a></p>
     <table class="table table-striped">
-      {% if multiroom_enabled %}
-      <tr><td colspan="2"></td>
-        {% for room in rooms %}
-          <th>{{ room.name|default:"<!-- No Room -->" }}</th>
-        {% endfor %}
-         <td></td>
-      </tr>
-      {% endif %}
       {% for day, showings in dates.items %}
         {% ifchanged %}
           <tr class="row_month">
             <td colspan="{{ room_columns|add:3 }}"><h2>{{ day|date:"F Y" }}</h2></td>
           </tr>
+          {% if multiroom_enabled %}
+          <tr><td colspan="2"></td>
+            {% for room in rooms %}
+              <th>{{ room.name|default:"No room" }}</th>
+            {% endfor %}
+             <td></td>
+          </tr>
+          {% endif %}
         {% endifchanged %}
         {% if day in ideas %}
           <tr>
