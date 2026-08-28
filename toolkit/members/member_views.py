@@ -98,7 +98,6 @@ def search(request):
         context = {
             "search_terms": search_terms or email_search,
             "members": results,
-            "membership_expiry_enabled": settings.MEMBERSHIP_EXPIRY_ENABLED,
         }
         return render(request, "search_members_results.html", context)
 
@@ -114,10 +113,7 @@ def view(request, member_id):
     return render(
         request,
         "view_member.html",
-        {
-            "member": member,
-            "membership_expiry_enabled": settings.MEMBERSHIP_EXPIRY_ENABLED,
-        },
+        {"member": member},
     )
 
 
@@ -304,7 +300,6 @@ def edit_member(request, member_id):
     context = {
         "member": member,
         "form": form,
-        "membership_expiry_enabled": settings.MEMBERSHIP_EXPIRY_ENABLED,
         "membership_length_days": settings.MEMBERSHIP_LENGTH_DAYS,
     }
     return render(request, "form_member.html", context)

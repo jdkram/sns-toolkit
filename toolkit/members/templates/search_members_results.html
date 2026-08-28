@@ -50,7 +50,7 @@ $(document).ready(function() {
 <th>Member #</th><th>Name</th>
 <th></th><th></th>
 <th>Email</th><th>Postcode</th><th>Last updated</th><th>GDPR Opt in</th>
-{% if membership_expiry_enabled %}
+{% if MEMBERSHIP_EXPIRY_ENABLED %}
 <th>Membership expires</th>
 {% endif %}
 <th>Mailout?</th>
@@ -66,7 +66,7 @@ $(document).ready(function() {
 <td>{{ member.postcode|default_if_none:"-" }}</td>
 <td>{{ member.updated_at|date:"d/m/Y" }}</td>
 <td>{{ member.gdpr_opt_in|date:"d/m/Y" }}</td>
-{% if membership_expiry_enabled %}
+{% if MEMBERSHIP_EXPIRY_ENABLED %}
 <td {% if member.has_expired %}class="expired"{% endif %}>{{ member.membership_expires|date:"d/m/Y" }}</td>
 {% endif %}
 <td>{{ member.mailout|yesno }}</td>

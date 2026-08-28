@@ -44,7 +44,7 @@ $(document).ready(function() {
         <th>Email</th>
         <th>Created</th>
         <th>Updated</th>
-        {% if membership_expiry_enabled %}
+        {% if MEMBERSHIP_EXPIRY_ENABLED %}
             <th>Membership expires</th>
         {% endif %}
         <th>Mailout?</th>
@@ -61,7 +61,7 @@ $(document).ready(function() {
     <td>{{ member.email|urlize }}</td>
     <td>{{ member.created_at|date:"d/m/Y" }}</td>
     <td>{{ member.updated_at|date:"d/m/Y" }}</td>
-    {% if membership_expiry_enabled %}
+    {% if MEMBERSHIP_EXPIRY_ENABLED %}
         <td {% if member.has_expired %}class="expired"{% endif %}>{{ member.membership_expires|date:"d/m/Y" }}</td>
     {% endif %}
     <td>{{ member.mailout|yesno }}</td>
