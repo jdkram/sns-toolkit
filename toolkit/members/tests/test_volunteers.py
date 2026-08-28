@@ -15,6 +15,19 @@ from toolkit.diary.models import Role
 
 from .common import MembersTestsMixin
 
+# A VENUE dict shaped like Star & Shadow's (toolkit/settings_ss.py), used
+# below without actually importing that settings module - importing it
+# would execute its `TEMPLATES[0]["DIRS"] = ...` assignment, which mutates
+# the *same* TEMPLATES[0] dict object shared with settings_common (via
+# `from toolkit.settings_common import *`), permanently changing template
+# resolution for the rest of the test process:
+SS_LIKE_VENUE = {
+    **settings.VENUE,
+    "longname": "Star and Shadow",
+    "mailout_from_address": "info@starandshadow.org.uk",
+    "vols_admin_address": ["info@starandshadow.org.uk"],
+}
+
 TINY_VALID_BASE64_PNG = (
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAAXNSR0IArs4c6QAAAARnQU1BA"
     "ACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAMSURBVBhXY/j//z8ABf4C/qc1gYQAAA"
@@ -105,6 +118,7 @@ class TestVolunteerEditViews(MembersTestsMixin, TestCase):
         self.assertRedirects(response, reverse("view-volunteer-list"))
 
 
+@override_settings(MAILMAN_INTEGRATION=True)
 class TestActivateDeactivateVolunteer(MembersTestsMixin, TestCase):
     def setUp(self):
         super().setUp()
@@ -229,6 +243,43 @@ class TestActivateDeactivateVolunteer(MembersTestsMixin, TestCase):
         url = reverse("activate-volunteer")
         response = self.client.post(url)
         self.assertEqual(response.status_code, 404)
+
+    @override_settings(MAILMAN_INTEGRATION=False)
+    @patch("toolkit.members.volunteer_views.send_mail")
+    def test_mailman_disabled_retire_emails_vols_admin_address(
+        self, mock_send_mail
+    ):
+        vol = Volunteer.objects.get(id=2)
+        vol.member.email = "something@example.com"
+        vol.member.save()
+
+        url = reverse("inactivate-volunteer")
+        response = self.client.post(url, data={"volunteer": "2"}, follow=True)
+
+        self.assertRedirects(response, reverse("view-volunteer-list"))
+        mock_send_mail.assert_called_once()
+        self.assertEqual(
+            mock_send_mail.call_args.kwargs["recipient_list"],
+            ["volunteers-owner@cubecinema.com"],
+        )
+
+        self.unsubscribe_mock.assert_not_called()
+
+    @override_settings(MAILMAN_INTEGRATION=False)
+    @patch("toolkit.members.volunteer_views.send_mail")
+    def test_mailman_disabled_unretire_emails_vols_admin_address(
+        self, mock_send_mail
+    ):
+        url = reverse("activate-volunteer")
+        response = self.client.post(url, data={"volunteer": "4"}, follow=True)
+
+        self.assertRedirects(response, reverse("view-volunteer-list"))
+        mock_send_mail.assert_called_once()
+        self.assertEqual(
+            mock_send_mail.call_args.kwargs["recipient_list"],
+            ["volunteers-owner@cubecinema.com"],
+        )
+        self.subscribe_mock.assert_not_called()
 
 
 class TestVolunteerEdit(MembersTestsMixin, TestCase):
