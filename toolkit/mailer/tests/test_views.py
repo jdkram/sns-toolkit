@@ -1,4 +1,6 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
+
 import fixtures
 from django.test import TestCase
 from django.urls import reverse
@@ -6,7 +8,7 @@ import django.utils.timezone
 
 from toolkit.mailer.models import MailoutJob
 
-from ...diary.tests.common import ToolkitUsersFixture
+from ...diary.tests.common import FAKE_NOW, ToolkitUsersFixture
 
 
 class TestPermissions(TestCase, fixtures.TestWithFixtures):
@@ -33,6 +35,7 @@ class TestPermissions(TestCase, fixtures.TestWithFixtures):
             "mailer:job-delete": {"job_id": 1},
             "mailer:jobs-list": {},
             "mailer:jobs-table": {},
+            "mailer:test-mailout-create": {},
         }
         self._assert_need_login(views)
 
@@ -40,6 +43,7 @@ class TestPermissions(TestCase, fixtures.TestWithFixtures):
         self.client.login(username="read_only", password="T3stPassword!1")
         views = {
             "mailer:job-delete": {"job_id": 1},
+            "mailer:test-mailout-create": {},
         }
         self._assert_need_login(views)
 
@@ -226,3 +230,107 @@ class TestListJobView(TestCase, fixtures.TestWithFixtures):
         self.assertContains(response, "Page 2 of 2")
         for job in jobs[:5]:
             self.assertContains(response, f"<td>{job.pk}</td>", html=True)
+
+
+class TestMailoutCreateView(TestCase, fixtures.TestWithFixtures):
+    def setUp(self) -> None:
+        self.useFixture(ToolkitUsersFixture())
+        self.client.login(username="admin", password="T3stPassword!")
+        self.url = reverse("mailer:test-mailout-create")
+
+        self.time_patch = patch("django.utils.timezone.now")
+        self.time_mock = self.time_patch.start()
+        self.time_mock.return_value = FAKE_NOW
+        self.addCleanup(self.time_patch.stop)
+
+    def _data(self, **overrides) -> dict:
+        data = {
+            "subject": "Test subject",
+            "body_text": "Test body",
+            "recipient_filter": "someone@example.com",
+            "send_at": "01/06/2025 22:11",
+        }
+        data.update(overrides)
+        return data
+
+    def test_get(self) -> None:
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "test-mailout.html")
+
+    def test_create_scheduled(self) -> None:
+        self.assertEqual(0, MailoutJob.objects.count())
+        data = self._data()
+        response = self.client.post(self.url, data=data)
+
+        self.assertRedirects(response, reverse("mailer:jobs-list"))
+
+        self.assertEqual(1, MailoutJob.objects.count())
+        job = MailoutJob.objects.get()
+        self.assertEqual(job.subject, data["subject"])
+        self.assertEqual(job.body_text, data["body_text"])
+        self.assertEqual(job.recipient_filter, data["recipient_filter"])
+        # Test jobs are always forced to plain-text only:
+        self.assertEqual(job.send_html, False)
+        self.assertEqual(job.body_html, "")
+        self.assertEqual(
+            job.send_at,
+            datetime(2025, 6, 1, 21, 11, tzinfo=timezone.utc),
+        )
+
+    def test_create_send_now(self) -> None:
+        url = reverse("mailer:test-mailout-create", query={"send_at": "now"})
+        self.assertEqual(0, MailoutJob.objects.count())
+        # The posted send_at is in the past, but is overridden because of
+        # the "send_at=now" query param:
+        data = self._data(send_at="01/06/1901 12:00")
+        response = self.client.post(url, data=data)
+
+        self.assertRedirects(response, reverse("mailer:jobs-list"))
+
+        self.assertEqual(1, MailoutJob.objects.count())
+        job = MailoutJob.objects.get()
+        self.assertEqual(job.subject, data["subject"])
+        self.assertEqual(job.recipient_filter, data["recipient_filter"])
+        self.assertEqual(job.send_at, FAKE_NOW + timedelta(seconds=2))
+
+    def test_date_in_past(self) -> None:
+        data = self._data(
+            send_at=(FAKE_NOW - timedelta(seconds=1)).strftime(
+                "%d/%m/%Y %H:%M"
+            )
+        )
+        response = self.client.post(self.url, data=data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "test-mailout.html")
+        self.assertFormError(
+            response.context["form"], "send_at", "Must be in the future"
+        )
+        self.assertEqual(0, MailoutJob.objects.count())
+
+    def test_missing_recipient(self) -> None:
+        data = self._data(recipient_filter="")
+        response = self.client.post(self.url, data=data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "test-mailout.html")
+        self.assertFormError(
+            response.context["form"],
+            "recipient_filter",
+            "A recipient email address is required",
+        )
+        self.assertEqual(0, MailoutJob.objects.count())
+
+    def test_invalid_recipient_email(self) -> None:
+        data = self._data(recipient_filter="not-an-email-address")
+        response = self.client.post(self.url, data=data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "test-mailout.html")
+        self.assertFormError(
+            response.context["form"],
+            "recipient_filter",
+            "Please enter a valid email address",
+        )
+        self.assertEqual(0, MailoutJob.objects.count())
