@@ -26,9 +26,9 @@ The current branch is **`master`** (Django 5.2 LTS, Wagtail 6.3, Python 3, no Ce
 
 | Remote | Points at | Public? | Notes |
 |---|---|---|---|
-| `origin` | `github.com/jdkram/sns-toolkit` | yes | Ours. |
+| `origin` | `github.com/jdkram/sns-toolkit` | yes | Ours. A genuine GitHub fork of `BenMotz/cubetoolkit` since 2026-09-01, so the network graph draws the divergence automatically. Default branch is `sns_2026_overhaul`. |
 | `homeserver` | freyja | no | Deploy target. |
-| `upstream` | `github.com/BenMotz/cubetoolkit` | yes | Ben's published tree. Fetch freely. |
+| `upstream` | `github.com/BenMotz/cubetoolkit` | yes | Ben's published tree, and now the fork parent. Local `master` tracks it. Fetch freely. |
 | `cube` | `toolkit@cubecinema.com:/home/toolkit/repo` | **no** | The Cube's own server. Read access granted by Marcus, May 2026. Slow: allow three minutes for a fetch. Fetches into `refs/remotes/cube/*` only. |
 
 `cube` carries branches that exist nowhere else, currently `s+s-rebased` and `s+s-reunification`. Keep them as remote-tracking refs rather than local branches. They are Ben's unpublished, self-declared unreviewed work, so importing them is fine but publishing them is his call to make, not ours.
@@ -51,7 +51,18 @@ It is a guard against accidents, not against intent: `--no-verify` bypasses it, 
 
 A previous rule required cloning the `cube` remote to a disposable directory and running `git filter-repo` to strip `marcus@marcusv.org` before importing. That protected against an exposure Ben himself publishes: his `master` is public on GitHub, address included, at the same hash. The procedure cost real work and protected nothing, so it is gone, replaced by the lighter check above.
 
-A correction to the earlier note in passing: `s+s+nosix` was described as "already correctly redacted" on public GitHub. It is not. Local `master`, `s+s`, `s+s+nosix` and `retheme-2023` are the redacted lineage; the copies on GitHub carry the real address and always have. Decision taken 2026-09-01: adopt the GitHub lineage locally, so the two agree and there is one canonical history per branch. Not yet executed; the four branches still hold the redacted hashes.
+A correction to the earlier note in passing: `s+s+nosix` was described as "already correctly redacted" on public GitHub. It is not. Local `master`, `s+s`, `s+s+nosix` and `retheme-2023` are the redacted lineage; the copies on GitHub carry the real address and always have. Decision taken and executed 2026-09-01: adopt the published lineage, so there is one canonical history per branch. `master` now tracks `upstream/master`; `s+s`, `s+s+nosix` and `retheme-2023` were reset to their published equivalents. Backup tags under `backup/pre-consolidation/` hold the old redacted tips.
+
+### The September 2026 re-release
+
+`sns_2026_overhaul` was re-published on 2026-09-01 as a fork. Two things changed in the process:
+
+- **Commit messages were rewritten** to drop the `Co-Authored-By: Claude` trailers from 314 commits. Author and committer identities and dates were already, and remain, Jonny's alone; only the trailers went. Trees are byte-identical. Disclosure of AI involvement lives in the file-level `ai-contributors:` tags instead, per the workspace authorship protocol. For reference, Ben uses no AI disclosure in commit metadata at all. Old tip preserved as tag `backup/pre-message-rewrite/sns_2026_overhaul`.
+- **Every SHA above `bce4d098` changed.** The ten `v2026.*` release tags were remapped onto their rewritten equivalents via filter-repo's `commit-map`; check that any other ref pointing into that range is still an ancestor of the branch before trusting it.
+
+The previous repo is archived read-only at `github.com/jdkram/sns-toolkit-archive`. It still holds `feature/9.2-programming-pipeline` and `feature/diary-hub-overhaul`, which were not carried over: by patch content only 17 and 13 commits respectively were not already in the overhaul.
+
+**On the "commits behind" banner.** GitHub compares `sns_2026_overhaul` against `upstream/master` and reports roughly 783 ahead, 476 behind. The real gap is 143. The merge-base is `bce4d098` (May 2018) because the redaction rewrite gave every later commit on this lineage a different hash, so around 333 of those 476 are content we already have under different SHAs. Rebasing to unify the lineages conflicts on the first of 772 commits, on the redaction line itself, and was judged not worth it.
 
 ### Known and unfixed
 
