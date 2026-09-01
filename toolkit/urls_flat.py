@@ -10,6 +10,7 @@ from wagtail.admin import urls as wagtailadmin_urls
 from wagtail.documents import urls as wagtaildocs_urls
 from wagtail import urls as wagtail_urls
 
+import toolkit.audit.urls
 import toolkit.members.urls
 import toolkit.toolkit_auth.urls
 import toolkit.index.urls
@@ -34,6 +35,7 @@ urlpatterns = [
     re_path(r"^labs/", include(toolkit.labs.urls)),
     re_path(r"^inductions/", include(toolkit.inductions.urls)),
     re_path(r"^operations/", include(toolkit.operations.urls)),
+    re_path(r"^audit/", include(toolkit.audit.urls)),
     re_path(r"^$", toolkit.diary.urls.view_diary, name="default-view"),
     re_path(
         r"^id/(?P<event_id>\d+)/$",

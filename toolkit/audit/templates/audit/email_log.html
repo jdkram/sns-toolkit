@@ -1,0 +1,107 @@
+{% extends 'base_admin.html' %}
+{% block title %}Email log{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-3">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <h1>Email log</h1>
+    <a href="{% url 'audit-deletion-log' %}" class="btn btn-outline-secondary btn-sm">Recent deletions</a>
+  </div>
+  <p class="text-muted">
+    Every email the toolkit has attempted to send, from any feature.
+    "Sent" means the configured email backend accepted the message, not that it reached an inbox.
+    Bodies are not stored; mailouts appear as one summary row per batch.
+  </p>
+
+  <div class="alert alert-secondary small">
+    <strong>What "the configured email backend" means:</strong> it's the piece of software actually
+    responsible for handing your message to the outside world. Right now that's set to
+    <code>{{ configured_backend }}</code>, which in plain terms means:
+    <strong>{{ configured_backend_description }}</strong>
+    A row marked "Sent" below only means the toolkit handed the message to this backend without
+    error. If the backend is the console or file backend, nothing left the server at all; if it's
+    SMTP, the message reached a mail server, which is still no guarantee it reached the
+    recipient's inbox. The toolkit does not currently detect bounces (e.g. a dead or full mailbox)
+    after that point; see <code>docs/tasks/</code> for the proposed bounce-handling feature.
+  </div>
+
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+      <select name="status" class="form-select form-select-sm">
+        <option value="" {% if not status %}selected{% endif %}>All</option>
+        <option value="success" {% if status == "success" %}selected{% endif %}>Sent only</option>
+        <option value="failed" {% if status == "failed" %}selected{% endif %}>Failed only{% if failure_count %} ({{ failure_count }}){% endif %}</option>
+      </select>
+    </div>
+    <div class="col-auto">
+      <input type="text" name="search" value="{{ search }}" class="form-control form-control-sm"
+             placeholder="Search recipient or subject">
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+      {% if status or search %}<a href="{% url 'audit-email-log' %}" class="btn btn-link btn-sm">Clear</a>{% endif %}
+    </div>
+  </form>
+
+  {% if page.object_list %}
+  <div class="table-responsive">
+    <table class="table table-sm table-striped align-middle">
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>To</th>
+          <th>Subject</th>
+          <th>Triggered by</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in page.object_list %}
+        <tr>
+          <td class="text-nowrap">{{ log.sent_at|date:"j M Y H:i" }}</td>
+          <td>{{ log.recipients }}</td>
+          <td>{{ log.subject }}</td>
+          <td class="text-nowrap">
+            {% if log.trigger_source %}
+              {{ log.trigger_source }}{% if log.triggered_by %} ({{ log.triggered_by.username }}){% endif %}
+            {% else %}
+              <span class="text-muted fst-italic">unknown</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if log.success %}
+            <span class="badge bg-success">Sent</span>
+            {% else %}
+            <span class="badge bg-danger">Failed</span>
+            {% if log.error %}
+            <details class="d-inline-block ms-1">
+              <summary class="small">error</summary>
+              <pre class="small mb-0" style="white-space: pre-wrap;">{{ log.error }}</pre>
+            </details>
+            {% endif %}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page.has_other_pages %}
+  <nav aria-label="Email log pages">
+    <ul class="pagination pagination-sm">
+      {% if page.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ page.previous_page_number }}&status={{ status }}&search={{ search|urlencode }}">Previous</a></li>
+      {% endif %}
+      <li class="page-item disabled"><span class="page-link">Page {{ page.number }} of {{ page.paginator.num_pages }}</span></li>
+      {% if page.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page.next_page_number }}&status={{ status }}&search={{ search|urlencode }}">Next</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+  {% else %}
+  <p class="text-muted fst-italic">No emails logged{% if status or search %} matching this filter{% endif %}.</p>
+  {% endif %}
+</div>
+{% endblock %}

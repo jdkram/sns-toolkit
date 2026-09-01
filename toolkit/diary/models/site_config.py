@@ -366,6 +366,22 @@ class SiteConfiguration(models.Model):
         ),
     )
 
+    email_log_retain_days = models.PositiveSmallIntegerField(
+        default=90,
+        help_text=(
+            "Days to keep rows on the email log page (recipient addresses are "
+            "personal data, so don't keep them forever). Purged daily by the "
+            "'purge_audit_logs' command. Set to 0 to keep everything."
+        ),
+    )
+    deletion_log_retain_days = models.PositiveSmallIntegerField(
+        default=365,
+        help_text=(
+            "Days to keep rows on the recent-deletions page. Purged daily by "
+            "the 'purge_audit_logs' command. Set to 0 to keep everything."
+        ),
+    )
+
     DIGEST_DAY_DISABLED = 0
     DIGEST_DAY_CHOICES = [
         (0, "Disabled"),
@@ -943,6 +959,10 @@ SITE_CONFIG_FIELD_GROUPS = {
         "consent_renewal_days",
         "consent_renewal_grace_days",
         "volunteer_digest_day",
+    ],
+    "Audit logs": [
+        "email_log_retain_days",
+        "deletion_log_retain_days",
     ],
     "Last-gasp re-engagement email": [
         "last_gasp_email_enabled",

@@ -55,6 +55,7 @@ from toolkit.diary.models import (
     VolunteerEventMark,
     get_site_config,
 )
+from toolkit.audit.models import DeletionLog, log_deletion
 import toolkit.diary.forms as diary_forms
 import toolkit.diary.validators as diary_validators
 import toolkit.diary.edit_prefs as edit_prefs
@@ -277,8 +278,22 @@ def delete_showing(request, showing_id):
             reverse("edit-showing", kwargs={"showing_id": showing_id})
         )
     else:
-        logger.info(
-            f"Deleting showing id {showing_id} (for event id {showing.event_id})"
+        # WARNING so destructive actions survive a prod root-logger level of
+        # WARNING; DeletionLog row so the record survives log rotation (9.159).
+        description = (
+            f"Booking for '{showing.event.name}' (event id {showing.event_id}) "
+            f"on {showing.start.strftime('%d/%m/%Y %H:%M')}"
+        )
+        logger.warning(
+            f"Deleting showing id {showing_id}: {description} "
+            f"[deleted by {request.user.username}]"
+        )
+        log_deletion(
+            model="Showing",
+            object_pk=showing_id,
+            description=description,
+            deleted_by=request.user,
+            via=DeletionLog.VIA_EDIT_UI,
         )
         messages.add_message(
             request,

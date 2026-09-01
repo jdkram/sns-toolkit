@@ -100,6 +100,7 @@
             {% endif %}
             {% if user.is_superuser %}
             <li><a href="{% url "toolkit-access" %}"><span>Access levels</span></a></li>
+            <li><a href="{% url "audit-email-log" %}"><span>Email log</span></a></li>
             <li><a href="{% url "edit-site-configuration" %}"><span>Site settings</span></a></li>
             <li><a href="{% url "inductions:manage_settings" %}"><span>Induction settings</span></a></li>
             {% endif %}

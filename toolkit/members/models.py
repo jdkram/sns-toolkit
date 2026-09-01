@@ -505,6 +505,7 @@ class Volunteer(models.Model):
         """
         member = self.member
         volunteer_name = member.name
+        original_email = member.email
 
         # FK-linked entries are authoritative; text-match catches legacy entries
         # where the FK was never set (pre-migration rota history).
@@ -576,6 +577,14 @@ class Volunteer(models.Model):
             # Remove personal-preference data
             VolunteerEventMark.objects.filter(volunteer=self).delete()
             TrainingRecord.objects.filter(volunteer=self).delete()
+
+            # GDPR: scrub the email audit trail of this person's address too.
+            if original_email:
+                from toolkit.audit.models import SentEmailLog
+
+                SentEmailLog.objects.filter(
+                    recipients__icontains=original_email
+                ).update(recipients=f"(anonymised volunteer {self.pk})")
 
             AnonymisationLog.objects.create(
                 volunteer_pk=self.pk,

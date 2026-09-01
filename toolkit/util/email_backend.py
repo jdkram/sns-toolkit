@@ -9,9 +9,10 @@ mailouts, password resets, digests, one-off notifications -- with no
 call-site changes, and logs one line per message to the ``toolkit.email``
 logger: success at INFO, failure at ERROR.
 
-This is also the intended hook point for the SentEmailLog DB rows (9.156):
-add the write alongside the log calls in send_messages, nothing else needs
-restructuring.
+Each message also gets a SentEmailLog DB row (9.156) via
+toolkit.audit.models.record_email -- imported lazily so importing this
+module at settings load time doesn't touch the app registry. The audit
+write must never block the send; record_email swallows its own failures.
 """
 import logging
 
@@ -45,6 +46,8 @@ class LoggingEmailBackend(BaseEmailBackend):
     def send_messages(self, email_messages):
         if not email_messages:
             return 0
+        from toolkit.audit.models import record_email
+
         sent_count = 0
         for message in email_messages:
             recipients = ", ".join(message.recipients())
@@ -61,6 +64,13 @@ class LoggingEmailBackend(BaseEmailBackend):
                     self.inner_backend_path,
                     exc,
                 )
+                record_email(
+                    recipients,
+                    message.subject,
+                    success=False,
+                    error=str(exc),
+                    backend=self.inner_backend_path,
+                )
                 if not self.fail_silently:
                     raise
                 continue
@@ -72,6 +82,12 @@ class LoggingEmailBackend(BaseEmailBackend):
                     message.subject,
                     self.inner_backend_path,
                 )
+                record_email(
+                    recipients,
+                    message.subject,
+                    success=True,
+                    backend=self.inner_backend_path,
+                )
             else:
                 # Backends signal a swallowed per-message problem by
                 # returning 0 without raising.
@@ -81,5 +97,12 @@ class LoggingEmailBackend(BaseEmailBackend):
                     recipients,
                     message.subject,
                     self.inner_backend_path,
+                )
+                record_email(
+                    recipients,
+                    message.subject,
+                    success=False,
+                    error="Backend reported 0 sent without raising",
+                    backend=self.inner_backend_path,
                 )
         return sent_count

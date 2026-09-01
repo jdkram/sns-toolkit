@@ -201,9 +201,14 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if options["wipe"]:
             self.stdout.write("Wiping existing data...")
+            # Legitimate bulk wipe: silence the Event deletion trap (which
+            # would otherwise WARN + write a DeletionLog row per event).
+            from toolkit.audit.signals import suppress_event_deletion_log
+
             RotaEntry.objects.all().delete()
             Showing.objects.all().delete()
-            Event.objects.all().delete()
+            with suppress_event_deletion_log():
+                Event.objects.all().delete()
             EventTemplate.objects.all().delete()
             Room.objects.all().delete()
             Role.objects.all().delete()

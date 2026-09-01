@@ -1,0 +1,70 @@
+{% extends 'base_admin.html' %}
+{% block title %}Recent deletions{% endblock %}
+
+{% block body %}
+<div class="container-fluid mt-3">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <h1>Recent deletions</h1>
+    <a href="{% url 'audit-email-log' %}" class="btn btn-outline-secondary btn-sm">Email log</a>
+  </div>
+  <p class="text-muted">
+    Destructive actions recorded by the toolkit: who deleted what, and when.
+    Covers bookings deleted through the edit UI and any unexpected event deletion.
+    Routine archiving (tags, roles) and seed-data resets are not listed.
+  </p>
+
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+      <input type="text" name="search" value="{{ search }}" class="form-control form-control-sm"
+             placeholder="Search description, type, or username">
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+      {% if search %}<a href="{% url 'audit-deletion-log' %}" class="btn btn-link btn-sm">Clear</a>{% endif %}
+    </div>
+  </form>
+
+  {% if page.object_list %}
+  <div class="table-responsive">
+    <table class="table table-sm table-striped align-middle">
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>What</th>
+          <th>Description</th>
+          <th>Deleted by</th>
+          <th>Via</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in page.object_list %}
+        <tr>
+          <td class="text-nowrap">{{ log.deleted_at|date:"j M Y H:i" }}</td>
+          <td>{{ log.model }} <span class="text-muted small">#{{ log.object_pk }}</span></td>
+          <td>{{ log.description }}</td>
+          <td>{% if log.deleted_by %}{{ log.deleted_by.username }}{% else %}<span class="text-muted">unknown</span>{% endif %}</td>
+          <td><span class="badge bg-secondary">{{ log.get_via_display }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page.has_other_pages %}
+  <nav aria-label="Deletion log pages">
+    <ul class="pagination pagination-sm">
+      {% if page.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ page.previous_page_number }}&search={{ search|urlencode }}">Previous</a></li>
+      {% endif %}
+      <li class="page-item disabled"><span class="page-link">Page {{ page.number }} of {{ page.paginator.num_pages }}</span></li>
+      {% if page.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page.next_page_number }}&search={{ search|urlencode }}">Next</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+  {% else %}
+  <p class="text-muted fst-italic">No deletions logged{% if search %} matching this search{% endif %}.</p>
+  {% endif %}
+</div>
+{% endblock %}

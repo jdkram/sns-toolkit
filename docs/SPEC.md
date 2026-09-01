@@ -1114,6 +1114,12 @@ PENDING ──► SENDING ──► SENT
 - HTML mailouts send both text and HTML parts (multipart email)
 - `recipient_filter` can restrict sends to a subset of members
 
+#### SentEmailLog (toolkit/audit)
+One row per email send attempt, written automatically by the `LoggingEmailBackend` wrapper (so every code path is captured with no call-site changes). Fields: `sent_at`, `recipients`, `subject`, `success`, `error`, `backend`. Deliberately stores no body (bodies hold personal content and live password-set links). Mailout batches are summarised as a single row (`summarise_email_batch` context manager around the mailout send loop), not one per recipient. Surfaced on the Panopticon-only `/audit/emails/` page. Retention: `SiteConfiguration.email_log_retain_days` (default 90; 0 keeps forever), purged daily by `purge_audit_logs`. GDPR: `Volunteer.anonymise()` rewrites rows containing the volunteer's address.
+
+#### DeletionLog (toolkit/audit)
+One row per destructive action, written explicitly from deletion views (not via `pre_delete` signals, which seed/reseed mass-deletes would flood — the one exception is a belt-and-braces `pre_delete` trap on `Event` only, since Event deletion bypassing the model guard is always suspicious; seeding suppresses it via `suppress_event_deletion_log()`). Fields: `deleted_at`, `model`, `object_pk`, `description`, `deleted_by` (FK User, SET_NULL), `via` (edit-ui / management-command / cascade / signal). Surfaced on `/audit/deletions/`. Retention: `SiteConfiguration.deletion_log_retain_days` (default 365; 0 keeps forever).
+
 #### EventTemplate
 A reusable blueprint for recurring event types. When a new event is created from a template, it pre-populates the new `Event` with default values for roles, tags, pricing, copy, copy_summary, terms, film_information, private, and outside_hire. The first `Showing` also receives the template's default rota_notes. The programmer can override all of these after creation.
 

@@ -126,6 +126,8 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             "consent_renewal_days": str(config.consent_renewal_days),
             "consent_renewal_grace_days": str(config.consent_renewal_grace_days),
             "volunteer_digest_day": str(config.volunteer_digest_day),
+            "email_log_retain_days": str(config.email_log_retain_days),
+            "deletion_log_retain_days": str(config.deletion_log_retain_days),
             "last_gasp_email_subject": "",
             "last_gasp_email_body": "",
             "last_gasp_cooldown_days": str(config.last_gasp_cooldown_days),

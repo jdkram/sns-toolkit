@@ -661,3 +661,19 @@ The gallery can also be embedded on the public programme page, replacing or supp
 
 ---
 
+### 9.161 — Unify Nav tags and filter groups into one filter UI 🟠 L (speculative, unscoped)
+
+**Problem.** The public programme currently has two separate, overlapping filtering mechanisms: the filter-group buttons (9.105) at the top of the page, and individually "Nav"-flagged tags that appear as their own links in the sidebar. A venue admin has to think about both when deciding how a tag should surface, and end users see two different places to narrow down the programme.
+
+**Idea floated (not committed).** A treemap-style filter control: top-level filter groups shown as blocks, each hinting visually that it contains sub-tags, with double-click (or equivalent) surfacing the individual tag pills underneath for a more granular click-through. This would visually unify the "broad category" and "specific tag" filtering into one interactive control instead of two separate UI locations.
+
+**Known concern before this is scoped further.** The treemap idea is untested on mobile and may not degrade gracefully to a phone-sized viewport — needs a fallback interaction pattern (e.g. accordion or drill-down list) before it's a real proposal, not just a novelty for desktop.
+
+**Core requirement to preserve, whatever shape this takes:** a venue must still be able to give a critical-but-niche tag (e.g. "closed captions", "autism-friendly") its own prominent, individually surfaced filter — not buried as one pill inside a bigger group the user has to expand first. These tags matter disproportionately to the people who need them, and should stay reachable quickly, including via screen reader (a "flatten to a simple list of links" fallback must always be available, not just a visual nicety).
+
+**Status:** not scoped for implementation. Revisit once 9.105 and the Nav mechanism have both been in production use long enough to know which tags actually get flagged as Nav and why, informing what "niche but critical" tags actually look like in practice.
+
+**Related:** 9.105 (filter groups), 9.134 (more filters panel — may end up subsumed by this)
+
+---
+

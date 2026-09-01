@@ -9,6 +9,14 @@ Bugs and current system limitations.
 
 ## Current bugs
 
+**Bug AR** — Approved queue events vanish from the diary — nothing bridges "approved" to "confirmed" 🟡 M
+
+**Symptom.** A programmer proposes an event, it goes through the Monday-meeting programming queue, gets marked active (`make_active` action) — and then it disappears. It's on the internal calendar somewhere, but not on the diary a programmer actually checks day to day, and there's no message telling them why or what to do next.
+
+**Root cause.** `programming_status` (draft/proposed/active/rejected — the queue's state machine) and `Showing.confirmed` (whether a booking is public-facing — a separate state machine gated by `Event.terms_satisfied()`) are independent. `update_event_programming_status`'s `make_active` branch (`toolkit/diary/edit_views/site_config.py:295-298`) only flips `programming_status`; it never touches `confirmed`, never checks terms, and sends no notification. Meanwhile `Showing.objects.public()` (`toolkit/diary/models/showing.py:102-111`) — used by the public and logged-in-volunteer diary (`public_views.py`) — filters `confirmed=True`. So an "active" event with an unconfirmed showing is invisible on every diary a programmer would normally look at, even though the internal staff calendar (`edit_views/diary_overview.py`) does show it, styled with an `s_unconfirmed` CSS class. Leaving the queue was the programmer's implicit "done" signal; nothing tells them a second step (satisfying terms, then confirming) still remains.
+
+**Fix design:** see task 9.162 (bridging the two state machines / surfacing the outstanding step) and 9.164 (emailing the proposer once a decision is made). 9.163 (audit trail + real `created_by`) is a prerequisite for 9.164 knowing who to notify.
+
 **Bug E** — Homepage list view layout broken by volunteer event info 🔵 S
 
 The "list" view on the homepage is currently misaligned or layout-broken due to the addition of volunteer event/rota information. The extra data points (available slots, etc.) are likely pushing elements out of their containers or causing spacing issues in the compact list view.

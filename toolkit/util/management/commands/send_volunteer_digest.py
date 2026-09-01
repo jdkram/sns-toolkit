@@ -161,6 +161,10 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        from toolkit.audit.models import set_email_trigger
+
+        set_email_trigger("Scheduled job: send_volunteer_digest")
+
         dry_run = options["dry_run"]
         now = timezone.now()
 

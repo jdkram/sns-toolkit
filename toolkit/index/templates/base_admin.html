@@ -157,6 +157,7 @@ body {
       {% if user.is_superuser %}
       {label:"Access levels",      category:"Meta",                             href:"{% url 'toolkit-access' %}",     keywords:"permissions roles panopticon labs"},
       {label:"Site settings",      category:"Meta",                             href:"{% url 'edit-site-configuration' %}", keywords:"config venue setup labs"},
+      {label:"Email log",          category:"Meta",                             href:"{% url 'audit-email-log' %}",    keywords:"audit sent emails failed deletions"},
       {% endif %}
       {% if perms.toolkit.write %}
       {label:"New event",          category:"Actions",   shortcut:"n (Diary)",  href:"{% url 'add-event' %}",          keywords:"create add showing booking"},
@@ -311,6 +312,7 @@ body {
               <a class="dropdown-item" href="{% url "toolkit-access" %}">Access levels <span class="labs-tag">labs</span></a>
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="{% url "edit-site-configuration" %}">Site settings <span class="labs-tag">labs</span></a>
+              <a class="dropdown-item" href="{% url "audit-email-log" %}">Email log <span class="labs-tag">labs</span></a>
               {% if inductions_settings.inductions_enabled %}
               <a class="dropdown-item" href="{% url "inductions:manage_settings" %}">Inductions settings <span class="labs-tag">labs</span></a>
               {% endif %}

@@ -76,6 +76,21 @@ def _notify_vols_admin_status_change(request, vol, now_active):
     # roster, email the volunteers admin so the mailing list can be kept in step.
     # No-op when no vols_admin_address is configured.
     vols_admin = settings.VENUE.get("vols_admin_address") or []
+
+    # vols_admin_address must be a list of single addresses, not a
+    # comma-joined string (send_mail iterates recipient_list character by
+    # character if given a bare string) and not a list containing a
+    # comma-joined element (this exact typo -- "a@x.com, b@y.com" as one
+    # list entry -- broke volunteer-add on the s+s branch in production).
+    if isinstance(vols_admin, str) or any("," in addr for addr in vols_admin):
+        logger.error(
+            "vols_admin_address is misconfigured (expected a list of single "
+            "addresses, got %r); skipping volunteers-admin notification "
+            "rather than sending to a garbled address.",
+            vols_admin,
+        )
+        return
+
     if not vols_admin:
         return
 

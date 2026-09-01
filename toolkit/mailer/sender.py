@@ -159,59 +159,68 @@ def send_mailout_to(
 
     err_list = []
 
+    # Summarise the batch as one SentEmailLog row: a 500-member mailout must
+    # not create 500 audit rows (the MailoutJob row tracks per-job state).
+    from toolkit.audit.models import email_trigger, summarise_email_batch
+
     try:
-        for recipient in recipients:
-            now_m = time.monotonic()
-            if sent % one_percent == 0 or (
-                now_m - last_poll_for_cancel > POLL_FOR_CANCEL_PERIOD_S
-            ):
-                job.refresh_from_db()
-                if job.keep_sending():
-                    job.do_sending(sent, count)
-                    job.save()
-                last_poll_for_cancel = now_m
+        with email_trigger(f"Mailout job #{job.pk}"), summarise_email_batch(
+            f"[mailout] {job.subject}"
+        ):
+            for recipient in recipients:
+                now_m = time.monotonic()
+                if sent % one_percent == 0 or (
+                    now_m - last_poll_for_cancel > POLL_FOR_CANCEL_PERIOD_S
+                ):
+                    job.refresh_from_db()
+                    if job.keep_sending():
+                        job.do_sending(sent, count)
+                        job.save()
+                    last_poll_for_cancel = now_m
 
-            if not job.keep_sending():
-                logger.info(f"Aborting job: {job}")
-                break
+                if not job.keep_sending():
+                    logger.info(f"Aborting job: {job}")
+                    break
 
-            # Build per-recipient signature, with customised unsubscribe links:
-            text_pre, text_post = _get_text_preamble_signature(recipient)
+                # Build per-recipient signature, with customised unsubscribe links:
+                text_pre, text_post = _get_text_preamble_signature(recipient)
 
-            # Build final email, still in unicode:
-            mail_body_text = text_pre + job.body_text + text_post
+                # Build final email, still in unicode:
+                mail_body_text = text_pre + job.body_text + text_post
 
-            if job.send_html and job.body_html:
-                html_mail_context.update(
-                    {
-                        "member_name": recipient.name,
-                        "unsubscribe_link": reverse(
-                            "unsubscribe-member", args=(recipient.pk,)
-                        ),
-                        "edit_link": reverse(
-                            "edit-member", args=(recipient.pk,)
-                        ),
-                        "delete_link": reverse(
-                            "delete-member", args=(recipient.pk,)
-                        ),
-                        "mailout_key": recipient.mailout_key,
-                    }
+                if job.send_html and job.body_html:
+                    html_mail_context.update(
+                        {
+                            "member_name": recipient.name,
+                            "unsubscribe_link": reverse(
+                                "unsubscribe-member", args=(recipient.pk,)
+                            ),
+                            "edit_link": reverse(
+                                "edit-member", args=(recipient.pk,)
+                            ),
+                            "delete_link": reverse(
+                                "delete-member", args=(recipient.pk,)
+                            ),
+                            "mailout_key": recipient.mailout_key,
+                        }
+                    )
+                    mail_body_html = html_mail_template.render(
+                        html_mail_context
+                    )
+                else:
+                    mail_body_html = None
+
+                error = _send_email(
+                    email_conn,
+                    recipient.email,
+                    job.subject,
+                    mail_body_text,
+                    mail_body_html,
                 )
-                mail_body_html = html_mail_template.render(html_mail_context)
-            else:
-                mail_body_html = None
+                if error:
+                    err_list.append(error)
 
-            error = _send_email(
-                email_conn,
-                recipient.email,
-                job.subject,
-                mail_body_text,
-                mail_body_html,
-            )
-            if error:
-                err_list.append(error)
-
-            sent += 1
+                sent += 1
 
         job.do_complete(sent=sent)
         job.save()

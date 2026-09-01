@@ -502,3 +502,38 @@ Populated from the `LoggingEmailBackend` (9.154) so every send is captured with 
 **Scope:** Showing, Event (guard-bypass paths), RotaEntry bulk clears if cheap. Not tags/roles (already archive-don't-delete), not seed commands.
 
 **Depends on:** nothing (Bug AQ fix is independent); pairs naturally with 9.156's app/page.
+
+---
+
+### 9.160: Bounce handling, stop mailing dead addresses 🟡 M (split into two phases, see below)
+
+**Problem:** nothing currently stops the toolkit repeatedly mailing an address that's stopped working. `Member.mailout_failed` exists on the model and is already excluded from mailout recipient queries, but nothing sets it; it's admin-editable only. A decommissioned mailbox (or any hard bounce) is invisible to the toolkit, so the mailout will keep hitting it every send, indefinitely. That's the exact pattern that gets a sending domain rate-limited or blocklisted by receiving mail servers: a reputation risk, not just wasted sends.
+
+Not urgent today, since `TOOLKIT_WRAPPED_EMAIL_BACKEND` is still the console backend in production (9.154), so nothing has actually left the building yet. It becomes urgent the day SMTP is switched on.
+
+**Two kinds of bounce, two different mechanisms:**
+
+1. **Synchronous rejections**, where the SMTP server refuses the message *during the send itself* (e.g. "550 mailbox full", "550 no such user"). `_send_email` (`toolkit/mailer/sender.py`) already catches `smtplib.SMTPException` and records the error string in `err_list` / `SentEmailLog.error`, but currently does nothing with it beyond logging. This is the cheap, no-new-infrastructure win: **on a hard failure (SMTP 5xx) during a mailout send, set `recipient.mailout_failed = True`.** No new services, no polling, just closing a loop that's already half-built.
+2. **Asynchronous bounces**, where the send succeeds (SMTP accepted it), and the *rejection* arrives later as a separate email to the envelope sender (bounce message from an intermediate relay, "Delivery Status Notification: Failure", etc.). This is the more common case for a dead mailbox in practice, and the toolkit currently has no way to see it at all, since nobody reads `mailout_from_address`'s inbox programmatically.
+
+**Recommendation, phased:**
+
+- **Phase 1 (small, do this alongside switching SMTP on):** wire up (1) above. Also apply the same rule to `send_volunteer_digest`, `send_consent_renewal_reminders`, and `send_induction_reminders`; a hard SMTP failure on any of those to a `Member`-linked address should set `mailout_failed` too, not just mass mailouts. Surface `mailout_failed` addresses somewhere a human will actually see them (a filter already exists in `members/admin.py`; consider a Panopticon-visible count or list, similar to the email log's failure count).
+- **Phase 2 (bigger, needs a real decision, don't build speculatively):** asynchronous bounce ingestion. Options, roughly in order of effort:
+  - **VERP plus a bounce mailbox plus a periodic reader.** Encode the recipient in the envelope return-path (e.g. `bounce+<member-pk>@...`), have a mailbox catch anything undeliverable, and poll it (management command via cron/systemd timer, same pattern as the digest/reminder commands, no Celery needed). Most control, most infrastructure to own and keep working.
+  - **Switch the real backend to a transactional email provider with a bounce webhook** (Postmark, SES, Mailgun, etc.) instead of raw SMTP. They handle bounce/complaint detection and hand you a webhook; you just need a view to receive it and flip `mailout_failed`. Less to build and maintain than reading a mailbox, but it's a bigger decision (cost, another third party holding member email addresses) than a code change, worth a separate conversation before committing rather than something to default into while speccing this.
+  - **Do nothing beyond phase 1** and rely on synchronous rejections plus manual admin toggling for the (hopefully rare) mailbox that bounces silently. Reasonable if mailout volume stays low and SMTP isn't switched on imminently.
+
+**Depends on:** SMTP actually being configured (`TOOLKIT_WRAPPED_EMAIL_BACKEND` pointed at `smtp.EmailBackend`) before phase 1 has anything to act on. Pairs with 9.156's `SentEmailLog`/trigger-attribution work, since the email log page already shows per-send errors, so a bounce is discoverable there even before `mailout_failed` is wired up automatically.
+
+---
+
+### 9.161: Throttle mailout send rate 🟢 XS
+
+**Problem:** `send_mailout_to` (`toolkit/mailer/sender.py`) loops over every recipient and sends as fast as the SMTP connection allows, with no delay between messages. For a mailing list of any real size, firing hundreds of messages through one connection in a tight loop is itself a signal receiving mail providers (Gmail, Outlook) use to rate-limit or greylist unfamiliar senders, independent of content or list hygiene. This is exactly the kind of thing that contributes to a fresh sending domain getting a poor reputation, so it should be closed off before SMTP is switched on, not discovered after the first big mailout gets throttled or blocklisted.
+
+Not urgent today for the same reason as 9.160: production is still on the console backend, so nothing is actually being sent at rate yet.
+
+**What to build:** a small delay between sends in the `send_mailout_to` loop (e.g. `time.sleep(THROTTLE_SECONDS)` after each `_send_email` call), with `THROTTLE_SECONDS` read from a `SiteConfiguration` field (default something conservative, e.g. 0.5-1s, i.e. roughly 1-2 messages/second) rather than hardcoded, since the right rate depends on whatever SMTP relay ends up in front of this (a dedicated transactional provider will have its own documented rate limits and reputation warm-up guidance; raw SMTP through a generic host has no such guarantee and should stay conservative). Should not block the cancel-check poll already in the loop (`job.keep_sending()`), so a mid-mailout cancel still takes effect promptly rather than waiting out a long queue of sleeps.
+
+**Depends on:** nothing structurally, but only meaningful once SMTP is live (9.154/9.160). Worth landing in the same pass as 9.160 phase 1, since both are "make the mailout sender behave responsibly" changes to the same function.

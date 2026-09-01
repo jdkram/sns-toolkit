@@ -3,7 +3,7 @@
 from django.core import mail
 from django.core.mail import send_mail
 from django.core.mail.backends.base import BaseEmailBackend
-from django.test import SimpleTestCase, override_settings
+from django.test import TestCase, override_settings
 
 
 class FailingBackend(BaseEmailBackend):
@@ -24,8 +24,10 @@ WRAPPER = "toolkit.util.email_backend.LoggingEmailBackend"
 LOCMEM = "django.core.mail.backends.locmem.EmailBackend"
 
 
+# TestCase (not SimpleTestCase): each send also writes a SentEmailLog row
+# (toolkit.audit), which needs the test database.
 @override_settings(EMAIL_BACKEND=WRAPPER)
-class LoggingEmailBackendTests(SimpleTestCase):
+class LoggingEmailBackendTests(TestCase):
     @override_settings(TOOLKIT_WRAPPED_EMAIL_BACKEND=LOCMEM)
     def test_success_delegates_to_inner_backend_and_logs(self):
         with self.assertLogs("toolkit.email", "INFO") as logs:
