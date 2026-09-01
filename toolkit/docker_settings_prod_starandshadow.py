@@ -47,17 +47,16 @@ STORAGES = {
 }
 
 # Insert whitenoise after SecurityMiddleware so it serves static files.
-MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
+#
+# Derive from the inherited list rather than redeclaring it. This used to be a
+# hand-copied literal, which silently drifted: it had lost AxesMiddleware (so
+# brute-force login protection was configured but never ran in production) and
+# would have dropped every later addition too.
+MIDDLEWARE = list(MIDDLEWARE)
+MIDDLEWARE.insert(
+    MIDDLEWARE.index("django.middleware.security.SecurityMiddleware") + 1,
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "wagtail.contrib.redirects.middleware.RedirectMiddleware",
-]
+)
 
 # --- Database ---
 # Same MariaDB config as dev — credentials come from environment variables.
