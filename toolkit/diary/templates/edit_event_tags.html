@@ -8,29 +8,32 @@
 <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}diary/css/edit_form.css">
 <style type="text/css">
   #sortable {
-    list-style-type: none;
-    padding-left: 0;
     margin-bottom: 0;
   }
 
-  #sortable li {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.75rem;
-    border-bottom: 1px solid #dee2e6;
-    flex-wrap: wrap;
+  #sortable th {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #495057;
+    white-space: nowrap;
+    border-bottom-width: 1px;
   }
 
-  #sortable li:last-child {
-    border-bottom: none;
+  #sortable th small {
+    display: block;
+    font-weight: normal;
+    color: #6c757d;
   }
 
-  #sortable li.promoted {
+  #sortable td {
+    vertical-align: middle;
+  }
+
+  #sortable tbody tr.promoted {
     background-color: #f0f7ff;
   }
 
-  #sortable li.new_tag {
+  #sortable tbody tr.new_tag {
     background-color: #fff9c4;
   }
 
@@ -38,35 +41,11 @@
     cursor: move;
     color: #adb5bd;
     font-size: 1.1rem;
-    flex-shrink: 0;
     user-select: none;
   }
 
-  .drag-handle-placeholder {
-    width: 1.25rem;
-    flex-shrink: 0;
-  }
-
-  .tag-name {
+  .tag-name-cell {
     font-weight: 600;
-    flex: 1;
-  }
-
-  .tag-options {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-shrink: 0;
-  }
-
-  .tag-options label {
-    margin-bottom: 0;
-    font-weight: normal;
-  }
-
-  .tag-description-input {
-    flex: 1 1 240px;
-    min-width: 0;
   }
 
   .tag-description-input input {
@@ -76,6 +55,10 @@
     padding: 0.2rem 0.4rem;
     border: 1px solid #ced4da;
     border-radius: 0;
+  }
+
+  .filter-group-cell select {
+    font-size: 0.9em;
   }
 
   .archived-section {
@@ -116,13 +99,13 @@
 "use strict";
 
 $(document).ready(function() {
-    $("#sortable").sortable({
-        "items": "li:not(.new_tag)",
+    $("#sortable tbody").sortable({
+        "items": "tr:not(.new_tag)",
         "handle": ".drag-handle",
         "update": updateOrdering
     });
-    $("#sortable").disableSelection();
-    $("#sortable li input[type='checkbox']").change(updateSortable);
+    $("#sortable tbody").disableSelection();
+    $("#sortable tbody tr input[type='checkbox']").change(updateSortable);
     updateSortable();
     updateOrdering();
 
@@ -138,15 +121,16 @@ $(document).ready(function() {
 });
 
 function processInputFields(fn) {
-    var list_items = document.getElementById("sortable")
-                             .getElementsByTagName("li");
+    var rows = document.getElementById("sortable")
+                        .querySelector("tbody")
+                        .getElementsByTagName("tr");
     var i, j;
     var input_fields;
-    for(i = 0; i < list_items.length; i++) {
-        if(!list_items[i].classList.contains("new_tag")) {
-            input_fields = list_items[i].getElementsByTagName("input");
+    for(i = 0; i < rows.length; i++) {
+        if(!rows[i].classList.contains("new_tag")) {
+            input_fields = rows[i].getElementsByTagName("input");
             for(j = 0; j < input_fields.length; j++) {
-                fn(input_fields[j], list_items[i], i);
+                fn(input_fields[j], rows[i], i);
             }
         }
     }
@@ -181,10 +165,13 @@ function updateOrdering() {
 
 
   <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="card-header">
       <h4 class="mb-0">Event Tags</h4>
       <small class="text-muted">
-        <strong>Nav</strong> tags appear as filter links in the sidebar. <strong>Filter group</strong> controls which programme filter button a tag maps to.
+        Tags describe events (e.g. "Live Music", "Performance"). <strong>Filter groups</strong> are the small set of broad
+        categories shown as filter buttons at the top of the public programme page, each one bundling several tags
+        together (e.g. "Live Music" and "Performance" might both map to a "Music" filter group), so visitors see a few
+        simple choices instead of every tag.
       </small>
     </div>
     <div class="card-body p-0" style="overflow-x: auto;">
@@ -192,46 +179,64 @@ function updateOrdering() {
         {{ formset.management_form }}
         {% csrf_token %}
 
-        <ul id="sortable">
+        <table id="sortable" class="table table-sm mb-0 align-middle">
+          <thead>
+            <tr>
+              <th style="width: 1.5rem;"></th>
+              <th>Tag</th>
+              <th>When to use <small>(tooltip on event form)</small></th>
+              <th>Nav <small>(public sidebar filter link)</small></th>
+              <th>Filter group <small>(public programme filter button)</small></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
 
         {% for form in formset %}
-          <li class="{% if form.instance.promoted and form.id.value %}promoted{% endif %}{% if not form.id.value %} new_tag{% endif %}">
+          <tr class="{% if form.instance.promoted and form.id.value %}promoted{% endif %}{% if not form.id.value %} new_tag{% endif %}">
 
-            {% if form.id.value %}
-              <span class="drag-handle" title="Drag to reorder">&#9776;</span>
-            {% else %}
-              <span class="drag-handle-placeholder"></span>
-            {% endif %}
+            <td>
+              {% if form.id.value %}
+                <span class="drag-handle" title="Drag to reorder">&#9776;</span>
+              {% endif %}
+            </td>
 
-            {% if form.errors %}
-              <span class="text-danger">
-                Error: {{ form.name.errors.as_text }} | {{ form.standard.errors.as_text }}
-              </span>
-            {% endif %}
-
-            <span class="tag-name">
+            <td class="tag-name-cell">
+              {% if form.errors %}
+                <div class="text-danger small">
+                  Error: {{ form.name.errors.as_text }} | {{ form.standard.errors.as_text }}
+                </div>
+              {% endif %}
               {% if not form.id.value %}
                 <label class="text-muted mb-0">New tag:</label>
                 {{ form.name }}
               {% else %}
                 {{ form.name.as_hidden }}{{ form.name.value }}
               {% endif %}
-            </span>
+            </td>
 
-            {% if form.id.value %}
-            <span class="tag-description-input" title="Guidance shown as a tooltip on the event edit form">
-              {{ form.description }}
-            </span>
-            {% endif %}
-
-            <span class="tag-options">
+            <td class="tag-description-input" title="Guidance shown as a tooltip on the event edit form">
               {% if form.id.value %}
-                <label title="Show this tag as a filter link under 'Programme' in the public website navigation">
-                  {{ form.promoted }} Nav
+                {{ form.description }}
+              {% endif %}
+            </td>
+
+            <td>
+              {% if form.id.value %}
+                <label title="Show this tag as a filter link under 'Programme' in the public website navigation" class="mb-0">
+                  {{ form.promoted }}
                 </label>
-                <label title="Which programme filter button this tag maps to">
-                  {{ form.filter_group }}
-                </label>
+              {% endif %}
+            </td>
+
+            <td class="filter-group-cell">
+              {% if form.id.value %}
+                {{ form.filter_group }}
+              {% endif %}
+            </td>
+
+            <td class="text-end">
+              {% if form.id.value %}
                 {% if not form.instance.read_only %}
                   {{ form.id }}
                   <button type="button" class="btn btn-sm btn-outline-warning archive-btn"
@@ -241,16 +246,22 @@ function updateOrdering() {
                   {{ form.id }}
                 {% endif %}
               {% endif %}
-            </span>
-
-            {{ form.sort_order.as_hidden }}
-          </li>
+              {{ form.sort_order.as_hidden }}
+            </td>
+          </tr>
         {% endfor %}
 
-        </ul>
+          </tbody>
+        </table>
 
         <div class="card-footer d-flex justify-content-between align-items-center">
-          <small class="text-muted">Tick <strong>Nav</strong> to show a tag as a filter link. Set <strong>Filter group</strong> to wire it to a programme filter button. <strong>When to use</strong> text appears as a tooltip when programmers select tags on event forms. Drag rows to set order.</small>
+          <small class="text-muted">
+            <strong>Filter group</strong> wires a tag to one of the broad filter buttons shown at the top of the public
+            programme page. <strong>Nav</strong> additionally shows this specific tag as its own filter link in the public
+            sidebar, useful for something like "Family friendly" that doesn't fit a broad group but should still be
+            easy to find. <strong>When to use</strong> appears as a tooltip when programmers select tags on event forms.
+            Drag rows to set order.
+          </small>
           <button type="submit" class="btn btn-primary">Save all changes</button>
         </div>
       </form>
