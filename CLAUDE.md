@@ -12,25 +12,56 @@ The current branch is **`master`** (Django 5.2 LTS, Wagtail 6.3, Python 3, no Ce
 
 ---
 
-## Repo layout: worktrees, not separate clones (as of 2026-07-28)
+## Repo layout: worktrees, not separate clones (as of 2026-07-28, revised 2026-09-01)
 
-`~/code/sns-toolkit` is the single `.git` for all locally-relevant lineages of this codebase. Two sibling directories are **git worktrees** of this same repo, not separate clones:
+`~/code/sns-toolkit` is the single `.git` for every locally-relevant lineage of this codebase. Two sibling directories are **git worktrees** of this same repo, not separate clones (their `.git` is a file, not a directory):
 
 | Directory | Branch | What it is |
 |---|---|---|
 | `~/code/sns-toolkit` | `sns_2026_overhaul` (usually) | The active rewrite. |
-| `~/code/sns-production-mirror` | `production_snapshot_04_2026` | Rsync-based filesystem snapshot of the live server, imported from the old standalone `sns-production-mirror` repo. `SECRET_KEY` in `devserver_settings.py` was scrubbed (`REDACTED_SECRET_KEY`) during import via `git filter-repo --replace-text` on a disposable clone — never touch that file's history without re-scrubbing first. |
-| `~/code/sns-live-toolkit` | `cube_upstream_master` | Ben Motz's actual current upstream `cubetoolkit` `master`, imported from the private production git source (`toolkit@cubecinema.com:/home/toolkit/repo`, access via Marcus). A real personal email (`marcus@marcusv.org`) was redacted to `"REDACTED"` in `toolkit/settings_ss.py` (and its two other settings variants) during import, matching the precedent already set on `s+s+nosix`. |
+| `~/code/sns-production-mirror` | `production_snapshot_04_2026` | Rsync-based filesystem snapshot of the live server. Orphan history, five commits, no shared ancestry with the code lineages. `SECRET_KEY` in `devserver_settings.py` was scrubbed (`REDACTED_SECRET_KEY`) during import, so never touch that file's history without re-scrubbing first. |
+| `~/code/sns-live-toolkit` | `cube_upstream_master` | Ben Motz's current upstream `cubetoolkit` `master`. Hash-identical to `BenMotz/cubetoolkit` on public GitHub, so it carries no exposure his own repo does not. |
 
-**`s+s+nosix`** (existing branch, already on public GitHub) is the S+S-specific line within that same private source, already correctly redacted — no import needed for it.
+### Remotes
 
-**Hard rules for `production_snapshot_04_2026` and `cube_upstream_master`:**
-- **Never push either to any remote.** A local `pre-push` hook (`.git/hooks/pre-push`, not versioned) blocks pushes of these two branch names — treat that as a backstop, not a substitute for care. Never `git push origin --all` / `--mirror` / `-f` without checking which branches are included.
-- **Never fetch-and-merge the private `cube-source` remote directly into a local branch.** There is deliberately no standing tracked remote for it. To refresh `cube_upstream_master` (or check `s+s+nosix` for upstream drift) later: clone `toolkit@cubecinema.com:/home/toolkit/repo` (or the current `sns-live-toolkit` if still around) to a **disposable** temp directory, run `git filter-repo --replace-text` with a rule mapping `marcus@marcusv.org==>REDACTED` (check `toolkit/settings_ss.py` and its variants for any other real personal emails first — a full `git grep` across all blobs is the reliable check, not just that one known file), verify with a full-history grep that the string is gone, *then* `git fetch <temp-clone> master:cube_upstream_master` into this repo.
-- Known pre-existing (not introduced by this consolidation, not yet fixed): the real personal email above also appears as the git **author/committer identity** on ~150 historical commits already public on GitHub (`s+s`, `s+s+nosix`, `master`). Fixing that means rewriting commit hashes on already-published branches — a separate, bigger decision, not done as part of this work.
-- Also known and unrelated to the above: `toolkit/devserver_settings.py`'s hardcoded `SECRET_KEY` is *also* already present, unredacted, in this repo's own `master`/`sns_2026_overhaul`/`s+s`/`s+s+nosix` branches and already pushed to public GitHub. It's a dev-only settings file, but worth rotating/removing the hardcoded fallback at some point — flagged, not yet actioned.
+| Remote | Points at | Public? | Notes |
+|---|---|---|---|
+| `origin` | `github.com/jdkram/sns-toolkit` | yes | Ours. |
+| `homeserver` | freyja | no | Deploy target. |
+| `upstream` | `github.com/BenMotz/cubetoolkit` | yes | Ben's published tree. Fetch freely. |
+| `cube` | `toolkit@cubecinema.com:/home/toolkit/repo` | **no** | The Cube's own server. Read access granted by Marcus, May 2026. Slow: allow three minutes for a fetch. Fetches into `refs/remotes/cube/*` only. |
 
-The original standalone directories (`sns-production-mirror-old` / `sns-live-toolkit-old`) were reviewed and deleted 2026-07-28 — their uncommitted state was either already superseded in the canonical worktrees or, in one case, safe to discard (a stray empty `sns_production.db`; the real data lives at `~/backups/sns/sns_production.db` and `~/sync/sns-toolkit/sns_production.sql`). A restic snapshot of `~/code` was taken beforehand as a safety net.
+`cube` carries branches that exist nowhere else, currently `s+s-rebased` and `s+s-reunification`. Keep them as remote-tracking refs rather than local branches. They are Ben's unpublished, self-declared unreviewed work, so importing them is fine but publishing them is his call to make, not ours.
+
+### The push guard
+
+`.git/hooks/pre-push` (local only, not versioned) refuses any push to `origin` or `upstream` that would send commits reachable only from `refs/remotes/cube/*` or `production_snapshot_04_2026`.
+
+It checks **content, not ref names**, because a name check is trivially defeated by `git push origin production_snapshot_04_2026:refs/heads/something-innocent`. Commits already reachable from `upstream/*` or `origin/*` are excluded as already public, which is why `cube/master` does not trip it. Pushes to `homeserver` are not checked.
+
+It is a guard against accidents, not against intent: `--no-verify` bypasses it, and it lives only in this checkout. Re-create it after any fresh clone.
+
+### Publishing rules
+
+- **Never push `production_snapshot_04_2026` anywhere public.** It is a filesystem snapshot of a live server. This matters more once `jdkram/sns-toolkit` becomes a GitHub fork, because objects pushed into a fork network stay reachable from the network even after the branch is deleted.
+- **Before importing a branch that is not already public somewhere, grep it for personal data you would be newly publishing.** Checked for `s+s-rebased` on 2026-09-01: same three settings files, same address, nothing new.
+- Never run `git push origin --all`, `--mirror` or `-f` without checking which branches are included.
+
+### The redaction procedure has been retired
+
+A previous rule required cloning the `cube` remote to a disposable directory and running `git filter-repo` to strip `marcus@marcusv.org` before importing. That protected against an exposure Ben himself publishes: his `master` is public on GitHub, address included, at the same hash. The procedure cost real work and protected nothing, so it is gone, replaced by the lighter check above.
+
+A correction to the earlier note in passing: `s+s+nosix` was described as "already correctly redacted" on public GitHub. It is not. Local `master`, `s+s`, `s+s+nosix` and `retheme-2023` are the redacted lineage; the copies on GitHub carry the real address and always have. Decision taken 2026-09-01: adopt the GitHub lineage locally, so the two agree and there is one canonical history per branch. Not yet executed; the four branches still hold the redacted hashes.
+
+### Known and unfixed
+
+- The same personal email appears as the git **author identity** on roughly 150 historical commits already public on GitHub. Fixing it means rewriting hashes on published branches, which is a separate and bigger decision.
+- `toolkit/devserver_settings.py` has a hardcoded `SECRET_KEY`, already public on `master`, `sns_2026_overhaul`, `s+s` and `s+s+nosix`. Dev-only, but worth removing the hardcoded fallback at some point.
+- On `sns_2026_overhaul` the address survives at tip in `CLAUDE.md` and `CURRENT_WORK.md`, quoted as part of the `vols_admin_address` incident write-up. Documentation of a real bug rather than live config, but it is still someone's address in a public repo.
+
+### History of this layout
+
+The original standalone directories (`sns-production-mirror-old`, `sns-live-toolkit-old`) were reviewed and deleted 2026-07-28. A restic snapshot of `~/code` was taken beforehand. Two further stray clones of `BenMotz/cubetoolkit` were found in `~/code/0archive` on 2026-09-01; the eight commits unique to them (your own 2026-02-17 dev-setup and seed-data work) are preserved as tag `archive/claudified-2026-02-17`.
 
 ---
 
