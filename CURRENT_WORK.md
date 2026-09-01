@@ -2,10 +2,38 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-07-15
+**Last updated:** 2026-09-01
 **Last major change:** Logging & email observability workstream complete repo-side: Bug AQ, 9.154, 9.156, 9.159 shipped; repo side of 9.155/9.157/9.158 done (see section 3c). Only the freyja server-side steps remain. 2026-07-15: email log trigger attribution + backend explainer (9.156b), plus a full security/robustness review of the email pipeline — 2 small fixes landed, throttling spec 9.161 added.
 **Current phase:** Phase 4 ongoing
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs) · [REWRITE_STRATEGY.md](docs/REWRITE_STRATEGY.md) (tech notes and migration guide)
+
+---
+
+## Picking this up (start here)
+
+Jonny stepped back from active development on 2026-09-01. This section is the orientation for whoever comes next, whether that is him in a couple of months, XtreamLab, or someone else entirely.
+
+### Where the code lives
+
+`github.com/jdkram/sns-toolkit` is a fork of `BenMotz/cubetoolkit`. Its default branch, `sns_2026_overhaul`, is this rewrite: roughly 440 commits of work on Django 5.2, four extra apps (`inductions`, `labs`, `operations`, `audit`), and diary migrations up to `0043`. **Nothing here is in production.** The live Star and Shadow site runs the `s+s` branch, which is Django 2.2 and has had no development since 2022.
+
+Ignore GitHub's "commits behind" banner. It compares against Ben's `master` from a May 2018 merge-base and reports around 476; the real gap is 143. See CLAUDE.md for why.
+
+### The two realistic paths
+
+**Ben Motz's `s+s-rebased` is the other candidate**, and the more conservative one. It is 15 commits on top of current Cube master, all from 2026-08-23, carrying the Star and Shadow features that were too different to fold into his trunk: per-volunteer logins, a permissions helper, the Django admin backend, mandatory member emails, the pre-2018 image rule, plus two bug fixes. It is not on GitHub. Fetch it from the `cube` remote as `cube/s+s-rebased`.
+
+The suggested first move for anyone starting fresh:
+
+1. **Diff this branch against `cube/s+s-rebased`** and see what each side actually has. They solve overlapping problems from different directions.
+2. **Then choose.** Either extricate the specific features you want from here and port them onto Ben's branch, or, if the overhaul looks solid enough on inspection, work out whether it is worth rebasing `s+s-rebased` onto it instead.
+3. **Consider gating the extra features behind flags.** The overhaul deliberately exposes site settings to end users (`SiteConfiguration`), so features can be toggled on and off without a deploy. That is the intended answer to feature bloat: ship it dormant, let the cinema turn on what it wants, rather than forcing an all-or-nothing adoption.
+
+The tradeoff in one line: Ben's branch is small and maintained by someone else; the overhaul is far more capable but needs an owner.
+
+### First deployable thing
+
+**9.159, the deletion-logging fix.** Event and showing deletions currently leave no audit trail in production. It is built and tested here, needs no further development, and only ever needed somewhere to deploy to. Start there.
 
 ---
 
@@ -416,6 +444,10 @@ Priorities agreed 2026-05-25. Full specs in [TASKS.md](docs/TASKS.md).
 - ~~**Event hub: unconfirmed-showings signpost**~~ ✅ 2026-07-01 — The amber "Checklist" bar only ever mentioned unconfirmed future showings via a separate green "Everything looks good" banner, which is reached only when every other checklist item (copy, image, terms, etc.) is already satisfied — so an event with e.g. no image *and* an unconfirmed showing silently dropped the unconfirmed warning entirely. Added an amber pill inside the checklist bar itself (`view_event_privatedetails.html`), same trigger condition (`unconfirmed_future_count and c.has_future_showing`), linking to a new `#showings-heading` anchor. The all-clear green banner is unchanged. 3 new tests (`EventHubChecklistTests`); 461 diary tests green.
 - ~~**Event template form: layout pass**~~ ✅ 2026-07-01 — The "New/edit event template" form (reached from "Save as template →") had unstyled inputs (no Bootstrap classes were ever applied, since the form is hand-rendered rather than via crispy) and two help texts rendered as `<small>` text beside wide textareas rather than as tooltips. Added Bootstrap `form-control`/`form-select`/`form-check-input` classing to `EventTemplateForm`/`EventTemplateRoleForm`/`EventTemplateRoomForm` widgets (`toolkit/diary/forms.py`); converted the two inline help texts (rota notes, copy summary) to ⓘ label tooltips matching `form_event.html`'s `FIELD_TIPS` pattern, extended to cover most fields; restyled each `.field-section` as a proper Bootstrap card (border + header); widened the page and the name/pricing/film-info columns. **Also fixed in passing:** the `cost_*` fields (cost_type, cost_distributor, etc.) were listed in `EventTemplateForm.Meta.fields` but never rendered anywhere on the page — since they're non-required model fields, an absent-from-POST field is silently blanked by `ModelForm.save()` on every edit. They're now rendered in a new "Terms & cost" card, closing that latent data-loss path. 3 new tests (`EventTemplateFormLayoutTests`); 463 diary tests green.
 - ~~**9.151 Volunteer consent renewal + privacy-policy-change notification**~~ ✅ 2026-07-01. Spec in `docs/tasks/volunteers.md`. Volunteers consented once at induction (`Member.gdpr_opt_in`) and were never asked again. Added: `SiteConfiguration` gains `consent_renewal_days`/`consent_renewal_grace_days` (0 disables) — grouped under "Membership & volunteers" alongside `volunteer_dormancy_days`/`volunteer_purge_days`, the closest sibling settings, rather than in `InductionsSettings`; `InductionsSettings` gains `privacy_policy_version`/`privacy_policy_updated_at` (stays with `privacy_policy_url`, which it versions); `Volunteer` gains `consent_policy_version`, `consent_reminder_sent_at`, and a computed `consent_overdue` property (retention-exempt volunteers always excluded, mirroring `purge_candidates()`). `send_consent_renewal_reminders` management command (cron, alongside `auto_dormancy`) emails active volunteers whose consent has gone stale and the grace period has passed; never touches `status`, never anonymises — overdue volunteers are only flagged (red "Consent overdue" badge on the volunteer list) for a human to review, same philosophy as `purge_stale_volunteers`. Renewal requires **logging in** (dashboard card + `renew_consent_self` view, modelled on the existing `reactivate_self`/"welcome back" card) rather than a token link, so renewing also proves the account is still live. Privacy policy changes are a **manual admin action** ("Mark privacy policy as updated" button in Inductions settings) — not automatic diffing, since the policy itself is just an external URL — which bumps `privacy_policy_version` and immediately emails every volunteer behind it (`notify_policy_change()` in `toolkit/inductions/emails.py`, also exposed as `send_policy_change_notification` for manual retries). Migrations `inductions/0002` + `0003` (add then move out the renewal-days fields), `members/0011`, `diary/0039`. 27 new tests across `toolkit/inductions/tests/test_consent.py` and `toolkit/members/tests/test_pool_management.py`; full suite 1036 green. **Follow-up fixes (same day):** (1) the reminder/notification emails build their login link from `settings.VENUE.get("siteurl", "")`, which no settings file defined — same pre-existing gap as `send_volunteer_digest.py`'s `toolkit_url`. Fixed by setting `VENUE["siteurl"]` in both `docker_settings_starandshadow.py` (`http://localhost:8000`) and `docker_settings_prod_starandshadow.py` (`f"https://{ALLOWED_HOST}"`, mirroring the existing `CSRF_TRUSTED_ORIGINS` pattern) — this also fixes the digest email's link as a side effect, since both read the same `VENUE` dict. (2) `consent_renewal_days`/`consent_renewal_grace_days` moved from `InductionsSettings` to `SiteConfiguration` for consistency with the other volunteer-pool-management thresholds — `InductionsSettings` is scoped to the induction/sign-up workflow, not ongoing pool management.
+
+## Upstream PR candidates (Cube Toolkit)
+
+Genuine, S&S-agnostic bugs found while syncing `cube_upstream_master` (Ben Motz's live upstream), worth offering back per `docs/SPEC.md`'s "being good neighbours" posture — for Jonny to investigate and PR himself, manually, no AI-authored PRs. Tracked in full (with upstream/S&S status per item) in Jonny's own notes, not this public repo.
 
 ## Agent instructions
 
