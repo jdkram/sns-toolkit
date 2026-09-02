@@ -111,8 +111,12 @@ Editing {{ event_list_name }}
       padding: 0;
   }
   .room-hide-btn:hover { opacity: 1; background: rgba(255,255,255,0.7); }
-  /* Collapsed column: col width is set to 0 by JS; cells overflow:hidden */
-  [data-col-hidden="1"] { overflow: hidden !important; padding: 0 !important; border-left: none !important; border-right: none !important; }
+  /* Collapsed column: col width is set to 0 by JS; cells overflow:hidden.
+     white-space:nowrap stops long event names wrapping into a tall stack
+     of single-character lines inside the zero-width cell, which would
+     otherwise inflate the whole row's height (overflow:hidden only clips
+     horizontally, not vertically). */
+  [data-col-hidden="1"] { overflow: hidden !important; padding: 0 !important; border-left: none !important; border-right: none !important; white-space: nowrap !important; }
 
   /* ── Fullscreen mode ──────────────────────────────────────────── */
   .container.diary-fullscreen {
@@ -240,7 +244,6 @@ Editing {{ event_list_name }}
       font-size: 1.05em;
       font-weight: 700;
       color: #1a1a1a;
-      white-space: nowrap;
   }
 
   /* Horizontal scroll when many rooms overflow the container.
@@ -377,6 +380,35 @@ Editing {{ event_list_name }}
       margin: 0.2em 0 0 0;
       line-height: 1.8;
   }
+
+  /* ── Hidden-rooms warning banner ──────────────────────────────── */
+  .diary-hidden-rooms-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1em;
+      background: #fff3cd;
+      border: 1px solid #ffe69c;
+      border-radius: 4px;
+      padding: 0.5em 0.9em;
+      margin-bottom: 1em;
+      font-size: 0.9em;
+      color: #664d03;
+  }
+  #diary-show-all-rooms-btn {
+      background: #664d03;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 0.35em 0.9em;
+      font-size: 0.95em;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+  }
+  #diary-show-all-rooms-btn:hover {
+      background: #4d3a02;
+  }
 </style>
 {% endblock %}
 
@@ -463,7 +495,9 @@ function diaryRecalcRoomWidths() {
             ? (parseFloat(getComputedStyle(otherCol).width) || 7 * fontSize) : 0;
 
         var visibleRoomCols = Array.prototype.slice.call(wrap.querySelectorAll('col.col-room')).filter(function(c) {
-            return c.style.width !== '0';
+            // el.style.width = '0' normalises to '0px' on read-back in most
+            // browsers, so compare the parsed value rather than the string.
+            return parseFloat(c.style.width) !== 0;
         });
         if (!visibleRoomCols.length) return;
 
@@ -513,8 +547,31 @@ function _diarySetRoom(roomPk, visible) {
     if (visible) { _hiddenRooms.delete(roomPk); }
     else         { _hiddenRooms.add(roomPk); }
     try { localStorage.setItem('diary-hidden-rooms', JSON.stringify([..._hiddenRooms])); } catch(e) {}
-    document.getElementById('diary-show-all-rooms-btn').style.display = _hiddenRooms.size ? '' : 'none';
+    _diaryUpdateHiddenRoomsBanner();
     diaryRecalcRoomWidths();
+}
+
+// Room name for a pk, read straight from its header (strips the trailing × button text).
+function _diaryRoomName(roomPk) {
+    if (roomPk === 'other') return 'Other';
+    var th = document.querySelector('th.room-col[data-room="' + roomPk + '"]');
+    if (!th) return null;
+    var btn = th.querySelector('.room-hide-btn');
+    return (btn ? th.textContent.replace(btn.textContent, '') : th.textContent).trim();
+}
+
+function _diaryUpdateHiddenRoomsBanner() {
+    var banner = document.getElementById('diary-hidden-rooms-banner');
+    var text = document.getElementById('diary-hidden-rooms-text');
+    if (!banner || !text) return;
+    if (!_hiddenRooms.size) {
+        banner.style.display = 'none';
+        return;
+    }
+    var names = [..._hiddenRooms].map(_diaryRoomName).filter(Boolean);
+    var label = names.length === 1 ? names[0] + ' is hidden' : names.join(', ') + ' are hidden';
+    text.textContent = '⚠ ' + label + ' — you’re only seeing a subset of rooms below.';
+    banner.style.display = 'flex';
 }
 
 function diaryToggleRoom(roomPk, btn) {
@@ -586,11 +643,8 @@ $(document).ready(function() {
     try {
         if (localStorage.getItem('diary-fullscreen') === '1') diaryToggleFullscreen();
     } catch(e) {}
-    // Hidden rooms (_diarySetRoom calls diaryRecalcRoomWidths after each)
+    // Hidden rooms (_diarySetRoom calls diaryRecalcRoomWidths and updates the banner after each)
     _hiddenRooms.forEach(function(pk) { _diarySetRoom(pk, false); });
-    if (_hiddenRooms.size) {
-        document.getElementById('diary-show-all-rooms-btn').style.display = '';
-    }
     // Initial recalc (covers the no-hidden-rooms case)
     diaryRecalcRoomWidths();
     // Month navigation rail
@@ -722,7 +776,10 @@ $(document).ready(function() {
     {% if can_edit %}<a href="{% url "add-event" %}" aria-keyshortcuts="n">+ New event</a>{% endif %}
     {% if can_edit %}<a href="{% url "quick-create-open-session" %}" title="Announce the building is open for volunteers">🔑 Building open</a>{% endif %}
     <button id="diary-fullscreen-btn" onclick="diaryToggleFullscreen()" title="Expand to full viewport width" style="background:none;border:1px solid #dee2e6;border-radius:4px;padding:0.2rem 0.5rem;font-size:0.85em;cursor:pointer;color:#6c757d;">⛶ Full width</button>
-    <button id="diary-show-all-rooms-btn" onclick="diaryShowAllRooms()" title="Restore all hidden room columns" style="display:none;background:none;border:1px solid #dee2e6;border-radius:4px;padding:0.2rem 0.5rem;font-size:0.85em;cursor:pointer;color:#6c757d;">↔ Show all rooms</button>
+  </div>
+  <div id="diary-hidden-rooms-banner" class="diary-hidden-rooms-banner" style="display:none;" role="status">
+    <span id="diary-hidden-rooms-text"></span>
+    <button id="diary-show-all-rooms-btn" onclick="diaryShowAllRooms()" title="Restore all hidden room columns">↔ Show all rooms</button>
   </div>
   <details class="diary-key">
     <summary>Key</summary>
