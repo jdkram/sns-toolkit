@@ -447,9 +447,17 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
         var toggleText = document.getElementById('filter-toggle-text');
 
         if (filterToggle && filterBar) {
-            // Auto-collapse on mobile only; desktop starts expanded
-            var isMobile = window.innerWidth <= 768;
-            if (isMobile) {
+            var FILTER_EXPANDED_KEY = 'fc6-calendar-filters-expanded';
+            // Default collapsed for everyone -- the extra filter rows are
+            // clutter most people never touch. Remember an explicit choice
+            // to expand, once made, across visits.
+            var expanded = false;
+            try { expanded = localStorage.getItem(FILTER_EXPANDED_KEY) === 'true'; } catch (e) {}
+
+            if (expanded) {
+                filterBar.classList.remove('collapsed');
+                if (toggleText) { toggleText.textContent = 'Hide filters'; }
+            } else {
                 filterBar.classList.add('collapsed');
                 if (toggleText) { toggleText.textContent = 'Show filters'; }
             }
@@ -459,6 +467,7 @@ function init_calendar_view(CSRF_TOKEN, defaultView, defaultDate, django_urls, r
                 if (toggleText) {
                     toggleText.textContent = isCollapsed ? 'Show filters' : 'Hide filters';
                 }
+                try { localStorage.setItem(FILTER_EXPANDED_KEY, isCollapsed ? 'false' : 'true'); } catch (e) {}
                 // Re-render calendar after transition
                 setTimeout(function() {
                     if (calendar) { calendar.render(); }
