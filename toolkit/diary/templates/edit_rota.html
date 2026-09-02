@@ -26,13 +26,18 @@
         margin-bottom: 1.5em;
     }
 
-    /* ── Filter header row (toggle + excluded-count badge) ───────────── */
-    .rota-filter-header {
+    /* ── Core filter row: always visible — search, starred/mine, highlights,
+       then the "More filters" toggle + excluded-count badge trail off to
+       the right. Extras (date range, role, badges, tags) live below,
+       collapsed by default. ─────────────────────────────────────────── */
+    .rota-filters-core {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
-        gap: 0.5em;
-        margin-bottom: 0;
+        gap: 0.5em 0.9em;
     }
+    .rota-filters-core .form-check { margin-bottom: 0; }
+    .rota-filters-core .form-check-label { font-size: 0.88em; }
     .rota-filter-toggle {
         background: none;
         border: none;
@@ -43,6 +48,8 @@
         display: flex;
         align-items: center;
         gap: 0.3em;
+        margin-left: auto;
+        white-space: nowrap;
     }
     .rota-filter-toggle:hover { text-decoration: underline; }
     .rota-filter-chevron { font-style: normal; font-size: 0.8em; }
@@ -56,10 +63,14 @@
         display: none;
     }
 
-    /* ── Collapsible filter body ─────────────────────────────────────── */
-    #rota-filter-body { padding-top: 0.5em; }
+    /* ── Collapsible extras body ───────────────────────────────────────── */
+    #rota-filter-body {
+        padding-top: 0.6em;
+        margin-top: 0.6em;
+        border-top: 1px solid #dee2e6;
+    }
 
-    /* ── Top row: date range + search side by side on desktop ───────── */
+    /* ── Top row: date range + role side by side on desktop ──────────── */
     .rota-top-row {
         display: flex;
         flex-wrap: wrap;
@@ -75,10 +86,10 @@
     }
     .rota-daterange label { font-size: 0.88em; margin-bottom: 0; white-space: nowrap; }
     .rota-daterange input[type="date"] { width: 9.5em; min-width: 0; }
-    .rota-search { flex: 1; min-width: 10em; max-width: 22em; }
+    .rota-search { flex: 1 1 auto; min-width: 10em; max-width: 22em; }
     .rota-search input { width: 100%; }
 
-    /* ── Filter row: filters left, highlights right ──────────────────── */
+    /* ── Extras filter row: role select + badge toggles ───────────────── */
     .rota-filters {
         display: flex;
         flex-wrap: wrap;
@@ -718,6 +729,18 @@
         background: rgba(76, 175, 80, 0.07);
         border-radius: 2px;
     }
+    /* The specific role slot that's yours — bold + coloured name, plus a
+       text tag so the cue doesn't rely on colour alone. */
+    .rota_name--mine {
+        font-weight: 700;
+        color: #1b5e20;
+    }
+    .rota-name-you-tag {
+        font-size: 0.78em;
+        font-weight: 600;
+        color: #1b5e20;
+        margin-left: 0.3em;
+    }
     .rota-showing--starred {
         background: rgba(232, 160, 0, 0.07);
         border-radius: 2px;
@@ -968,8 +991,11 @@ edit_rota(
             $.each(ROLE_BADGES, function(i, badge) {
                 if (li.data(badge.attr) === 1) {
                     // Append inside .rota_role so the icon stays with the
-                    // role label and never pushes the volunteer name column
-                    li.find(".rota_role").append(" " + badge.html);
+                    // role label and never pushes the volunteer name column.
+                    // A non-breaking space (rather than a plain one) keeps
+                    // the badge glued to the role name's last word instead
+                    // of wrapping onto an orphan line of its own.
+                    li.find(".rota_role").append(" " + badge.html);
                 }
             });
         });
@@ -1106,7 +1132,6 @@ edit_rota(
         var selectedRole    = $("#rota-filter-role").val();
         var highlightEmpty  = $("#rota-filter-empty").is(":checked");
         var highlightBeginner = $("#rota-filter-beginner").is(":checked");
-        var onlyVacancies   = $("#rota-filter-vacancies").is(":checked");
         var activeTagBtn    = $(".rota-tag-btn.active");
         var activeTagSlug   = activeTagBtn.length ? activeTagBtn.data("tag-slug") : null;
         var searchTerm      = $.trim($("#rota-search").val()).toLowerCase();
@@ -1141,19 +1166,6 @@ edit_rota(
                 if ($.inArray(activeTagSlug, showingTags) === -1) {
                     showing.hide(); return;
                 }
-            }
-
-            if (onlyVacancies) {
-                var hasVacancy = showing.find(".rota-empty-slot").length > 0
-                              || showing.find("[data-in-past='0'] .rota_name .na").length > 0;
-                // Re-check directly since the class may not be applied yet
-                var hasMissingSlot = false;
-                showing.find("li").each(function() {
-                    if ($(this).find(".rota_name .na").length > 0) {
-                        hasMissingSlot = true; return false;
-                    }
-                });
-                if (!hasMissingSlot) { showing.hide(); return; }
             }
 
             if (onlyStarred && showing.attr("data-mark") !== "star") {
@@ -1424,9 +1436,16 @@ edit_rota(
             {% if current_volunteer_pk %}
             var isMine = false;
             showing.find(".rota_name[data-volunteer-id]").each(function() {
-                if ($(this).attr("data-volunteer-id") === myVolPk) {
+                var nameSpan = $(this);
+                var mine = nameSpan.attr("data-volunteer-id") === myVolPk && myVolPk !== "";
+                nameSpan.toggleClass("rota_name--mine", mine);
+                if (mine) {
                     isMine = true;
-                    return false;
+                    if (!nameSpan.next(".rota-name-you-tag").length) {
+                        nameSpan.after('<span class="rota-name-you-tag">(you)</span>');
+                    }
+                } else {
+                    nameSpan.next(".rota-name-you-tag").remove();
                 }
             });
             if (isMine) { showing.addClass("rota-showing--mine"); return; }
@@ -1532,7 +1551,6 @@ edit_rota(
             if (document.getElementById('rota-kb-help')) { return; }
             var canMark    = !!$(".rota-mark-toggle").length;
             var canEdit    = !!$("a.showing-event-name[href*='edit']").length;
-            var hasVacancy = !!document.getElementById('rota-filter-vacancies');
             var hasStar    = !!document.getElementById('rota-filter-starred');
             var hasMine    = !!document.getElementById('rota-filter-mine');
             var sections = [
@@ -1556,8 +1574,7 @@ edit_rota(
                     ["s",         "Cycle mark  ☆ → ★ → ☽ → ☆"],
                     ["1 / 2 / 0", "Star ★ / shadow ☽ / clear ☆"]
                 ]} : null,
-                hasVacancy ? { heading: "Filters", rows: [
-                    ["v",                  "Toggle Vacancies filter"],
+                (hasStar || hasMine) ? { heading: "Filters", rows: [
                     hasStar ? ["*", "Toggle Starred filter"]    : null,
                     hasMine ? ["f", "Toggle My shifts filter"]  : null
                 ].filter(Boolean)} : null,
@@ -1842,11 +1859,6 @@ edit_rota(
                 }
 
                 // Filter toggles
-                case "v": {
-                    var vcb = document.getElementById('rota-filter-vacancies');
-                    if (vcb) { $(vcb).prop('checked', !vcb.checked).trigger('change'); }
-                    break;
-                }
                 case "*": {
                     var scb = document.getElementById('rota-filter-starred');
                     if (scb) { $(scb).prop('checked', !scb.checked).trigger('change'); }
@@ -1921,7 +1933,7 @@ edit_rota(
         });
 
         $("#rota-filter-role, #rota-filter-empty, " +
-          "#rota-filter-beginner, #rota-filter-vacancies{% if can_mark_events %}, #rota-filter-starred{% endif %}{% if current_volunteer_pk %}, #rota-filter-mine{% endif %}")
+          "#rota-filter-beginner{% if can_mark_events %}, #rota-filter-starred{% endif %}{% if current_volunteer_pk %}, #rota-filter-mine{% endif %}")
             .on("change", applyFilters);
 
         // Re-apply empty-slot highlights and keyholder warnings after a sign-up or clear.
@@ -1951,18 +1963,46 @@ document.addEventListener('DOMContentLoaded', function () {
 {% block body %}
 <div class="rota-wrapper">
 
-    <!-- ── Controls: collapsible filters (date range lives inside) ──── -->
+    <!-- ── Controls: core filters always visible, extras collapsed ──── -->
     <div class="rota-controls">
-        <div class="rota-filter-header">
+        {# Core row: search, starred/mine, highlight toggles — always shown. #}
+        <div class="rota-filters-core">
+            <div class="rota-search">
+                <input type="search" id="rota-search" class="form-control form-control-sm"
+                       placeholder="Search events…" autocomplete="off" aria-label="Search events">
+            </div>
+            {% if can_mark_events %}
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="rota-filter-starred">
+                <label class="form-check-label" for="rota-filter-starred">Starred ★</label>
+            </div>
+            {% endif %}
+            {% if current_volunteer_pk %}
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="rota-filter-mine">
+                <label class="form-check-label" for="rota-filter-mine">My shifts</label>
+            </div>
+            {% endif %}
+            <span class="filter-section-divider" aria-hidden="true"></span>
+            <span class="highlight-section-label">Highlight:</span>
+            <div class="form-check form-check--highlight">
+                <input class="form-check-input" type="checkbox" id="rota-filter-empty">
+                <label class="form-check-label" for="rota-filter-empty">Empty slots</label>
+            </div>
+            <div class="form-check form-check--highlight">
+                <input class="form-check-input" type="checkbox" id="rota-filter-beginner">
+                <label class="form-check-label" for="rota-filter-beginner">Good first role 🌱</label>
+            </div>
+
             <button type="button" id="rota-filter-toggle" class="rota-filter-toggle"
-                    aria-expanded="true" aria-controls="rota-filter-body">
-                <em class="rota-filter-chevron">▾</em> Filters
+                    aria-expanded="false" aria-controls="rota-filter-body">
+                <em class="rota-filter-chevron">▸</em> More filters
             </button>
             <span id="rota-filter-status" class="rota-filter-status"></span>
         </div>
 
-        <div id="rota-filter-body">
-            {# Date range + search on one flex row (stack on narrow screens) #}
+        {# Extras: date range, role, badge-visibility prefs, tags — collapsed by default. #}
+        <div id="rota-filter-body" style="display:none;">
             <div class="rota-top-row">
                 <form id="daterange" class="rota-daterange"
                       data-edit-url="{% url 'rota-edit' %}"
@@ -1976,47 +2016,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     <input type="date" name="to_date" value="{{ end_date|date:'Y-m-d' }}"
                            id="id_to_date" class="form-control form-control-sm" />
                 </form>
-                <div class="rota-search">
-                    <input type="search" id="rota-search" class="form-control form-control-sm"
-                           placeholder="Search events…" autocomplete="off" aria-label="Search events">
-                </div>
-            </div>
-
-            {# Filter row: actual filters, then a visual break, then highlight toggles #}
-            <div class="rota-filters">
                 <div class="filter-group">
                     <label for="rota-filter-role">Role:</label>
                     <select id="rota-filter-role" class="form-control form-control-sm" style="width: auto;">
                         <option value="">All</option>
                     </select>
                 </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="rota-filter-vacancies">
-                    <label class="form-check-label" for="rota-filter-vacancies">Vacancies</label>
-                </div>
-                {% if can_mark_events %}
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="rota-filter-starred">
-                    <label class="form-check-label" for="rota-filter-starred">Starred ★</label>
-                </div>
-                {% endif %}
-                {% if current_volunteer_pk %}
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="rota-filter-mine">
-                    <label class="form-check-label" for="rota-filter-mine">My shifts</label>
-                </div>
-                {% endif %}
-                <span class="filter-section-divider" aria-hidden="true"></span>
-                <span class="highlight-section-label">Highlight:</span>
-                <div class="form-check form-check--highlight">
-                    <input class="form-check-input" type="checkbox" id="rota-filter-empty">
-                    <label class="form-check-label" for="rota-filter-empty">Empty slots</label>
-                </div>
-                <div class="form-check form-check--highlight">
-                    <input class="form-check-input" type="checkbox" id="rota-filter-beginner">
-                    <label class="form-check-label" for="rota-filter-beginner">Good first role 🌱</label>
-                </div>
-                <span class="filter-section-divider" aria-hidden="true"></span>
+            </div>
+
+            <div class="rota-filters">
                 {# Badge group: wrapped so "Badges:" label never splits from its checkboxes #}
                 <div style="display:inline-flex; align-items:center; flex-wrap:wrap; gap:0.5rem;">
                     <span class="highlight-section-label">Badges:</span>
