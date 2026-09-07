@@ -1,0 +1,62 @@
+# human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Opus 5"]; status: "#ai-input"
+#
+# Tool configuration for the Cube/S+S toolkit.
+#
+# Before this file existed, every tool setting lived in prose in
+# docs/ONBOARDING.md. That meant `black` run without arguments used its
+# default 88-column width and reformatted the entire repo, and `ruff` was
+# never wired in at all -- which is how a June 2026 refactor shipped 500+
+# unused imports that went unnoticed for two and a half months.
+#
+# See QUALITY_PASS.md for the wider clean-up this belongs to.
+
+[tool.black]
+line-length = 79
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 79
+target-version = "py311"
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "ARG", "C901"]
+
+# E501 (line-too-long) is deliberately off: `black` owns line length, and
+# it cannot split long string literals or comments. Even immediately after
+# a clean `black --line-length 79` pass, 1,375 lines still exceed 79 --
+# mostly `help_text`, log messages and seed data. Enabling it would mean a
+# permanently red gate that everyone learns to ignore, which is worse than
+# no gate. E203 is off for the same reason: it disagrees with black on
+# slice whitespace.
+ignore = ["E501", "E203"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
+
+[tool.ruff.lint.per-file-ignores]
+# The views packages are re-export shims: `urls.py` imports the package and
+# reaches through to the symbols. `labs/views/` and `diary/edit_views/`
+# declare `__all__` so ruff already spares them; `members/views/` does not,
+# and without this its 34 re-exports would be auto-removed and the URLconf
+# would break. Ignoring F401 package-wide covers all three regardless.
+"__init__.py" = ["F401"]
+
+# Test modules legitimately import fixtures and helpers for their side
+# effects, and unused arguments are normal in mock signatures.
+"*/tests/*" = ["ARG"]
+
+# Django's settings layering (`from .settings_common import *`) is the
+# idiomatic way to do per-venue overrides. Star imports are correct here.
+"toolkit/*settings*.py" = ["F403", "F405"]
+
+# QUARANTINED, not blessed. The June 2026 split gave members/views/ a
+# `_common.py` re-export hub that all eight modules pull in via
+# `from ._common import *`, so 542 symbol references have no traceable
+# origin -- you cannot tell what `Volunteer` or `timezone` is without
+# opening another file. This is the same class of problem as the
+# copy-pasted import headers in diary/edit_views/, just a different
+# shortcut. It needs explicit per-module imports, which ruff cannot
+# autofix. Ignored here so the CI gate can go up now rather than waiting
+# on it; scheduled in QUALITY_PASS.md. Delete this block when that lands.
+"toolkit/members/views/*.py" = ["F403", "F405"]
