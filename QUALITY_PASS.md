@@ -8,24 +8,28 @@ status: "#ai-input"
 
 > **Status:** in progress on branch `chore/quality-pass-2026-09`, branched from
 > `sns_2026_overhaul` at `ccbb3d6a`.
-> **Last updated:** 2026-09-07
+> **Last updated:** 2026-09-08
 > **Resume by:** reading this file top-to-bottom, then checking
 > `git log --oneline chore/quality-pass-2026-09` to see which chunks actually shipped.
 
-### State at the end of the last session (2026-09-07)
+### State at the end of the last session (2026-09-08)
 
 | | |
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
-| Chunks done | 0, 1 |
-| Next chunk | **2 (the gates)** |
+| Chunks done | 0, 1, 2 |
+| Next chunk | **3 (docs drift)** |
 | Tests | 1,129 passing |
-| Ruff | 110 findings, none auto-fixable, all pre-triaged in Chunk 2 below |
+| Ruff | 0 findings |
 | Black | clean at 79 |
+| CI | `.github/workflows/ci.yml` + `.pre-commit-config.yaml` in place, not yet exercised by a real PR |
 
 Commits so far, newest first:
 
 ```
+(this commit)  docs(quality): record Chunk 2 results in the pass tracker
+f46c977d  ci(quality): add pre-commit and GitHub Actions gates
+b980935a  chore(quality): triage the 110 remaining ruff findings
 94786738  docs(quality): record Chunk 1 results in the pass tracker
 716002bd  chore(quality): black reformat at the now-pinned 79 columns
 c336f5df  chore(quality): remove 892 unused imports and variables
@@ -260,35 +264,54 @@ suite green after each.
 - Result: ruff findings **998 → 110**, none auto-fixable. Those need judgement and
   are Chunk 2's first job: 71 `ARG`, 19 `C901`, 8 `F841`, 5 `E741`, 4 `E402`, 3 `F401`.
 
-### Chunk 2: The gates — NOT STARTED
+### Chunk 2: The gates — DONE 2026-09-08
 
-- `.pre-commit-config.yaml` running ruff + black on staged files.
-- `.github/workflows/ci.yml` running ruff, `black --check`, and the full Django test suite on
-  push and PR. This is the one that matters: it catches what an agent running with
-  `--no-verify` would skip.
+**Ruff findings, resolved not just silenced.** The pre-triage table below was worked
+line-by-line, not blanket-ignored:
 
-**CI is simpler than it looks here:** `toolkit/test_settings.py` uses SQLite, not MySQL, so
-the workflow needs no database service container. Install Python 3.11, install
-`requirements/dev.txt`, run the three verification commands. GitHub Actions is free for public
-repos and this repo is public.
+- `ARG001` on signal handlers and the three `@receiver`-decorated functions in
+  `toolkit_auth/decorators.py` — per-file-ignores added for `*/signals.py` and that one file.
+- `ARG002` on `handle(self, *args, **options)` — per-file-ignore for
+  `*/management/commands/*.py`.
+- The ~46 remaining `ARG` findings were read individually. All but 6 turned out to be
+  framework-mandated signatures (Django views called positionally from urlconf, admin
+  permission hooks, widget `render()`/`value_from_datadict()`, template tag registration,
+  `Model.delete(*args, **kwargs)`, a `signal.signal()` handler, `BaseEmailBackend` mocks) —
+  each got an inline `# noqa` naming the API that requires it, not a blanket ignore, so a
+  genuinely dead argument on non-framework code still trips the gate. The 6 real exceptions:
+  `labs/forms.py`'s `ExchangeItemForm.__init__(user=...)` is accepted-but-unused pending real
+  filtering logic (noted, not fixed — out of scope here); `auto_dormancy.py`'s
+  `lambda v: None` intentionally matches a sibling callback's shape; three `seed_dev_data.py`
+  private-helper arguments (`volunteer_objects`, `anchor`, `vol_list`) are dead and deferred to
+  Chunk 11's rewrite rather than hand-patched now.
+- `C901`: `max-complexity` raised from 12 to 101 (the measured worst), with a comment
+  explaining it's a ratchet, not a target, to be brought back down as Chunks 9 and 11 land.
+- `E741` ambiguous `l`: all 5 renamed (`label_text`, `line`, `lang`, `lightness`).
+- `E402`: `diary/edit_views/events.py` and `film.py` had a `._common` import stranded after a
+  `logger = ...` line — moved up, no deliberate layering involved. The
+  `docker_settings_starandshadow.py` and `seed_dev_data.py` noqa comments were sitting on the
+  wrong physical line for a multi-line import (ruff anchors `noqa` to the line the name itself
+  is on, not the closing paren) — moved. `members/tests/test_volunteers.py` had a stray
+  mid-file import, moved to the top.
+- `F401` in `audit/apps.py` and `seed_dev_data.py`: kept, noqa'd, comment explains why
+  (side-effect import; availability probes).
+- `F841` unused locals: `diary_overview.py`'s `local_now` and `rota.py`'s
+  `yesterday_local_date` were confirmed dead (grepped for any later use) and deleted. Three
+  test-file locals (`test_shopping.py`, `test_maintenance.py`, `seed_dev_data.py`'s `job`) were
+  create()-for-side-effect only — dropped the assignment, kept the call. One,
+  `test_edit_misc.py`'s `initial_pricing`, was genuinely unused scaffolding — deleted.
+  **One was a real bug**, exactly the class QUALITY_PASS.md called out in advance:
+  `test_programming_queue.py`'s `test_invalid_action_returns_error` computed a `response` and
+  never asserted on it. Added `assertRedirects` against the actual redirect target (the Event
+  Hub, not the queue — the view's "unknown action" branch returns before the `next` param is
+  read, which the test now pins down instead of leaving implicit).
 
-**The 110 remaining ruff findings, pre-triaged 2026-09-07.** Work this list rather than
-re-deriving it. Fix or ignore-with-a-stated-reason, one at a time. Do *not* blanket-ignore to
-reach green, and do not `--fix` any of it blindly: several are correct code that ruff cannot
-understand.
+Ruff: 110 → 0. Black: clean. Tests: 1,129 passing (one assertion added, none broken).
 
-| Finding | Count | Verdict |
-|---|---|---|
-| `ARG001` on signal handlers (`sender`, `kwargs`) | ~10 | **Ignore by pattern.** Django's signal API dictates the signature; the receiver cannot drop them. Add a `per-file-ignores` for `*/signals.py`. |
-| `ARG002` on `handle(self, *args, **options)` | ~15 | **Ignore by pattern.** Django's `BaseCommand` API dictates it. Add `*/management/commands/*`. |
-| `ARG002` on Wagtail/Django hook methods taking `request` | ~15 | **Ignore case by case.** Framework-mandated signatures (`toolkit/content/models.py:138,142`). |
-| Remaining `ARG` | ~30 | **Judge individually.** A genuinely unused argument on our own helper is worth deleting. |
-| `C901` complex-structure | 19 | **Do not fix here.** These are the god-functions Chunks 9 and 11 exist to break up. Set `max-complexity` to the current worst value so the gate passes today, then ratchet it down as those chunks land. Worst is `seed_dev_data.handle` at 101. |
-| `E741` ambiguous name `l` | 5 | **Fix.** Trivial rename. `diary/form_widgets.py:158`, `diary/poster.py:122`, `diary/tmdb.py:100,121`, `util/image.py:54`. |
-| `E402` import not at top | 4 | **Read each.** In settings files this is deliberate layering. `diary/edit_views/events.py:47` and `film.py:22` are worth understanding before moving. |
-| `F401` in `audit/apps.py:11` | 1 | **DO NOT REMOVE.** `from . import signals` is a side-effect import that registers the signal handlers. Deleting it silently disables audit logging, and no test would catch it. Add `# noqa: F401` with a comment saying why. |
-| `F401` in `seed_dev_data.py:68,70` | 2 | **Keep.** Deliberate availability probes inside a try/except. `# noqa: F401`. |
-| `F841` unused local | 8 | **Read each; some are real bugs.** `diary/tests/test_programming_queue.py:164` assigns a `response` and never asserts on it, which is the status-code-only test problem showing up as a lint finding. `diary/edit_views/diary_overview.py:283` (`local_now`) and `rota.py:114` (`yesterday_local_date`) are dead date calculations worth understanding before deleting, in case the *use* was dropped rather than the variable being spurious. |
+**The gates themselves:** `.pre-commit-config.yaml` (ruff + black on staged files) and
+`.github/workflows/ci.yml` (ruff, `black --check`, full Django test suite via SQLite, no DB
+service container needed) are in place. Not yet exercised by a real push/PR — that happens
+naturally once this branch's work goes up.
 
 *After this chunk, June's regression could not have happened. Everything later is optional in a
 way this is not.*

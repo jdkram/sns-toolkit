@@ -82,7 +82,7 @@ layer, and routes the judgement work to a different model (MiniMax M3, ~$0.80 to
 |---|---|---|
 | 0 Set up | ✅ 2026-09-07 | `pyproject.toml` pins black + ruff at line-length 79; both plus `coverage` added to the image. E501 disabled with the measurement behind that decision recorded in the config. |
 | 1 Mechanical fixes | ✅ 2026-09-07 | 892 unused imports/variables removed (823 deletions, 48 files); black reformat at 79 (142 files). Ruff 998 → 110 findings. |
-| 2 The gates | ⬜ | pre-commit + GitHub Actions CI. Tests are SQLite, so no DB service container needed. The 110 remaining findings are pre-triaged in QUALITY_PASS.md. |
+| 2 The gates | ✅ 2026-09-08 | 110 ruff findings triaged (fixed, inline-noqa'd with a reason, or config-ignored by pattern) — one was a real test bug, now fixed. `.pre-commit-config.yaml` + `.github/workflows/ci.yml` added. Ruff 110 → 0. |
 | 3 Docs drift | ⬜ | 20 doc-referenced paths do not exist; `operations` and `audit` missing from the onboarding tour. |
 | 4 Baseline | ⬜ | First real per-module coverage measurement. |
 | 5 MiniMax sweep | ⬜ | ~40 files, ~$0.70. |
