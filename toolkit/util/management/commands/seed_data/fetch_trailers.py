@@ -23,6 +23,7 @@ from pathlib import Path
 # Config
 # ---------------------------------------------------------------------------
 
+
 def _find_repo_root(start: Path) -> Path:
     """Walk up from start until we find the repo root (has VERSION file)."""
     for parent in [start, *start.parents]:
@@ -74,7 +75,9 @@ def _load_api_key() -> str:
 def _tmdb_get(url: str, api_key: str) -> dict:
     sep = "&" if "?" in url else "?"
     full_url = f"{url}{sep}api_key={api_key}"
-    req = urllib.request.Request(full_url, headers={"Accept": "application/json"})
+    req = urllib.request.Request(
+        full_url, headers={"Accept": "application/json"}
+    )
     with urllib.request.urlopen(req, timeout=30) as resp:
         return json.load(resp)
 
@@ -96,7 +99,8 @@ def _search_movie(title: str, year: int | None, api_key: str) -> dict | None:
 def _pick_trailer(videos: list[dict]) -> str | None:
     """Pick the best YouTube trailer from a TMDB videos list."""
     yt_videos = [
-        v for v in videos
+        v
+        for v in videos
         if v.get("site", "").lower() == "youtube" and v.get("key")
     ]
     if not yt_videos:
@@ -149,6 +153,7 @@ def _fetch_trailer_for_film(film: dict, api_key: str) -> str | None:
 def _parse_toml_films(path: Path) -> tuple[list[dict], list[dict]]:
     """Return (sunday_films, thursday_films) using stdlib tomllib."""
     import tomllib
+
     with open(path, "rb") as f:
         data = tomllib.load(f)
     return data.get("sunday_films", []), data.get("thursday_films", [])
@@ -177,7 +182,11 @@ def _update_toml_file(path: Path, updates: dict[str, str]) -> None:
         if trailer_match and current_name and current_name in updates:
             new_url = updates[current_name]
             # Preserve original indentation by replacing only the value part
-            out_lines.append(re.sub(r'trailer_url\s*=\s*""', f'trailer_url = "{new_url}"', line))
+            out_lines.append(
+                re.sub(
+                    r'trailer_url\s*=\s*""', f'trailer_url = "{new_url}"', line
+                )
+            )
             changed += 1
             continue
 

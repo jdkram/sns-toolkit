@@ -595,4 +595,3 @@ class AgeRatingFilterTests(DiaryTestsMixin, TestCase):
         )
         self.assertContains(response, 'data-age-filter="__none__"')
         self.assertContains(response, "??")
-

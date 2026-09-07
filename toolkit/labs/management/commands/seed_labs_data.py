@@ -14,7 +14,16 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from toolkit.labs.models import Collective, CollectiveLink, CollectiveRole, DonationItem, FoundItem, Job, RoomNote, COLLECTIVE_PALETTE
+from toolkit.labs.models import (
+    Collective,
+    CollectiveLink,
+    CollectiveRole,
+    DonationItem,
+    FoundItem,
+    Job,
+    RoomNote,
+    COLLECTIVE_PALETTE,
+)
 
 DATA_DIR = Path(__file__).parent / "seed_data"
 
@@ -71,7 +80,9 @@ class Command(BaseCommand):
             links = item.pop("links", [])
             roles = item.pop("defined_roles", [])
             item.setdefault("colour", random.choice(palette_hexes))
-            collective, made = Collective.objects.get_or_create(slug=item["slug"], defaults=item)
+            collective, made = Collective.objects.get_or_create(
+                slug=item["slug"], defaults=item
+            )
             if made:
                 created += 1
             else:
@@ -83,10 +94,14 @@ class Command(BaseCommand):
             # Sync links and roles: clear and recreate so TOML is always the source of truth.
             collective.links.all().delete()
             for order, link in enumerate(links):
-                CollectiveLink.objects.create(collective=collective, order=order, **link)
+                CollectiveLink.objects.create(
+                    collective=collective, order=order, **link
+                )
             collective.defined_roles.all().delete()
             for order, role in enumerate(roles):
-                CollectiveRole.objects.create(collective=collective, display_order=order, **role)
+                CollectiveRole.objects.create(
+                    collective=collective, display_order=order, **role
+                )
         return created
 
     def _seed_donations(self):
@@ -113,7 +128,11 @@ class Command(BaseCommand):
             )
             _, made = Job.objects.get_or_create(
                 title=item["title"],
-                defaults={**item, "posted_by": admin_user, "resolved_at": resolved_at},
+                defaults={
+                    **item,
+                    "posted_by": admin_user,
+                    "resolved_at": resolved_at,
+                },
             )
             if made:
                 created += 1
@@ -129,8 +148,16 @@ class Command(BaseCommand):
             disposed_days_ago = item.pop("disposed_days_ago", 0)
 
             found_on = today - datetime.timedelta(days=days_ago)
-            claimed_on = (today - datetime.timedelta(days=claimed_days_ago)) if claimed_days_ago else None
-            disposed_on = (today - datetime.timedelta(days=disposed_days_ago)) if disposed_days_ago else None
+            claimed_on = (
+                (today - datetime.timedelta(days=claimed_days_ago))
+                if claimed_days_ago
+                else None
+            )
+            disposed_on = (
+                (today - datetime.timedelta(days=disposed_days_ago))
+                if disposed_days_ago
+                else None
+            )
 
             _, made = FoundItem.objects.get_or_create(
                 description=item["description"],

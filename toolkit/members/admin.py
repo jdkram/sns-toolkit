@@ -23,7 +23,15 @@ admin.site.register(User, CustomUserAdmin)
 
 @admin.register(Member)
 class MemberAdmin(admin.ModelAdmin):
-    list_display = ("name", "email", "phone", "is_member", "membership_expires", "mailout", "created_at")
+    list_display = (
+        "name",
+        "email",
+        "phone",
+        "is_member",
+        "membership_expires",
+        "mailout",
+        "created_at",
+    )
     list_filter = ("is_member", "mailout", "mailout_failed")
     search_fields = ("name", "email", "postcode", "number")
     readonly_fields = ("number", "created_at", "updated_at", "mailout_key")

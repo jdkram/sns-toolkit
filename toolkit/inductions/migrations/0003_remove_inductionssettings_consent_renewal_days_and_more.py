@@ -6,16 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('inductions', '0002_inductionssettings_consent_renewal_days_and_more'),
+        (
+            "inductions",
+            "0002_inductionssettings_consent_renewal_days_and_more",
+        ),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='inductionssettings',
-            name='consent_renewal_days',
+            model_name="inductionssettings",
+            name="consent_renewal_days",
         ),
         migrations.RemoveField(
-            model_name='inductionssettings',
-            name='consent_renewal_grace_days',
+            model_name="inductionssettings",
+            name="consent_renewal_grace_days",
         ),
     ]

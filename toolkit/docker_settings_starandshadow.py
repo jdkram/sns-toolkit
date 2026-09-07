@@ -33,7 +33,9 @@ DATABASES = {
     }
 }
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "insecure-dev-secret-key-change-in-production")
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY", "insecure-dev-secret-key-change-in-production"
+)
 
 # Print emails to the container logs instead of attempting SMTP delivery.
 # Change to smtp.EmailBackend and set EMAIL_HOST/PORT/etc. in production.
@@ -44,7 +46,9 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "insecure-dev-secret-key-change-in-pro
 # references (e.g. bootstrap.bundle.min.js.map) that aren't shipped in our
 # static tree. manifest_strict=False silences those without skipping the file.
 # The manifest format is identical so whitenoise reads it correctly.
-from django.contrib.staticfiles.storage import ManifestStaticFilesStorage  # noqa: E402
+from django.contrib.staticfiles.storage import (
+    ManifestStaticFilesStorage,
+)  # noqa: E402
 
 
 class _PermissiveManifestStorage(ManifestStaticFilesStorage):
@@ -56,7 +60,9 @@ class _PermissiveManifestStorage(ManifestStaticFilesStorage):
         # maps that bootstrap ships references to but doesn't include). Return
         # the name unchanged so the build doesn't abort.
         try:
-            return super().hashed_name(name, content=content, filename=filename)
+            return super().hashed_name(
+                name, content=content, filename=filename
+            )
         except ValueError:
             return name
 
@@ -73,7 +79,9 @@ STORAGES = {
 # Logging wrapper (9.154): one log line per email on the toolkit.email
 # logger. The backend that actually delivers goes in TOOLKIT_WRAPPED_EMAIL_BACKEND.
 EMAIL_BACKEND = "toolkit.util.email_backend.LoggingEmailBackend"
-TOOLKIT_WRAPPED_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+TOOLKIT_WRAPPED_EMAIL_BACKEND = (
+    "django.core.mail.backends.console.EmailBackend"
+)
 # Fail fast on SMTP connection attempts rather than hanging a worker.
 # Django's default has no timeout. Only takes effect with smtp.EmailBackend.
 EMAIL_TIMEOUT = 10

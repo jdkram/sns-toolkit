@@ -72,7 +72,9 @@ class DonationItem(models.Model):
 
     name = models.CharField(max_length=128)
     category = models.CharField(max_length=64, blank=True, default="")
-    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_WANTED)
+    status = models.CharField(
+        max_length=16, choices=STATUS_CHOICES, default=STATUS_WANTED
+    )
     notes = models.TextField(
         blank=True,
         default="",
@@ -112,24 +114,39 @@ class Collective(models.Model):
     name = models.CharField(max_length=128)
     slug = models.SlugField(max_length=64, unique=True)
     colour = models.CharField(max_length=7, default="#343a40")
-    display_order = models.IntegerField(default=0, help_text="Lower numbers appear first.")
+    display_order = models.IntegerField(
+        default=0, help_text="Lower numbers appear first."
+    )
     active = models.BooleanField(default=True)
     volunteer_count = models.CharField(
-        max_length=256, blank=True, default="",
+        max_length=256,
+        blank=True,
+        default="",
         help_text="Descriptive volunteer count shown on the collectives page.",
     )
     about = models.TextField(blank=True, default="")
-    roles = models.TextField(blank=True, default="", verbose_name="Roles and tasks")
-    organising = models.TextField(blank=True, default="", verbose_name="How they meet and organise")
-    proud_of = models.TextField(blank=True, default="", verbose_name="What they're most proud of")
-    get_involved = models.TextField(blank=True, default="", verbose_name="How to get involved")
+    roles = models.TextField(
+        blank=True, default="", verbose_name="Roles and tasks"
+    )
+    organising = models.TextField(
+        blank=True, default="", verbose_name="How they meet and organise"
+    )
+    proud_of = models.TextField(
+        blank=True, default="", verbose_name="What they're most proud of"
+    )
+    get_involved = models.TextField(
+        blank=True, default="", verbose_name="How to get involved"
+    )
     sample_role = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Sample role",
         help_text="A short, concrete example of what a member might actually do — shown to help people decide whether to join.",
     )
     contact = models.CharField(
-        max_length=256, blank=True, default="",
+        max_length=256,
+        blank=True,
+        default="",
         help_text="Contact email or address shown at the bottom of the card.",
     )
     invite_only = models.BooleanField(
@@ -141,13 +158,18 @@ class Collective(models.Model):
         help_text="Include this collective on the public /labs/collectives/public/ page. Requires public_copy to be set.",
     )
     public_copy = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         verbose_name="Public description",
         help_text="Short description for the public directory (100–300 characters). Leave blank to exclude from the public page even if listed_publicly is checked.",
     )
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(
-        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
     )
 
     class Meta:
@@ -196,11 +218,14 @@ class CollectiveRole(models.Model):
     title = models.CharField(max_length=128)
     description = models.TextField(blank=True, default="")
     time_commitment = models.CharField(
-        max_length=128, blank=True, default="",
+        max_length=128,
+        blank=True,
+        default="",
         help_text="e.g. '~3hrs/month', 'weekly Tuesday evenings'",
     )
     getting_started = models.TextField(
-        blank=True, default="",
+        blank=True,
+        default="",
         help_text="First concrete step for someone interested in this role.",
     )
     needs_volunteers = models.BooleanField(
@@ -247,12 +272,22 @@ class Job(models.Model):
         default="",
         help_text="Area or location, e.g. 'Kitchen', 'Roof', 'Anywhere'.",
     )
-    description = models.TextField(blank=True, default="", help_text="Full description of the issue or task.")
-    plan_status = models.TextField(blank=True, default="", help_text="Current plan or status update.")
+    description = models.TextField(
+        blank=True,
+        default="",
+        help_text="Full description of the issue or task.",
+    )
+    plan_status = models.TextField(
+        blank=True, default="", help_text="Current plan or status update."
+    )
 
     # Flags
-    safety_risk = models.BooleanField(default=False, help_text="Is there an immediate safety risk?")
-    skill_needed = models.BooleanField(default=False, help_text="Does this require a specific skill or trade?")
+    safety_risk = models.BooleanField(
+        default=False, help_text="Is there an immediate safety risk?"
+    )
+    skill_needed = models.BooleanField(
+        default=False, help_text="Does this require a specific skill or trade?"
+    )
     skill_required = models.CharField(
         max_length=128,
         blank=True,
@@ -260,7 +295,9 @@ class Job(models.Model):
         help_text="Which skill or trade, e.g. 'Electrical', 'Sound desk', 'Carpentry'.",
     )
     keyholder_required = models.BooleanField(default=False)
-    urgency = models.CharField(max_length=16, choices=URGENCY_CHOICES, default=URGENCY_LOW)
+    urgency = models.CharField(
+        max_length=16, choices=URGENCY_CHOICES, default=URGENCY_LOW
+    )
     location_type = models.CharField(
         max_length=16,
         choices=LOCATION_CHOICES,
@@ -270,7 +307,11 @@ class Job(models.Model):
 
     # People
     posted_by = models.ForeignKey(
-        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="posted_jobs"
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="posted_jobs",
     )
     reporter_name = models.CharField(
         max_length=128,
@@ -305,7 +346,11 @@ class LoftItem(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True, default="")
     added_by = models.ForeignKey(
-        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="loft_items"
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="loft_items",
     )
     added_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -325,7 +370,11 @@ class AreaPhoto(models.Model):
     image = models.ImageField(upload_to="area-photos/")
     caption = models.CharField(max_length=200, blank=True, default="")
     uploaded_by = models.ForeignKey(
-        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
     )
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
@@ -347,7 +396,11 @@ class Bulletin(models.Model):
     title = models.CharField(max_length=200)
     body = models.TextField()
     author = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(
@@ -396,7 +449,9 @@ class Bulletin(models.Model):
 
 
 class BulletinRead(models.Model):
-    bulletin = models.ForeignKey(Bulletin, on_delete=models.CASCADE, related_name="reads")
+    bulletin = models.ForeignKey(
+        Bulletin, on_delete=models.CASCADE, related_name="reads"
+    )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="+")
     read_at = models.DateTimeField(auto_now_add=True)
 
@@ -409,6 +464,7 @@ class BulletinRead(models.Model):
 
 
 # ── Shopping list (consumables) ───────────────────────────────────────────────
+
 
 class Supplier(models.Model):
     FULFILMENT_DELIVERY = "delivery"
@@ -427,7 +483,8 @@ class Supplier(models.Model):
     ordering_notes = models.TextField(blank=True, default="")
     account_holder = models.ForeignKey(
         "members.Volunteer",
-        null=True, blank=True,
+        null=True,
+        blank=True,
         on_delete=models.SET_NULL,
         related_name="supplier_logins",
     )
@@ -456,7 +513,9 @@ class ConsumableItem(models.Model):
     ]
 
     name = models.CharField(max_length=100)
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default=CATEGORY_OTHER)
+    category = models.CharField(
+        max_length=20, choices=CATEGORY_CHOICES, default=CATEGORY_OTHER
+    )
     notes = models.TextField(blank=True, default="")
     active = models.BooleanField(default=True)
 
@@ -473,15 +532,25 @@ class ConsumableItem(models.Model):
 
 
 class SupplierRecord(models.Model):
-    item = models.ForeignKey(ConsumableItem, on_delete=models.CASCADE, related_name="suppliers")
+    item = models.ForeignKey(
+        ConsumableItem, on_delete=models.CASCADE, related_name="suppliers"
+    )
     supplier = models.ForeignKey(
-        Supplier, null=True, blank=True, on_delete=models.CASCADE, related_name="records"
+        Supplier,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="records",
     )
     supplier_name = models.CharField(max_length=100)
     product_code = models.CharField(max_length=100, blank=True, default="")
     product_url = models.URLField(blank=True, default="")
-    unit_desc = models.CharField(max_length=200, blank=True, default="", help_text="e.g. '6-pack', '5L'")
-    approx_price = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    unit_desc = models.CharField(
+        max_length=200, blank=True, default="", help_text="e.g. '6-pack', '5L'"
+    )
+    approx_price = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True
+    )
     ordering_notes = models.TextField(blank=True, default="")
     account_holder = models.ForeignKey(
         "members.Volunteer",
@@ -502,9 +571,15 @@ class SupplierRecord(models.Model):
 
 
 class NeedFlag(models.Model):
-    item = models.ForeignKey(ConsumableItem, on_delete=models.CASCADE, related_name="need_flags")
+    item = models.ForeignKey(
+        ConsumableItem, on_delete=models.CASCADE, related_name="need_flags"
+    )
     flagged_by = models.ForeignKey(
-        "members.Volunteer", null=True, blank=True, on_delete=models.SET_NULL, related_name="flagged_needs"
+        "members.Volunteer",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="flagged_needs",
     )
     flagged_at = models.DateTimeField(auto_now_add=True)
     notes = models.CharField(max_length=300, blank=True, default="")
@@ -541,17 +616,34 @@ class ProcurementPledge(models.Model):
         (STATUS_FULFILLED, "Fulfilled"),
     ]
 
-    need_flag = models.OneToOneField(NeedFlag, on_delete=models.CASCADE, related_name="pledge")
+    need_flag = models.OneToOneField(
+        NeedFlag, on_delete=models.CASCADE, related_name="pledge"
+    )
     pledged_by = models.ForeignKey(
-        "members.Volunteer", null=True, blank=True, on_delete=models.SET_NULL, related_name="pledges"
+        "members.Volunteer",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pledges",
     )
     pledged_at = models.DateTimeField(auto_now_add=True)
     eta_date = models.DateField(null=True, blank=True)
-    eta_notes = models.CharField(max_length=200, blank=True, default="", help_text="e.g. 'Friday cleaning club'")
+    eta_notes = models.CharField(
+        max_length=200,
+        blank=True,
+        default="",
+        help_text="e.g. 'Friday cleaning club'",
+    )
     fulfilled_at = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_PLEDGED)
+    status = models.CharField(
+        max_length=16, choices=STATUS_CHOICES, default=STATUS_PLEDGED
+    )
     intended_supplier = models.ForeignKey(
-        Supplier, null=True, blank=True, on_delete=models.SET_NULL, related_name="pledges"
+        Supplier,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pledges",
     )
     status_notes = models.CharField(max_length=300, blank=True, default="")
 
@@ -563,6 +655,7 @@ class ProcurementPledge(models.Model):
 
 
 # ── Loft inventory ─────────────────────────────────────────────────────────────
+
 
 class FoundItem(models.Model):
     TYPE_FOUND = "found"
@@ -592,7 +685,9 @@ class FoundItem(models.Model):
         (DISPOSAL_OTHER, "Other"),
     ]
 
-    report_type = models.CharField(max_length=8, choices=TYPE_CHOICES, default=TYPE_FOUND)
+    report_type = models.CharField(
+        max_length=8, choices=TYPE_CHOICES, default=TYPE_FOUND
+    )
     description = models.CharField(max_length=200)
     location_found = models.CharField(max_length=100)
     found_on = models.DateField(default=datetime.date.today)
@@ -603,11 +698,15 @@ class FoundItem(models.Model):
         help_text="Private contact details for the person who lost the item. Not shown in the list view.",
     )
     photo = models.ImageField(upload_to="lost-and-found/", blank=True)
-    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=STATUS_UNCLAIMED)
+    status = models.CharField(
+        max_length=12, choices=STATUS_CHOICES, default=STATUS_UNCLAIMED
+    )
     claimed_by = models.CharField(max_length=200, blank=True, default="")
     claimed_on = models.DateField(null=True, blank=True)
     disposed_on = models.DateField(null=True, blank=True)
-    disposal_method = models.CharField(max_length=12, choices=DISPOSAL_CHOICES, blank=True, default="")
+    disposal_method = models.CharField(
+        max_length=12, choices=DISPOSAL_CHOICES, blank=True, default=""
+    )
     notes = models.TextField(blank=True, default="")
 
     class Meta:
@@ -624,12 +723,18 @@ class FoundItem(models.Model):
     @property
     def is_overdue(self):
         from toolkit.diary.models import get_site_config
-        if self.report_type != self.TYPE_FOUND or self.status != self.STATUS_UNCLAIMED:
+
+        if (
+            self.report_type != self.TYPE_FOUND
+            or self.status != self.STATUS_UNCLAIMED
+        ):
             return False
         retain_days = get_site_config().lost_and_found_retain_days
         if retain_days <= 0:
             return False
-        threshold = datetime.date.today() - datetime.timedelta(days=retain_days)
+        threshold = datetime.date.today() - datetime.timedelta(
+            days=retain_days
+        )
         return self.found_on <= threshold
 
     def status_display(self):
@@ -644,11 +749,17 @@ class FoundItem(models.Model):
 
 
 class LoftItemPhoto(models.Model):
-    item = models.ForeignKey(LoftItem, on_delete=models.CASCADE, related_name="photos")
+    item = models.ForeignKey(
+        LoftItem, on_delete=models.CASCADE, related_name="photos"
+    )
     image = models.ImageField(upload_to="loft-photos/")
     caption = models.CharField(max_length=200, blank=True, default="")
     uploaded_by = models.ForeignKey(
-        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
     )
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
@@ -731,12 +842,20 @@ class ExchangeItem(models.Model):
         (STATUS_WITHDRAWN, "Withdrawn"),
     ]
 
-    listing_type = models.CharField(max_length=8, choices=TYPE_CHOICES, default=TYPE_GIVE)
+    listing_type = models.CharField(
+        max_length=8, choices=TYPE_CHOICES, default=TYPE_GIVE
+    )
     name = models.CharField(max_length=128)
     description = models.TextField(blank=True, default="")
-    category = models.CharField(max_length=16, choices=CATEGORY_CHOICES, default=CATEGORY_OTHER)
-    condition = models.CharField(max_length=16, choices=CONDITION_CHOICES, default=CONDITION_GOOD)
-    owner_type = models.CharField(max_length=16, choices=OWNER_CHOICES, default=OWNER_VOLUNTEER)
+    category = models.CharField(
+        max_length=16, choices=CATEGORY_CHOICES, default=CATEGORY_OTHER
+    )
+    condition = models.CharField(
+        max_length=16, choices=CONDITION_CHOICES, default=CONDITION_GOOD
+    )
+    owner_type = models.CharField(
+        max_length=16, choices=OWNER_CHOICES, default=OWNER_VOLUNTEER
+    )
     owner_volunteer = models.ForeignKey(
         "members.Volunteer",
         null=True,
@@ -751,7 +870,9 @@ class ExchangeItem(models.Model):
         default="",
         help_text="Where to collect or arrange pickup — e.g. 'Bring to the next event' or 'Ask at the bar'.",
     )
-    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_AVAILABLE)
+    status = models.CharField(
+        max_length=16, choices=STATUS_CHOICES, default=STATUS_AVAILABLE
+    )
     quantity = models.CharField(
         max_length=64,
         blank=True,
@@ -771,10 +892,18 @@ class ExchangeItem(models.Model):
     image = models.ImageField(upload_to="exchange/", blank=True)
     active = models.BooleanField(default=True)
     added_by = models.ForeignKey(
-        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
     )
     borrowed_by = models.ForeignKey(
-        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
     )
     borrowed_by_name = models.CharField(
         max_length=128,

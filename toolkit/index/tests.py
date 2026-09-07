@@ -8,7 +8,15 @@ from django.utils import timezone
 import django.contrib.auth.models as auth_models
 import django.contrib.contenttypes as contenttypes
 
-from toolkit.diary.models import Event, EventTag, Role, RotaEntry, Showing, SiteConfiguration, VolunteerEventMark
+from toolkit.diary.models import (
+    Event,
+    EventTag,
+    Role,
+    RotaEntry,
+    Showing,
+    SiteConfiguration,
+    VolunteerEventMark,
+)
 from toolkit.index.models import IndexLink, IndexCategory
 from toolkit.labs.models import Job
 from toolkit.members.models import Member, Volunteer
@@ -243,9 +251,15 @@ class TestViews(TestCase):
         )
 
 
-def _make_volunteer_user(username: str, password: str = "T3stPassword!") -> tuple[auth_models.User, Volunteer]:
-    member = Member.objects.create(name=f"{username} Test", email=f"{username}@example.com")
-    user = auth_models.User.objects.create_user(username, email=f"{username}@example.com", password=password)
+def _make_volunteer_user(
+    username: str, password: str = "T3stPassword!"
+) -> tuple[auth_models.User, Volunteer]:
+    member = Member.objects.create(
+        name=f"{username} Test", email=f"{username}@example.com"
+    )
+    user = auth_models.User.objects.create_user(
+        username, email=f"{username}@example.com", password=password
+    )
     volunteer = Volunteer.objects.create(member=member, user=user)
     return user, volunteer
 
@@ -279,7 +293,9 @@ class TestDashboardWidgets(TestCase):
 
     def test_no_volunteer_record_no_shift_widgets(self):
         # A user without a Volunteer record should not see shift/starred widgets
-        user = auth_models.User.objects.create_user("plain", password="T3stPassword!")
+        user = auth_models.User.objects.create_user(
+            "plain", password="T3stPassword!"
+        )
         self._login(user)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
@@ -297,9 +313,16 @@ class TestDashboardWidgets(TestCase):
 
     def test_upcoming_shifts_shows_confirmed_future_entry(self):
         user, volunteer = _make_volunteer_user("vol2")
-        role = Role.objects.create(name="Test Role", read_only=False, standard=True)
+        role = Role.objects.create(
+            name="Test Role", read_only=False, standard=True
+        )
         showing = _make_showing(days_ahead=3, confirmed=True)
-        RotaEntry.objects.create(showing=showing, role=role, volunteer=volunteer, name=volunteer.member.name)
+        RotaEntry.objects.create(
+            showing=showing,
+            role=role,
+            volunteer=volunteer,
+            name=volunteer.member.name,
+        )
         self._login(user)
         response = self.client.get(self.url)
         shifts = response.context["upcoming_shifts"]
@@ -308,9 +331,16 @@ class TestDashboardWidgets(TestCase):
 
     def test_upcoming_shifts_excludes_unconfirmed(self):
         user, volunteer = _make_volunteer_user("vol3")
-        role = Role.objects.create(name="Test Role 2", read_only=False, standard=True)
+        role = Role.objects.create(
+            name="Test Role 2", read_only=False, standard=True
+        )
         showing = _make_showing(days_ahead=3, confirmed=False)
-        RotaEntry.objects.create(showing=showing, role=role, volunteer=volunteer, name=volunteer.member.name)
+        RotaEntry.objects.create(
+            showing=showing,
+            role=role,
+            volunteer=volunteer,
+            name=volunteer.member.name,
+        )
         self._login(user)
         response = self.client.get(self.url)
         self.assertEqual(list(response.context["upcoming_shifts"]), [])
@@ -319,7 +349,9 @@ class TestDashboardWidgets(TestCase):
         user, volunteer = _make_volunteer_user("vol4")
         showing = _make_showing(days_ahead=10)
         VolunteerEventMark.objects.create(
-            volunteer=volunteer, event=showing.event, mark_type=VolunteerEventMark.MARK_STAR
+            volunteer=volunteer,
+            event=showing.event,
+            mark_type=VolunteerEventMark.MARK_STAR,
         )
         self._login(user)
         response = self.client.get(self.url)
@@ -344,7 +376,9 @@ class TestDashboardWidgets(TestCase):
             start=timezone.now() - timedelta(days=2)
         )
         VolunteerEventMark.objects.create(
-            volunteer=volunteer, event=showing.event, mark_type=VolunteerEventMark.MARK_STAR
+            volunteer=volunteer,
+            event=showing.event,
+            mark_type=VolunteerEventMark.MARK_STAR,
         )
         self._login(user)
         response = self.client.get(self.url)
@@ -354,14 +388,18 @@ class TestDashboardWidgets(TestCase):
         user, volunteer = _make_volunteer_user("vol6")
         showing = _make_showing(days_ahead=5)
         VolunteerEventMark.objects.create(
-            volunteer=volunteer, event=showing.event, mark_type=VolunteerEventMark.MARK_SHADOW
+            volunteer=volunteer,
+            event=showing.event,
+            mark_type=VolunteerEventMark.MARK_SHADOW,
         )
         self._login(user)
         response = self.client.get(self.url)
         self.assertEqual(list(response.context["starred_events"]), [])
 
     def test_new_showings_visible_to_programmer(self):
-        user = auth_models.User.objects.create_user("prog1", password="T3stPassword!")
+        user = auth_models.User.objects.create_user(
+            "prog1", password="T3stPassword!"
+        )
         user.user_permissions.add(self.write_perm)
         user.save()
         showing = _make_showing(days_ahead=7)
@@ -385,7 +423,9 @@ class TestDashboardWidgets(TestCase):
 
     def test_new_showings_uses_30day_fallback_when_no_last_login(self):
         # When last_login is None, fall back to 30-day lookback rather than skipping.
-        user = auth_models.User.objects.create_user("prog2", password="T3stPassword!")
+        user = auth_models.User.objects.create_user(
+            "prog2", password="T3stPassword!"
+        )
         user.user_permissions.add(self.write_perm)
         user.save()
         showing = _make_showing(days_ahead=7)
@@ -403,18 +443,33 @@ class TestRotaGapsWidget(TestCase):
     """9.91 — Dashboard widget: upcoming showings with gaps in the rota."""
 
     def setUp(self):
-        SiteConfiguration.objects.update_or_create(pk=1, defaults={"rota_gap_min_missing": 3, "rota_gap_min_pct": 0})
+        SiteConfiguration.objects.update_or_create(
+            pk=1, defaults={"rota_gap_min_missing": 3, "rota_gap_min_pct": 0}
+        )
         self.url = reverse("toolkit-index")
-        self.user = auth_models.User.objects.create_user("gapuser", password="T3stPassword!")
+        self.user = auth_models.User.objects.create_user(
+            "gapuser", password="T3stPassword!"
+        )
         self.client.login(username="gapuser", password="T3stPassword!")
-        self.role = Role.objects.create(name="Gap Role", read_only=False, standard=True)
+        self.role = Role.objects.create(
+            name="Gap Role", read_only=False, standard=True
+        )
 
-    def _make_showing_with_gaps(self, days_ahead: int, n_empty: int, n_filled: int = 0) -> Showing:
+    def _make_showing_with_gaps(
+        self, days_ahead: int, n_empty: int, n_filled: int = 0
+    ) -> Showing:
         showing = _make_showing(days_ahead=days_ahead, confirmed=True)
         for _ in range(n_empty):
-            RotaEntry.objects.create(showing=showing, role=self.role, required=True)
+            RotaEntry.objects.create(
+                showing=showing, role=self.role, required=True
+            )
         for i in range(n_filled):
-            RotaEntry.objects.create(showing=showing, role=self.role, required=True, name=f"Person {i}")
+            RotaEntry.objects.create(
+                showing=showing,
+                role=self.role,
+                required=True,
+                name=f"Person {i}",
+            )
         return showing
 
     def test_showing_with_enough_gaps_appears(self):
@@ -435,7 +490,9 @@ class TestRotaGapsWidget(TestCase):
         self.assertNotIn("showings_with_gaps", response.context)
 
     def test_widget_suppressed_when_both_thresholds_zero(self):
-        SiteConfiguration.objects.update_or_create(pk=1, defaults={"rota_gap_min_missing": 0, "rota_gap_min_pct": 0})
+        SiteConfiguration.objects.update_or_create(
+            pk=1, defaults={"rota_gap_min_missing": 0, "rota_gap_min_pct": 0}
+        )
         self._make_showing_with_gaps(days_ahead=5, n_empty=10)
         response = self.client.get(self.url)
         self.assertNotIn("showings_with_gaps", response.context)
@@ -446,9 +503,13 @@ class TestRotaGapsWidget(TestCase):
         self.assertNotIn("showings_with_gaps", response.context)
 
     def test_percentage_threshold(self):
-        SiteConfiguration.objects.update_or_create(pk=1, defaults={"rota_gap_min_missing": 0, "rota_gap_min_pct": 50})
+        SiteConfiguration.objects.update_or_create(
+            pk=1, defaults={"rota_gap_min_missing": 0, "rota_gap_min_pct": 50}
+        )
         # 2 filled, 3 empty out of 5 = 60% missing — should appear
-        showing = self._make_showing_with_gaps(days_ahead=5, n_empty=3, n_filled=2)
+        showing = self._make_showing_with_gaps(
+            days_ahead=5, n_empty=3, n_filled=2
+        )
         response = self.client.get(self.url)
         self.assertIn("showings_with_gaps", response.context)
         pks = [s.pk for s in response.context["showings_with_gaps"]]
@@ -460,15 +521,21 @@ class TestUnconfirmedWidget(TestCase):
 
     def setUp(self):
         self.url = reverse("toolkit-index")
-        ct = contenttypes.models.ContentType.objects.get_or_create(model="", app_label="toolkit")[0]
+        ct = contenttypes.models.ContentType.objects.get_or_create(
+            model="", app_label="toolkit"
+        )[0]
         self.write_perm = auth_models.Permission.objects.get_or_create(
             name="Write access to all toolkit content",
             content_type=ct,
             codename="write",
         )[0]
-        self.prog = auth_models.User.objects.create_user("uncprog", password="T3stPassword!")
+        self.prog = auth_models.User.objects.create_user(
+            "uncprog", password="T3stPassword!"
+        )
         self.prog.user_permissions.add(self.write_perm)
-        self.vol_user = auth_models.User.objects.create_user("uncvol", password="T3stPassword!")
+        self.vol_user = auth_models.User.objects.create_user(
+            "uncvol", password="T3stPassword!"
+        )
 
     def test_unconfirmed_showing_visible_to_programmer(self):
         showing = _make_showing(days_ahead=10, confirmed=False)
@@ -502,12 +569,20 @@ class TestUpcomingTrainingWidget(TestCase):
 
     def setUp(self):
         self.url = reverse("toolkit-index")
-        self.user = auth_models.User.objects.create_user("trainuser", password="T3stPassword!")
+        self.user = auth_models.User.objects.create_user(
+            "trainuser", password="T3stPassword!"
+        )
         self.client.login(username="trainuser", password="T3stPassword!")
-        self.induction_tag = EventTag.objects.create(name="induction", slug="induction")
-        self.training_tag = EventTag.objects.create(name="training-for-volunteers", slug="training-for-volunteers")
+        self.induction_tag = EventTag.objects.create(
+            name="induction", slug="induction"
+        )
+        self.training_tag = EventTag.objects.create(
+            name="training-for-volunteers", slug="training-for-volunteers"
+        )
 
-    def _make_tagged_showing(self, tag: EventTag, days_ahead: int = 7) -> Showing:
+    def _make_tagged_showing(
+        self, tag: EventTag, days_ahead: int = 7
+    ) -> Showing:
         showing = _make_showing(days_ahead=days_ahead, confirmed=True)
         showing.event.tags.add(tag)
         return showing
@@ -549,7 +624,9 @@ class TestOpenJobsWidget(TestCase):
 
     def setUp(self):
         self.url = reverse("toolkit-index")
-        self.user = auth_models.User.objects.create_user("jobsuser", password="T3stPassword!")
+        self.user = auth_models.User.objects.create_user(
+            "jobsuser", password="T3stPassword!"
+        )
         self.client.login(username="jobsuser", password="T3stPassword!")
 
     def test_no_jobs_no_widget(self):
@@ -557,26 +634,36 @@ class TestOpenJobsWidget(TestCase):
         self.assertNotIn("open_jobs", response.context)
 
     def test_open_job_appears(self):
-        job = Job.objects.create(title="Fix gutter", urgency=Job.URGENCY_MEDIUM)
+        job = Job.objects.create(
+            title="Fix gutter", urgency=Job.URGENCY_MEDIUM
+        )
         response = self.client.get(self.url)
         self.assertIn("open_jobs", response.context)
         pks = [j.pk for j in response.context["open_jobs"]]
         self.assertIn(job.pk, pks)
 
     def test_resolved_job_excluded(self):
-        Job.objects.create(title="Fixed already", urgency=Job.URGENCY_LOW, resolved=True)
+        Job.objects.create(
+            title="Fixed already", urgency=Job.URGENCY_LOW, resolved=True
+        )
         response = self.client.get(self.url)
         self.assertNotIn("open_jobs", response.context)
 
     def test_urgent_job_ordered_before_low(self):
-        low = Job.objects.create(title="Low urgency job", urgency=Job.URGENCY_LOW)
+        low = Job.objects.create(
+            title="Low urgency job", urgency=Job.URGENCY_LOW
+        )
         high = Job.objects.create(title="Urgent job", urgency=Job.URGENCY_HIGH)
         response = self.client.get(self.url)
         pks = [j.pk for j in response.context["open_jobs"]]
         self.assertLess(pks.index(high.pk), pks.index(low.pk))
 
     def test_skill_required_shown_on_card(self):
-        Job.objects.create(title="Rewire socket", urgency=Job.URGENCY_MEDIUM, skill_required="Electrical")
+        Job.objects.create(
+            title="Rewire socket",
+            urgency=Job.URGENCY_MEDIUM,
+            skill_required="Electrical",
+        )
         response = self.client.get(self.url)
         self.assertContains(response, "Electrical")
 
@@ -586,7 +673,9 @@ class TestUpcomingMaintenanceWidget(TestCase):
 
     def setUp(self):
         self.url = reverse("toolkit-index")
-        self.user = auth_models.User.objects.create_user("maintuser", password="T3stPassword!")
+        self.user = auth_models.User.objects.create_user(
+            "maintuser", password="T3stPassword!"
+        )
         self.client.login(username="maintuser", password="T3stPassword!")
 
     def test_no_tasks_no_widget(self):
@@ -595,7 +684,8 @@ class TestUpcomingMaintenanceWidget(TestCase):
 
     def test_active_task_appears(self):
         task = MaintenanceTask.objects.create(
-            name="Fire alarm service", frequency=MaintenanceTask.FREQUENCY_ANNUAL
+            name="Fire alarm service",
+            frequency=MaintenanceTask.FREQUENCY_ANNUAL,
         )
         response = self.client.get(self.url)
         self.assertIn("upcoming_maintenance", response.context)
@@ -604,7 +694,9 @@ class TestUpcomingMaintenanceWidget(TestCase):
 
     def test_inactive_task_excluded(self):
         MaintenanceTask.objects.create(
-            name="Retired task", frequency=MaintenanceTask.FREQUENCY_ANNUAL, active=False
+            name="Retired task",
+            frequency=MaintenanceTask.FREQUENCY_ANNUAL,
+            active=False,
         )
         response = self.client.get(self.url)
         self.assertNotIn("upcoming_maintenance", response.context)

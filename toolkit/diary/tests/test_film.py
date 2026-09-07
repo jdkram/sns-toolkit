@@ -1,5 +1,6 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Sonnet 4.6"]; status: "#ai-input"
 """Tests for Film model, OMDb client, and film link/unlink views (9.66)."""
+
 import json
 import urllib.error
 from io import BytesIO
@@ -12,7 +13,6 @@ from django.urls import reverse
 from toolkit.diary.models import EventTag, Film
 from toolkit.diary.tests.common import DiaryTestsMixin
 import toolkit.diary.omdb as omdb_module
-
 
 # ---------------------------------------------------------------------------
 # Film model
@@ -41,7 +41,9 @@ class FilmModelTests(TestCase):
         self.assertEqual(result, "Dir. Amber Collective, GB, 1985, 82 mins")
 
     def test_generate_film_information_partial(self):
-        f = Film(title="Twin Peaks", year=1990, director="David Lynch, Mark Frost")
+        f = Film(
+            title="Twin Peaks", year=1990, director="David Lynch, Mark Frost"
+        )
         result = f.generate_film_information()
         self.assertEqual(result, "Dir. David Lynch, Mark Frost, 1990")
 
@@ -97,28 +99,60 @@ def _make_response(data: dict):
 
 MOCK_SEARCH_RESPONSE = {
     "Search": [
-        {"Title": "Seacoal", "Year": "1985", "imdbID": "tt0090186", "Type": "movie", "Poster": "https://example.com/seacoal.jpg"},
-        {"Title": "Twin Peaks", "Year": "1990–1991", "imdbID": "tt0098936", "Type": "series", "Poster": "https://example.com/twinpeaks.jpg"},
-        {"Title": "Some Episode", "Year": "1990", "imdbID": "tt0000001", "Type": "episode", "Poster": "N/A"},
+        {
+            "Title": "Seacoal",
+            "Year": "1985",
+            "imdbID": "tt0090186",
+            "Type": "movie",
+            "Poster": "https://example.com/seacoal.jpg",
+        },
+        {
+            "Title": "Twin Peaks",
+            "Year": "1990–1991",
+            "imdbID": "tt0098936",
+            "Type": "series",
+            "Poster": "https://example.com/twinpeaks.jpg",
+        },
+        {
+            "Title": "Some Episode",
+            "Year": "1990",
+            "imdbID": "tt0000001",
+            "Type": "episode",
+            "Poster": "N/A",
+        },
     ],
     "totalResults": "3",
     "Response": "True",
 }
 
 MOCK_MOVIE_DETAIL = {
-    "Title": "Seacoal", "Year": "1985", "Rated": "15",
-    "Runtime": "82 min", "Director": "Amber Collective",
-    "Country": "United Kingdom", "Language": "English",
-    "Plot": "A film about coal.", "Poster": "https://example.com/seacoal.jpg",
-    "imdbID": "tt0090186", "Type": "movie", "Response": "True",
+    "Title": "Seacoal",
+    "Year": "1985",
+    "Rated": "15",
+    "Runtime": "82 min",
+    "Director": "Amber Collective",
+    "Country": "United Kingdom",
+    "Language": "English",
+    "Plot": "A film about coal.",
+    "Poster": "https://example.com/seacoal.jpg",
+    "imdbID": "tt0090186",
+    "Type": "movie",
+    "Response": "True",
 }
 
 MOCK_TV_DETAIL = {
-    "Title": "Twin Peaks", "Year": "1990–1991", "Rated": "TV-MA",
-    "Runtime": "47 min", "Director": "David Lynch, Mark Frost",
-    "Country": "United States", "Language": "English",
-    "Plot": "A damn fine show.", "Poster": "https://example.com/twinpeaks.jpg",
-    "imdbID": "tt0098936", "Type": "series", "Response": "True",
+    "Title": "Twin Peaks",
+    "Year": "1990–1991",
+    "Rated": "TV-MA",
+    "Runtime": "47 min",
+    "Director": "David Lynch, Mark Frost",
+    "Country": "United States",
+    "Language": "English",
+    "Plot": "A damn fine show.",
+    "Poster": "https://example.com/twinpeaks.jpg",
+    "imdbID": "tt0098936",
+    "Type": "series",
+    "Response": "True",
 }
 
 
@@ -137,19 +171,36 @@ class OmdbClientTests(TestCase):
     def test_search_poster_url(self, mock_urlopen):
         mock_urlopen.return_value = _make_response(MOCK_SEARCH_RESPONSE)
         results = omdb_module.search_works("seacoal", "fake-key")
-        self.assertEqual(results[0]["poster_url"], "https://example.com/seacoal.jpg")
-        self.assertEqual(results[1]["poster_url"], "https://example.com/twinpeaks.jpg")
+        self.assertEqual(
+            results[0]["poster_url"], "https://example.com/seacoal.jpg"
+        )
+        self.assertEqual(
+            results[1]["poster_url"], "https://example.com/twinpeaks.jpg"
+        )
 
     @patch("urllib.request.urlopen")
     def test_search_na_poster_becomes_empty(self, mock_urlopen):
-        resp = {"Search": [{"Title": "X", "Year": "2000", "imdbID": "tt9999999", "Type": "movie", "Poster": "N/A"}], "Response": "True"}
+        resp = {
+            "Search": [
+                {
+                    "Title": "X",
+                    "Year": "2000",
+                    "imdbID": "tt9999999",
+                    "Type": "movie",
+                    "Poster": "N/A",
+                }
+            ],
+            "Response": "True",
+        }
         mock_urlopen.return_value = _make_response(resp)
         results = omdb_module.search_works("x", "fake-key")
         self.assertEqual(results[0]["poster_url"], "")
 
     @patch("urllib.request.urlopen")
     def test_search_false_response_returns_empty(self, mock_urlopen):
-        mock_urlopen.return_value = _make_response({"Response": "False", "Error": "Movie not found!"})
+        mock_urlopen.return_value = _make_response(
+            {"Response": "False", "Error": "Movie not found!"}
+        )
         results = omdb_module.search_works("zzznoresult", "fake-key")
         self.assertEqual(results, [])
 
@@ -163,7 +214,9 @@ class OmdbClientTests(TestCase):
         self.assertEqual(details["runtime_minutes"], 82)
         self.assertEqual(details["countries"], "United Kingdom")
         self.assertEqual(details["media_type"], "film")
-        self.assertEqual(details["poster_url"], "https://example.com/seacoal.jpg")
+        self.assertEqual(
+            details["poster_url"], "https://example.com/seacoal.jpg"
+        )
 
     @patch("urllib.request.urlopen")
     def test_fetch_tv_details(self, mock_urlopen):
@@ -199,7 +252,9 @@ class OmdbClientTests(TestCase):
             omdb_module.verify_api_key("bad-key")
 
     @patch("urllib.request.urlopen")
-    def test_verify_api_key_rate_limit_is_not_treated_as_invalid(self, mock_urlopen):
+    def test_verify_api_key_rate_limit_is_not_treated_as_invalid(
+        self, mock_urlopen
+    ):
         # OMDb's daily-quota-exhausted response looks identical to an invalid
         # key (401 + same JSON shape) except for the Error text — a quota hit
         # must not be reported to the user as "this key is wrong".
@@ -310,7 +365,9 @@ class LinkFilmViewTests(DiaryTestsMixin, TestCase):
     def test_link_via_omdb_creates_film_and_sets_fk(self, mock_urlopen):
         mock_urlopen.return_value = _make_response(MOCK_MOVIE_DETAIL)
         url = reverse("link-film", kwargs={"event_id": self.e1.pk})
-        response = self.client.post(url, {"imdb_id": "tt0090186", "media_type": "film"})
+        response = self.client.post(
+            url, {"imdb_id": "tt0090186", "media_type": "film"}
+        )
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.content)
         self.assertTrue(data["success"])
@@ -334,12 +391,15 @@ class LinkFilmViewTests(DiaryTestsMixin, TestCase):
 
     def test_link_manual_creates_film_without_imdb_id(self):
         url = reverse("link-film", kwargs={"event_id": self.e1.pk})
-        response = self.client.post(url, {
-            "title": "Local Film",
-            "year": "2023",
-            "director": "Local Director",
-            "media_type": "film",
-        })
+        response = self.client.post(
+            url,
+            {
+                "title": "Local Film",
+                "year": "2023",
+                "director": "Local Director",
+                "media_type": "film",
+            },
+        )
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.content)
         self.assertTrue(data["success"])
@@ -350,26 +410,33 @@ class LinkFilmViewTests(DiaryTestsMixin, TestCase):
 
     def test_link_returns_suggested_film_information(self):
         url = reverse("link-film", kwargs={"event_id": self.e1.pk})
-        response = self.client.post(url, {
-            "title": "Local Film",
-            "year": "2023",
-            "director": "Director",
-            "runtime_minutes": "90",
-            "countries": "GB",
-            "media_type": "film",
-        })
+        response = self.client.post(
+            url,
+            {
+                "title": "Local Film",
+                "year": "2023",
+                "director": "Director",
+                "runtime_minutes": "90",
+                "countries": "GB",
+                "media_type": "film",
+            },
+        )
         data = json.loads(response.content)
         self.assertIn("suggested_film_information", data)
         self.assertIn("Director", data["suggested_film_information"])
 
     @override_settings(OMDB_API_KEY="fake-key")
     @patch("urllib.request.urlopen")
-    def test_link_via_omdb_rate_limited_gives_friendly_error(self, mock_urlopen):
+    def test_link_via_omdb_rate_limited_gives_friendly_error(
+        self, mock_urlopen
+    ):
         mock_urlopen.side_effect = _make_http_error(
             {"Response": "False", "Error": "Request limit reached!"}
         )
         url = reverse("link-film", kwargs={"event_id": self.e1.pk})
-        response = self.client.post(url, {"imdb_id": "tt0090186", "media_type": "film"})
+        response = self.client.post(
+            url, {"imdb_id": "tt0090186", "media_type": "film"}
+        )
         self.assertEqual(response.status_code, 503)
         data = json.loads(response.content)
         self.assertNotIn("success", data)
@@ -414,7 +481,9 @@ class EventHubFilmTests(DiaryTestsMixin, TestCase):
         )
         self.e1.film = film
         self.e1.save()
-        url = reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk})
+        url = reverse(
+            "edit-event-details-view", kwargs={"event_id": self.e1.pk}
+        )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Screened work")
@@ -422,7 +491,9 @@ class EventHubFilmTests(DiaryTestsMixin, TestCase):
         self.assertContains(response, "Amber Collective")
 
     def test_hub_omits_film_section_when_no_film(self):
-        url = reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk})
+        url = reverse(
+            "edit-event-details-view", kwargs={"event_id": self.e1.pk}
+        )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "Screened work")
@@ -444,7 +515,9 @@ class FilmCompletenessTests(DiaryTestsMixin, TestCase):
 
     def test_film_badge_shown_when_film_tag_and_no_film_linked(self):
         self.e1.tags.add(self.film_tag)
-        url = reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk})
+        url = reverse(
+            "edit-event-details-view", kwargs={"event_id": self.e1.pk}
+        )
         response = self.client.get(url)
         self.assertContains(response, "Film details not linked")
 
@@ -453,12 +526,16 @@ class FilmCompletenessTests(DiaryTestsMixin, TestCase):
         self.e1.tags.add(self.film_tag)
         self.e1.film = film
         self.e1.save()
-        url = reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk})
+        url = reverse(
+            "edit-event-details-view", kwargs={"event_id": self.e1.pk}
+        )
         response = self.client.get(url)
         self.assertNotContains(response, "Film details not linked")
 
     def test_film_badge_absent_when_no_film_tag(self):
         # Event has no "film" tag — check should not appear even without a Film
-        url = reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk})
+        url = reverse(
+            "edit-event-details-view", kwargs={"event_id": self.e1.pk}
+        )
         response = self.client.get(url)
         self.assertNotContains(response, "Film details not linked")

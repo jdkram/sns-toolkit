@@ -41,6 +41,7 @@ ALLOWED_HOSTS = ("127.0.0.1", "localhost", "0.0.0.0")
 INTERNAL_IPS = ("127.0.0.1",)
 try:
     import debug_toolbar  # noqa: F401
+
     DEBUG_TOOLBAR_CONFIG = {
         "INTERCEPT_REDIRECTS": False,
     }
@@ -55,7 +56,9 @@ CRISPY_FAIL_SILENTLY = False
 # Logging wrapper (9.154): one log line per email on the toolkit.email
 # logger. The backend that actually delivers goes in TOOLKIT_WRAPPED_EMAIL_BACKEND.
 EMAIL_BACKEND = "toolkit.util.email_backend.LoggingEmailBackend"
-TOOLKIT_WRAPPED_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+TOOLKIT_WRAPPED_EMAIL_BACKEND = (
+    "django.core.mail.backends.console.EmailBackend"
+)
 
 warnings.filterwarnings(
     "error",

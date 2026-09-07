@@ -691,7 +691,9 @@ class RoomBookingModelTests(TestCase):
     def setUp(self):
         self.room_a = Room.objects.create(name="Cinema", colour="#CC2200")
         self.room_b = Room.objects.create(name="Café", colour="#FFD700")
-        self.event = Event.objects.create(name="Test Event", duration="02:00:00")
+        self.event = Event.objects.create(
+            name="Test Event", duration="02:00:00"
+        )
         self.showing = Showing.objects.create(
             event=self.event,
             start=datetime(2026, 6, 1, 19, 0, tzinfo=zoneinfo.ZoneInfo("UTC")),
@@ -702,8 +704,14 @@ class RoomBookingModelTests(TestCase):
     def _make_booking(self, room, start_offset_hours=0, end_offset_hours=None):
         base = datetime(2026, 6, 1, 19, 0, tzinfo=zoneinfo.ZoneInfo("UTC"))
         start = base + timedelta(hours=start_offset_hours)
-        end = base + timedelta(hours=end_offset_hours) if end_offset_hours is not None else None
-        return RoomBooking.objects.create(showing=self.showing, room=room, start=start, end=end)
+        end = (
+            base + timedelta(hours=end_offset_hours)
+            if end_offset_hours is not None
+            else None
+        )
+        return RoomBooking.objects.create(
+            showing=self.showing, room=room, start=start, end=end
+        )
 
     def test_primary_room_returns_first_by_start(self):
         self._make_booking(self.room_b, start_offset_hours=1)
@@ -734,7 +742,9 @@ class ClashDetectionTests(TestCase):
     def setUp(self):
         self.room = Room.objects.create(name="Cinema", colour="#CC2200")
         self.other_room = Room.objects.create(name="Café", colour="#FFD700")
-        self.event = Event.objects.create(name="Test Event", duration="02:00:00")
+        self.event = Event.objects.create(
+            name="Test Event", duration="02:00:00"
+        )
         UTC = zoneinfo.ZoneInfo("UTC")
 
         self.showing_a = Showing.objects.create(
@@ -754,11 +764,16 @@ class ClashDetectionTests(TestCase):
     def _book(self, showing, room, start_hour, end_hour=None):
         UTC = self.UTC
         start = datetime(2026, 6, 1, start_hour, 0, tzinfo=UTC)
-        end = datetime(2026, 6, 1, end_hour, 0, tzinfo=UTC) if end_hour else None
-        return RoomBooking.objects.create(showing=showing, room=room, start=start, end=end)
+        end = (
+            datetime(2026, 6, 1, end_hour, 0, tzinfo=UTC) if end_hour else None
+        )
+        return RoomBooking.objects.create(
+            showing=showing, room=room, start=start, end=end
+        )
 
     def test_overlapping_bookings_detected(self):
         from toolkit.diary.clash import find_clashes
+
         rb_a = self._book(self.showing_a, self.room, 19, 21)
         rb_b = self._book(self.showing_b, self.room, 20, 22)
         clashes = find_clashes(rb_b)
@@ -766,6 +781,7 @@ class ClashDetectionTests(TestCase):
 
     def test_non_overlapping_bookings_not_detected(self):
         from toolkit.diary.clash import find_clashes
+
         rb_a = self._book(self.showing_a, self.room, 19, 20)
         rb_b = self._book(self.showing_b, self.room, 20, 22)
         clashes = find_clashes(rb_b)
@@ -773,12 +789,14 @@ class ClashDetectionTests(TestCase):
 
     def test_self_excluded_from_clashes(self):
         from toolkit.diary.clash import find_clashes
+
         rb = self._book(self.showing_a, self.room, 19, 21)
         clashes = find_clashes(rb)
         self.assertNotIn(rb, clashes)
 
     def test_different_room_not_flagged(self):
         from toolkit.diary.clash import find_clashes
+
         rb_a = self._book(self.showing_a, self.other_room, 19, 21)
         rb_b = self._book(self.showing_b, self.room, 19, 21)
         clashes = find_clashes(rb_b)
@@ -786,6 +804,7 @@ class ClashDetectionTests(TestCase):
 
     def test_unconfirmed_showing_not_flagged(self):
         from toolkit.diary.clash import find_clashes
+
         unconfirmed = Showing.objects.create(
             event=self.event,
             start=datetime(2026, 6, 1, 19, 0, tzinfo=self.UTC),
@@ -799,6 +818,7 @@ class ClashDetectionTests(TestCase):
 
     def test_open_ended_existing_booking_treated_as_clash(self):
         from toolkit.diary.clash import find_clashes
+
         rb_a = self._book(self.showing_a, self.room, 19)  # no end — open-ended
         rb_b = self._book(self.showing_b, self.room, 20, 22)
         clashes = find_clashes(rb_b)
@@ -926,7 +946,9 @@ class EventBudgetLineSyncTests(TestCase):
             category="Acts/ Performers", item="Hire fee"
         )
         self.assertEqual(str(line.estimate_gbp), "150.00")
-        self.assertEqual(line.estimate_source, EventBudgetLine.SOURCE_DEAL_TERMS)
+        self.assertEqual(
+            line.estimate_source, EventBudgetLine.SOURCE_DEAL_TERMS
+        )
 
     def test_manual_override_survives_resync_even_if_source_changes(self):
         event = self._event(
@@ -980,7 +1002,9 @@ class EventBudgetLineSyncTests(TestCase):
             category="Fees", item="Late night licence"
         )
         self.assertEqual(str(line.estimate_gbp), "75.00")
-        self.assertEqual(line.estimate_source, EventBudgetLine.SOURCE_SITE_DEFAULT)
+        self.assertEqual(
+            line.estimate_source, EventBudgetLine.SOURCE_SITE_DEFAULT
+        )
 
     def test_retagging_adds_new_rows_without_deleting_old(self):
         EventTag(name="film", slug="film").save()

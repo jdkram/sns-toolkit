@@ -8,6 +8,7 @@ Attribution required by TMDB ToS:
 
 Free tier: 40 req/10s, no hard daily cap. Suitable for occasional programmer lookups.
 """
+
 import json
 import logging
 import urllib.error
@@ -36,7 +37,9 @@ def search_works(query: str, api_key: str) -> list[dict]:
         tmdb_id, media_type ('film'|'tv'), title, original_title,
         year, director, poster_url
     """
-    data = _get("/search/multi", {"query": query, "include_adult": "false"}, api_key)
+    data = _get(
+        "/search/multi", {"query": query, "include_adult": "false"}, api_key
+    )
     results = []
     for item in data.get("results", []):
         mt = item.get("media_type")
@@ -61,7 +64,11 @@ def search_works(query: str, api_key: str) -> list[dict]:
                 "original_title": original_title,
                 "year": year,
                 "director": "",  # not available in search results; fetched on detail
-                "poster_url": f"{TMDB_IMAGE_BASE}/w92{poster_path}" if poster_path else "",
+                "poster_url": (
+                    f"{TMDB_IMAGE_BASE}/w92{poster_path}"
+                    if poster_path
+                    else ""
+                ),
             }
         )
     return results
@@ -86,13 +93,17 @@ def fetch_film_details(tmdb_id: int, media_type: str, api_key: str) -> dict:
         raw_date = data.get("release_date", "")
         year = int(raw_date[:4]) if raw_date and len(raw_date) >= 4 else None
         runtime_minutes = data.get("runtime") or None
-        countries = ", ".join(c["iso_3166_1"] for c in data.get("production_countries", []))
+        countries = ", ".join(
+            c["iso_3166_1"] for c in data.get("production_countries", [])
+        )
         languages = ", ".join(
             l["english_name"] for l in data.get("spoken_languages", [])
         )
         imdb_id = data.get("imdb_id", "") or ""
         director = _extract_director_film(data.get("credits", {}))
-        certificate = _extract_uk_certificate_film(data.get("release_dates", {}))
+        certificate = _extract_uk_certificate_film(
+            data.get("release_dates", {})
+        )
     else:
         data = _get(
             f"/tv/{tmdb_id}",
@@ -107,12 +118,13 @@ def fetch_film_details(tmdb_id: int, media_type: str, api_key: str) -> dict:
         runtime_minutes = runtimes[0] if runtimes else None
         countries = ", ".join(data.get("origin_country", []))
         languages = ", ".join(
-            l["english_name"]
-            for l in data.get("spoken_languages", [])
+            l["english_name"] for l in data.get("spoken_languages", [])
         )
         imdb_id = data.get("external_ids", {}).get("imdb_id", "") or ""
         director = _extract_creator_tv(data)
-        certificate = _extract_uk_certificate_tv(data.get("content_ratings", {}))
+        certificate = _extract_uk_certificate_tv(
+            data.get("content_ratings", {})
+        )
 
     return {
         "tmdb_id": tmdb_id,

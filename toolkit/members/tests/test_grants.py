@@ -1,4 +1,5 @@
 """Tests for PanopticonGrant, ProgrammerGrant models and the access transparency page."""
+
 import datetime
 
 from django.contrib.auth.models import User, Group
@@ -61,6 +62,7 @@ class UserFormGrantIntegrationTests(MembersTestsMixin, TestCase):
 
     def _make_form(self, **post_data):
         from toolkit.members.forms import UserForm
+
         defaults = {
             "user-username": self.target_user.username,
         }
@@ -68,10 +70,12 @@ class UserFormGrantIntegrationTests(MembersTestsMixin, TestCase):
         return UserForm(defaults, instance=self.target_user)
 
     def test_granting_panopticon_creates_grant(self):
-        form = self._make_form(**{
-            "user-is_superuser": "on",
-            "user-panopticon_reason": "Organising committee",
-        })
+        form = self._make_form(
+            **{
+                "user-is_superuser": "on",
+                "user-panopticon_reason": "Organising committee",
+            }
+        )
         self.assertTrue(form.is_valid(), form.errors)
         form.save(granted_by=self.admin)
         grant = PanopticonGrant.objects.get(user=self.target_user)
@@ -79,24 +83,34 @@ class UserFormGrantIntegrationTests(MembersTestsMixin, TestCase):
         self.assertEqual(grant.granted_by, self.admin)
 
     def test_granting_panopticon_without_reason_fails(self):
-        form = self._make_form(**{"user-is_superuser": "on", "user-panopticon_reason": ""})
+        form = self._make_form(
+            **{"user-is_superuser": "on", "user-panopticon_reason": ""}
+        )
         self.assertFalse(form.is_valid())
-        self.assertFalse(PanopticonGrant.objects.filter(user=self.target_user).exists())
+        self.assertFalse(
+            PanopticonGrant.objects.filter(user=self.target_user).exists()
+        )
 
     def test_revoking_panopticon_deletes_grant(self):
         self.target_user.is_superuser = True
         self.target_user.save()
-        PanopticonGrant.objects.create(user=self.target_user, reason="Old reason")
+        PanopticonGrant.objects.create(
+            user=self.target_user, reason="Old reason"
+        )
         form = self._make_form(**{"user-is_superuser": False})
         self.assertTrue(form.is_valid(), form.errors)
         form.save(granted_by=self.admin)
-        self.assertFalse(PanopticonGrant.objects.filter(user=self.target_user).exists())
+        self.assertFalse(
+            PanopticonGrant.objects.filter(user=self.target_user).exists()
+        )
 
     def test_granting_programmer_creates_grant(self):
         form = self._make_form(**{"user-programmer": "on"})
         self.assertTrue(form.is_valid(), form.errors)
         form.save(granted_by=self.admin)
-        self.assertTrue(ProgrammerGrant.objects.filter(user=self.target_user).exists())
+        self.assertTrue(
+            ProgrammerGrant.objects.filter(user=self.target_user).exists()
+        )
         grant = ProgrammerGrant.objects.get(user=self.target_user)
         self.assertEqual(grant.granted_by, self.admin)
 
@@ -107,7 +121,9 @@ class UserFormGrantIntegrationTests(MembersTestsMixin, TestCase):
         form = self._make_form(**{"user-programmer": False})
         self.assertTrue(form.is_valid(), form.errors)
         form.save(granted_by=self.admin)
-        self.assertFalse(ProgrammerGrant.objects.filter(user=self.target_user).exists())
+        self.assertFalse(
+            ProgrammerGrant.objects.filter(user=self.target_user).exists()
+        )
 
 
 class ToolkitAccessViewTests(MembersTestsMixin, TestCase):
@@ -150,7 +166,9 @@ class MarkPanopticonReviewedTests(MembersTestsMixin, TestCase):
         self.grant = PanopticonGrant.objects.create(
             user=self.admin, reason="Original reason"
         )
-        self.url = reverse("toolkit-access-review", kwargs={"grant_id": self.grant.pk})
+        self.url = reverse(
+            "toolkit-access-review", kwargs={"grant_id": self.grant.pk}
+        )
 
     def test_mark_reviewed_sets_date(self):
         self.client.login(username="admin", password="T3stPassword!")

@@ -64,7 +64,11 @@ class TestVolunteerListViews(MembersTestsMixin, TestCase):
         # The role report is retired; old URL redirects to the qualification report.
         url = reverse("view-volunteer-role-report")
         response = self.client.get(url)
-        self.assertRedirects(response, reverse("view-qualification-report"), fetch_redirect_response=False)
+        self.assertRedirects(
+            response,
+            reverse("view-qualification-report"),
+            fetch_redirect_response=False,
+        )
 
 
 class TestVolunteerEditViews(MembersTestsMixin, TestCase):
@@ -146,8 +150,12 @@ class TestVolunteerSuspension(MembersTestsMixin, TestCase):
 
     def _make_entry_for(self, volunteer, start):
         event = Event(
-            name="Ev", copy="c", copy_summary="s", duration=None,
-            outside_hire=False, private=False,
+            name="Ev",
+            copy="c",
+            copy_summary="s",
+            duration=None,
+            outside_hire=False,
+            private=False,
         )
         event.save()
         # Showing.start is a FutureDateTimeField, so always create in the
@@ -219,6 +227,7 @@ class TestVolunteerSuspension(MembersTestsMixin, TestCase):
 
     def test_suspended_not_offered_to_non_superuser(self):
         from toolkit.members.forms import VolunteerForm
+
         form = VolunteerForm(instance=self.vol_1, is_superuser=False)
         values = [v for v, _ in form.fields["status"].choices]
         self.assertNotIn(Volunteer.STATUS_SUSPENDED, values)
@@ -227,6 +236,7 @@ class TestVolunteerSuspension(MembersTestsMixin, TestCase):
         # Suspension is handled via the dedicated toggle action, not via the
         # status field on the form — so it should never appear as a choice.
         from toolkit.members.forms import VolunteerForm
+
         form = VolunteerForm(instance=self.vol_1, is_superuser=True)
         values = [v for v, _ in form.fields["status"].choices]
         self.assertNotIn(Volunteer.STATUS_SUSPENDED, values)
@@ -382,7 +392,6 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
             new_member.volunteer.notes, "plays the balalaika really badly"
         )
 
-
     def test_post_new_vol_invalid_missing_data(self):
         url = reverse("add-volunteer")
         response = self.client.post(url)
@@ -401,7 +410,11 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
         url = reverse("edit-volunteer", kwargs={"volunteer_id": 1})
         response = self.client.post(
             url,
-            data={"mem-name": "Renam\u018fd Vol", "mem-email": "volon@cube.test", "vol-status": "active"},
+            data={
+                "mem-name": "Renam\u018fd Vol",
+                "mem-email": "volon@cube.test",
+                "vol-status": "active",
+            },
             follow=True,
         )
         self.assertRedirects(response, reverse("view-volunteer-summary"))
@@ -499,7 +512,6 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
         self.assertEqual(
             member.volunteer.notes, "plays the balalaika really badly"
         )
-
 
     def test_post_update_vol_invalid_missing_data(self):
         url = reverse("edit-volunteer", kwargs={"volunteer_id": 1})
@@ -965,10 +977,14 @@ class TestBulkRecordTraining(MembersTestsMixin, TestCase):
             recs = vol.training_records.all()
             self.assertEqual(len(recs), 1)
             if test_general:
-                self.assertEqual(recs[0].training_type, TrainingRecord.GENERAL_TRAINING)
+                self.assertEqual(
+                    recs[0].training_type, TrainingRecord.GENERAL_TRAINING
+                )
                 self.assertEqual(recs[0].role, None)
             else:
-                self.assertEqual(recs[0].training_type, TrainingRecord.ROLE_TRAINING)
+                self.assertEqual(
+                    recs[0].training_type, TrainingRecord.ROLE_TRAINING
+                )
                 self.assertEqual(recs[0].role, role)
             self.assertEqual(recs[0].notes, notes.strip())
             self.assertEqual(recs[0].trainer, trainer)
@@ -1018,9 +1034,17 @@ class TestBulkRecordTraining(MembersTestsMixin, TestCase):
         response = self.client.post(self._url())
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "volunteer_bulk_record.html")
-        self.assertFormError(response.context["form"], "type", "This field is required.")
-        self.assertFormError(response.context["form"], "training_date", "This field is required.")
-        self.assertFormError(response.context["form"], "trainer", "This field is required.")
+        self.assertFormError(
+            response.context["form"], "type", "This field is required."
+        )
+        self.assertFormError(
+            response.context["form"],
+            "training_date",
+            "This field is required.",
+        )
+        self.assertFormError(
+            response.context["form"], "trainer", "This field is required."
+        )
 
     def test_add_group_record_missing_role(self):
         response = self.client.post(
@@ -1034,11 +1058,16 @@ class TestBulkRecordTraining(MembersTestsMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertFormError(response.context["form"], "role", "This field is required.")
+        self.assertFormError(
+            response.context["form"], "role", "This field is required."
+        )
         self.assertEqual(TrainingRecord.objects.count(), 0)
 
     def test_also_grants_qualification(self):
-        from toolkit.members.models import Qualification, VolunteerQualification
+        from toolkit.members.models import (
+            Qualification,
+            VolunteerQualification,
+        )
 
         qual = Qualification.objects.create(name="Bar")
         volunteers = Volunteer.objects.active()[:3]
@@ -1058,16 +1087,25 @@ class TestBulkRecordTraining(MembersTestsMixin, TestCase):
         self.assertRedirects(response, self._url())
         self.assertEqual(TrainingRecord.objects.count(), 3)
         self.assertEqual(
-            set(VolunteerQualification.objects.filter(qualification=qual).values_list("volunteer_id", flat=True)),
+            set(
+                VolunteerQualification.objects.filter(
+                    qualification=qual
+                ).values_list("volunteer_id", flat=True)
+            ),
             {v.pk for v in volunteers},
         )
 
     def test_qualification_grant_skips_existing_holders(self):
-        from toolkit.members.models import Qualification, VolunteerQualification
+        from toolkit.members.models import (
+            Qualification,
+            VolunteerQualification,
+        )
 
         qual = Qualification.objects.create(name="Bar")
         volunteers = list(Volunteer.objects.active()[:3])
-        VolunteerQualification.objects.create(volunteer=volunteers[0], qualification=qual)
+        VolunteerQualification.objects.create(
+            volunteer=volunteers[0], qualification=qual
+        )
 
         response = self.client.post(
             self._url(),
@@ -1083,7 +1121,10 @@ class TestBulkRecordTraining(MembersTestsMixin, TestCase):
         )
         self.assertRedirects(response, self._url())
         # Still only one VolunteerQualification per volunteer — no duplicate for the existing holder.
-        self.assertEqual(VolunteerQualification.objects.filter(qualification=qual).count(), 3)
+        self.assertEqual(
+            VolunteerQualification.objects.filter(qualification=qual).count(),
+            3,
+        )
 
     def test_no_qualification_selected_does_not_grant(self):
         from toolkit.members.models import VolunteerQualification
@@ -1210,11 +1251,14 @@ class TestAnonymiseVolunteer(MembersTestsMixin, TestCase):
         super().setUp()
         # Grant superuser status to the shared admin test account
         from django.contrib.auth.models import User as AuthUser
+
         AuthUser.objects.filter(username="admin").update(is_superuser=True)
         self.assertTrue(
             self.client.login(username="admin", password="T3stPassword!")
         )
-        self.url = reverse("anonymise-volunteer", kwargs={"volunteer_id": self.vol_1.pk})
+        self.url = reverse(
+            "anonymise-volunteer", kwargs={"volunteer_id": self.vol_1.pk}
+        )
 
     def tearDown(self):
         self.client.logout()
@@ -1280,9 +1324,13 @@ class TestAnonymiseVolunteer(MembersTestsMixin, TestCase):
             training_type=TrainingRecord.ROLE_TRAINING,
             training_date=datetime.date(2024, 1, 1),
         )
-        self.assertEqual(TrainingRecord.objects.filter(volunteer=self.vol_1).count(), 1)
+        self.assertEqual(
+            TrainingRecord.objects.filter(volunteer=self.vol_1).count(), 1
+        )
         self._post_confirm()
-        self.assertEqual(TrainingRecord.objects.filter(volunteer=self.vol_1).count(), 0)
+        self.assertEqual(
+            TrainingRecord.objects.filter(volunteer=self.vol_1).count(), 0
+        )
 
     def _make_rota_entry(self, name, event_name="Test Event"):
         event = Event(
@@ -1296,7 +1344,9 @@ class TestAnonymiseVolunteer(MembersTestsMixin, TestCase):
         event.save()
         showing = Showing(
             event=event,
-            start=datetime.datetime(2030, 6, 1, 19, 0, tzinfo=zoneinfo.ZoneInfo("UTC")),
+            start=datetime.datetime(
+                2030, 6, 1, 19, 0, tzinfo=zoneinfo.ZoneInfo("UTC")
+            ),
             confirmed=True,
         )
         showing.save()
@@ -1414,7 +1464,9 @@ class TestVolunteerDirectory(MembersTestsMixin, TestCase):
         self.assertNotContains(response, "Please provide a chair.")
 
     def test_collectives_shown_when_opted_in(self):
-        collective = Collective.objects.create(name="Film Collective", slug="film", colour="#000000")
+        collective = Collective.objects.create(
+            name="Film Collective", slug="film", colour="#000000"
+        )
         self.vol_1.dir_share_listed = True
         self.vol_1.dir_share_name_style = Volunteer.NAME_STYLE_FULL
         self.vol_1.dir_share_collectives = True
@@ -1511,7 +1563,9 @@ class TestVolunteerExportFilters(MembersTestsMixin, TestCase):
 
     def setUp(self):
         super().setUp()
-        self.assertTrue(self.client.login(username="admin", password="T3stPassword!"))
+        self.assertTrue(
+            self.client.login(username="admin", password="T3stPassword!")
+        )
 
         self.role = Role.objects.filter(read_only=False).first()
 
@@ -1590,12 +1644,16 @@ class TestVolunteerExportFilters(MembersTestsMixin, TestCase):
         self.assertIn("Volunteer One", body)
 
     def test_audit_log_records_filter(self):
-        self._post(ExportAuditLog.FILTER_EVENTS, event_ids=[self.event_future.pk])
+        self._post(
+            ExportAuditLog.FILTER_EVENTS, event_ids=[self.event_future.pk]
+        )
         log = ExportAuditLog.objects.latest("exported_at")
         self.assertEqual(log.filter_type, ExportAuditLog.FILTER_EVENTS)
         self.assertEqual(log.filter_event_ids, [self.event_future.pk])
 
     def test_audit_log_page_shows_event_names(self):
-        self._post(ExportAuditLog.FILTER_EVENTS, event_ids=[self.event_future.pk])
+        self._post(
+            ExportAuditLog.FILTER_EVENTS, event_ids=[self.event_future.pk]
+        )
         resp = self.client.get(reverse("view-volunteer-export-audit"))
         self.assertContains(resp, "Future confirmed event")

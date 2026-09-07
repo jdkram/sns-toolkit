@@ -18,15 +18,13 @@ def widen_translation_key_if_needed(apps, schema_editor):
     if schema_editor.connection.vendor != "mysql":
         return
     with schema_editor.connection.cursor() as cursor:
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT CHARACTER_MAXIMUM_LENGTH
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_SCHEMA = DATABASE()
               AND TABLE_NAME   = 'wagtailcore_page'
               AND COLUMN_NAME  = 'translation_key'
-            """
-        )
+            """)
         row = cursor.fetchone()
         if row is None:
             # Column does not exist — nothing to do. Should not happen given
@@ -36,12 +34,10 @@ def widen_translation_key_if_needed(apps, schema_editor):
         if current_length is not None and current_length >= 36:
             # Already wide enough; fresh Wagtail 6.3 installs land here.
             return
-        cursor.execute(
-            """
+        cursor.execute("""
             ALTER TABLE wagtailcore_page
             MODIFY COLUMN translation_key varchar(36) NOT NULL
-            """
-        )
+            """)
 
 
 def reverse_noop(apps, schema_editor):

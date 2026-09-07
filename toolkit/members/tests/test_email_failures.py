@@ -5,6 +5,7 @@ Each test routes email through the real LoggingEmailBackend wrapper with a
 deliberately failing inner backend (toolkit.util.tests.FailingBackend), so
 the whole stack from view to backend is exercised.
 """
+
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -46,12 +47,16 @@ class EmailFailureViewTests(MembersTestsMixin, TestCase):
         self.assertContains(response, "failed to send")
         # The pending flag survives so the send can be retried:
         self.assertTrue(
-            self.client.session.get(f"suspension_email_pending_{self.vol_1.pk}")
+            self.client.session.get(
+                f"suspension_email_pending_{self.vol_1.pk}"
+            )
         )
 
     def test_last_gasp_failure_shows_error_and_starts_no_cooldown(self):
         self._set_config(last_gasp_email_enabled=True)
-        url = reverse("last-gasp-email", kwargs={"volunteer_id": self.vol_1.pk})
+        url = reverse(
+            "last-gasp-email", kwargs={"volunteer_id": self.vol_1.pk}
+        )
 
         response = self.client.post(url, follow=True)
 

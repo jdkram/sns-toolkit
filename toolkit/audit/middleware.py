@@ -6,6 +6,7 @@ already resolved. Sends from management commands or mailerd aren't requests
 at all, so they set their own trigger_source explicitly (see
 toolkit.audit.models.email_trigger) rather than going through this.
 """
+
 from .models import email_trigger
 
 

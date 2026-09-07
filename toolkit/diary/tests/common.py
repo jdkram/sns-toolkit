@@ -44,6 +44,7 @@ class DiaryTestsMixin(fixtures.TestWithFixtures):
         # a previous test's SiteConfiguration mutation could leak in. Clear it.
         from django.core.cache import cache
         from toolkit.diary.models import SiteConfiguration
+
         cache.delete(SiteConfiguration._CACHE_KEY)
         return super().setUp()
 
@@ -431,9 +432,13 @@ class DiaryTestsMixin(fixtures.TestWithFixtures):
         m5.save()
 
         # Users for volunteers (minimal accounts, no permissions needed):
-        u1 = auth_models.User.objects.create_user("vol1", "volon@cube.test", "testpass")
+        u1 = auth_models.User.objects.create_user(
+            "vol1", "volon@cube.test", "testpass"
+        )
         u2 = auth_models.User.objects.create_user("vol2", "", "testpass")
-        u3 = auth_models.User.objects.create_user("vol3", "volthree@foo.test", "testpass")
+        u3 = auth_models.User.objects.create_user(
+            "vol3", "volthree@foo.test", "testpass"
+        )
 
         # Volunteers:
         v1 = Volunteer(member=m3, user=u1)
@@ -455,4 +460,5 @@ class ToolkitUsersFixture(fixtures.Fixture):
         # via self.client.login(...), so the Fixture doesn't expose the User
         # objects on self.
         from toolkit.test_common import create_toolkit_test_users
+
         create_toolkit_test_users(include_rota_editor=True)

@@ -11,10 +11,6 @@ working unchanged.
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["glm-5.2"]; status: "#ai-input"
 
 
-
-
-
-
 def _user_volunteer(user):
     """Return user.volunteer if the user has an associated Volunteer row, else None.
 

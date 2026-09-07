@@ -17,7 +17,7 @@ VENUE = {
     "twitter": "https://twitter.com/StarAndShadow",
     "facebook": "https://www.facebook.com/StarAndShadow",
     "instagram": "https://www.instagram.com/starandshadowcinema/",
-    "bluesky": "",   # TODO: add Bluesky handle when confirmed
+    "bluesky": "",  # TODO: add Bluesky handle when confirmed
     "mastodon": "",  # TODO: add Mastodon URL if account exists
     "flickr": "",
     "vimeo": "",
@@ -71,4 +71,3 @@ TEMPLATES[0]["DIRS"] = (
     os.path.join(BASE_DIR, "star_and_shadow_templates"),
     os.path.join(BASE_DIR, "templates"),
 )
-

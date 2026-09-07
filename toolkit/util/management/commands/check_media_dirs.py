@@ -28,6 +28,7 @@ HOW TO FIX A FAILURE
        docker compose exec --user root toolkit mkdir -p /site/media/<path>
        docker compose exec --user root toolkit chown toolkit:toolkit /site/media/<path>
 """
+
 import os
 import stat
 
@@ -68,14 +69,20 @@ class Command(BaseCommand):
             ok, reason = self._check_dir(full_path)
             if ok:
                 if verbosity >= 2:
-                    self.stdout.write(self.style.SUCCESS(f"  OK  {path}  ({source})"))
+                    self.stdout.write(
+                        self.style.SUCCESS(f"  OK  {path}  ({source})")
+                    )
             elif create:
                 os.makedirs(full_path, exist_ok=True)
                 if verbosity >= 1:
-                    self.stdout.write(self.style.WARNING(f"  CREATED  {path}  ({source})"))
+                    self.stdout.write(
+                        self.style.WARNING(f"  CREATED  {path}  ({source})")
+                    )
             else:
                 failures.append((path, source, reason))
-                self.stderr.write(self.style.ERROR(f"  FAIL  {path}  ({source}): {reason}"))
+                self.stderr.write(
+                    self.style.ERROR(f"  FAIL  {path}  ({source}): {reason}")
+                )
 
         if failures:
             self.stderr.write(
@@ -116,7 +123,9 @@ class Command(BaseCommand):
                     continue
                 # Normalise: strip leading slash, ensure trailing slash.
                 upload_to = upload_to.strip("/") + "/"
-                label = f"{model._meta.app_label}.{model.__name__}.{field.name}"
+                label = (
+                    f"{model._meta.app_label}.{model.__name__}.{field.name}"
+                )
                 # Keep first label seen for any given path (multiple fields can share a dir).
                 paths.setdefault(upload_to, label)
         return paths

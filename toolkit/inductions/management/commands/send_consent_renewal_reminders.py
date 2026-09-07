@@ -8,6 +8,7 @@ that they should log in and reconfirm it. Never changes Volunteer.status and
 never anonymises anything — a volunteer who doesn't respond is only flagged
 via Volunteer.consent_overdue, for a human to review in the volunteer list.
 """
+
 import logging
 
 from django.core.mail import EmailMessage, get_connection
@@ -26,7 +27,8 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--dry-run", action="store_true",
+            "--dry-run",
+            action="store_true",
             help="Report who would be emailed without sending anything or updating consent_reminder_sent_at.",
         )
 
@@ -41,18 +43,27 @@ class Command(BaseCommand):
         cfg = get_site_config()
         renewal_days = cfg.consent_renewal_days
         if not renewal_days:
-            self.stdout.write("Consent renewal is disabled (consent_renewal_days = 0). Nothing to do.")
+            self.stdout.write(
+                "Consent renewal is disabled (consent_renewal_days = 0). Nothing to do."
+            )
             return
 
         cutoff = now - timezone.timedelta(days=renewal_days)
 
         due = (
-            Volunteer.objects.filter(status=Volunteer.STATUS_ACTIVE, retention_exempt=False)
+            Volunteer.objects.filter(
+                status=Volunteer.STATUS_ACTIVE, retention_exempt=False
+            )
             .filter(member__gdpr_opt_in__lt=cutoff)
             .select_related("member")
         )
         # Don't re-send to someone already reminded this cycle.
-        due = [v for v in due if not v.consent_reminder_sent_at or v.consent_reminder_sent_at < cutoff]
+        due = [
+            v
+            for v in due
+            if not v.consent_reminder_sent_at
+            or v.consent_reminder_sent_at < cutoff
+        ]
 
         self.stdout.write(
             f"{'[DRY RUN] ' if dry_run else ''}{len(due)} volunteer(s) due a consent renewal reminder"
@@ -71,27 +82,47 @@ class Command(BaseCommand):
                 email = volunteer.member.email
                 name = volunteer.member.name or "Volunteer"
                 if not email:
-                    self.stdout.write(self.style.WARNING(f"  Skipping {name}: no email address"))
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"  Skipping {name}: no email address"
+                        )
+                    )
                     skipped += 1
                     continue
 
                 if dry_run:
-                    self.stdout.write(f"  [DRY RUN] Would remind {name} <{email}>")
+                    self.stdout.write(
+                        f"  [DRY RUN] Would remind {name} <{email}>"
+                    )
                     continue
 
                 try:
                     subject, body = build_consent_renewal_email(volunteer)
-                    EmailMessage(subject, body, _from_email(), [email], connection=connection).send()
+                    EmailMessage(
+                        subject,
+                        body,
+                        _from_email(),
+                        [email],
+                        connection=connection,
+                    ).send()
                     volunteer.consent_reminder_sent_at = now
                     volunteer.save(update_fields=["consent_reminder_sent_at"])
-                    self.stdout.write(self.style.SUCCESS(f"  Reminded {name} <{email}>"))
+                    self.stdout.write(
+                        self.style.SUCCESS(f"  Reminded {name} <{email}>")
+                    )
                     sent += 1
                 except Exception:
-                    logger.exception(f"Failed to send consent renewal reminder to volunteer pk={volunteer.pk}")
+                    logger.exception(
+                        f"Failed to send consent renewal reminder to volunteer pk={volunteer.pk}"
+                    )
                     skipped += 1
         finally:
             if connection:
                 connection.close()
 
         if not dry_run:
-            self.stdout.write(self.style.SUCCESS(f"Sent {sent} reminder(s); {skipped} skipped."))
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Sent {sent} reminder(s); {skipped} skipped."
+                )
+            )

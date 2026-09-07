@@ -196,9 +196,7 @@ def _template_forms_prefilled_from_event(source_event):
         extra=len(role_initial) + 1,
         can_delete=True,
     )
-    roles_formset = RolesFormSet(
-        instance=blank_template, initial=role_initial
-    )
+    roles_formset = RolesFormSet(instance=blank_template, initial=role_initial)
 
     link_initial = [
         {"label": link.label, "url": link.url}

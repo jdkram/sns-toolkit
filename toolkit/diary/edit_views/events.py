@@ -788,7 +788,8 @@ def _budget_grid_context(event, budget_formset):
     )
     return {
         "budget_categories": [
-            {"name": name, "forms": forms} for name, forms in categories.items()
+            {"name": name, "forms": forms}
+            for name, forms in categories.items()
         ],
         "budget_totals": totals,
     }

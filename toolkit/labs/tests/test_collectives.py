@@ -81,14 +81,18 @@ class CollectiveJoinTests(LabsTestsMixin, TestCase):
         self.client.login(username="volunteer", password="T3stPassword!3")
 
     def test_volunteer_can_join_open_collective(self):
-        url = reverse("labs-collective-join", kwargs={"slug": self.col_open.slug})
+        url = reverse(
+            "labs-collective-join", kwargs={"slug": self.col_open.slug}
+        )
         response = self.client.post(url)
         self.assertRedirects(response, reverse("labs-collectives"))
         self.assertIn(self.col_open, self.user_vol.volunteer.collectives.all())
 
     def test_joining_again_is_harmless(self):
         self.user_vol.volunteer.collectives.add(self.col_open)
-        url = reverse("labs-collective-join", kwargs={"slug": self.col_open.slug})
+        url = reverse(
+            "labs-collective-join", kwargs={"slug": self.col_open.slug}
+        )
         response = self.client.post(url)
         self.assertRedirects(response, reverse("labs-collectives"))
         # Still in the collective, no duplicate
@@ -97,20 +101,28 @@ class CollectiveJoinTests(LabsTestsMixin, TestCase):
         )
 
     def test_cannot_join_invite_only_collective(self):
-        url = reverse("labs-collective-join", kwargs={"slug": self.col_invite.slug})
+        url = reverse(
+            "labs-collective-join", kwargs={"slug": self.col_invite.slug}
+        )
         response = self.client.post(url)
         self.assertRedirects(response, reverse("labs-collectives"))
-        self.assertNotIn(self.col_invite, self.user_vol.volunteer.collectives.all())
+        self.assertNotIn(
+            self.col_invite, self.user_vol.volunteer.collectives.all()
+        )
 
     def test_user_without_volunteer_profile_gets_error_message(self):
         self.client.logout()
         self.client.login(username="no_perm", password="T3stPassword!2")
-        url = reverse("labs-collective-join", kwargs={"slug": self.col_open.slug})
+        url = reverse(
+            "labs-collective-join", kwargs={"slug": self.col_open.slug}
+        )
         response = self.client.post(url, follow=True)
         self.assertContains(response, "volunteer profile")
 
     def test_join_inactive_collective_returns_404(self):
-        url = reverse("labs-collective-join", kwargs={"slug": self.col_inactive.slug})
+        url = reverse(
+            "labs-collective-join", kwargs={"slug": self.col_inactive.slug}
+        )
         response = self.client.post(url)
         self.assertEqual(response.status_code, 404)
 
@@ -124,14 +136,20 @@ class CollectiveLeaveTests(LabsTestsMixin, TestCase):
         self.user_vol.volunteer.collectives.add(self.col_open)
 
     def test_volunteer_can_leave_collective(self):
-        url = reverse("labs-collective-leave", kwargs={"slug": self.col_open.slug})
+        url = reverse(
+            "labs-collective-leave", kwargs={"slug": self.col_open.slug}
+        )
         response = self.client.post(url)
         self.assertRedirects(response, reverse("labs-collectives"))
-        self.assertNotIn(self.col_open, self.user_vol.volunteer.collectives.all())
+        self.assertNotIn(
+            self.col_open, self.user_vol.volunteer.collectives.all()
+        )
 
     def test_leaving_collective_not_in_is_harmless(self):
         # leave an unjoined collective — should not error
-        url = reverse("labs-collective-leave", kwargs={"slug": self.col_invite.slug})
+        url = reverse(
+            "labs-collective-leave", kwargs={"slug": self.col_invite.slug}
+        )
         response = self.client.post(url)
         self.assertRedirects(response, reverse("labs-collectives"))
 
@@ -142,7 +160,9 @@ class CollectiveEditTests(LabsTestsMixin, TestCase):
     def setUp(self):
         super().setUp()
         self.client.login(username="volunteer", password="T3stPassword!3")
-        self.url = reverse("labs-collective-edit", kwargs={"slug": self.col_open.slug})
+        self.url = reverse(
+            "labs-collective-edit", kwargs={"slug": self.col_open.slug}
+        )
 
     def test_get_edit_form_returns_200(self):
         response = self.client.get(self.url)
@@ -150,7 +170,9 @@ class CollectiveEditTests(LabsTestsMixin, TestCase):
         self.assertContains(response, self.col_open.name)
 
     def test_edit_inactive_collective_returns_404(self):
-        url = reverse("labs-collective-edit", kwargs={"slug": self.col_inactive.slug})
+        url = reverse(
+            "labs-collective-edit", kwargs={"slug": self.col_inactive.slug}
+        )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
@@ -211,15 +233,17 @@ class CollectiveEditTests(LabsTestsMixin, TestCase):
 
     def test_post_creates_defined_role(self):
         data = self._base_post_data()
-        data.update({
-            "defined_roles-TOTAL_FORMS": "2",
-            "defined_roles-0-title": "Head Cook",
-            "defined_roles-0-time_commitment": "~3hrs/month",
-            "defined_roles-0-needs_volunteers": "on",
-            "defined_roles-0-open_to_new_volunteers": "on",
-            "defined_roles-0-description": "Plan and cook one meal per month.",
-            "defined_roles-0-getting_started": "Come to the next Community Kitchen evening.",
-        })
+        data.update(
+            {
+                "defined_roles-TOTAL_FORMS": "2",
+                "defined_roles-0-title": "Head Cook",
+                "defined_roles-0-time_commitment": "~3hrs/month",
+                "defined_roles-0-needs_volunteers": "on",
+                "defined_roles-0-open_to_new_volunteers": "on",
+                "defined_roles-0-description": "Plan and cook one meal per month.",
+                "defined_roles-0-getting_started": "Come to the next Community Kitchen evening.",
+            }
+        )
         response = self.client.post(self.url, data)
         self.assertRedirects(response, reverse("labs-collectives"))
         self.col_open.refresh_from_db()
@@ -231,6 +255,7 @@ class CollectiveEditTests(LabsTestsMixin, TestCase):
 
     def test_collectives_list_shows_roles(self):
         from toolkit.labs.models import CollectiveRole
+
         CollectiveRole.objects.create(
             collective=self.col_open,
             title="Head Cook",

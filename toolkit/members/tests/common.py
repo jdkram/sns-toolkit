@@ -113,10 +113,16 @@ class MembersTestsMixin:
         self.mem_8.save()
 
         # Users for volunteers (minimal accounts, no permissions needed):
-        u_vol1 = auth_models.User.objects.create_user("vol1", "volon@cube.test", "testpass")
+        u_vol1 = auth_models.User.objects.create_user(
+            "vol1", "volon@cube.test", "testpass"
+        )
         u_vol2 = auth_models.User.objects.create_user("vol2", "", "testpass")
-        u_vol3 = auth_models.User.objects.create_user("vol3", "volthree@foo.test", "testpass")
-        u_vol4 = auth_models.User.objects.create_user("vol4", "four4@foo.test", "testpass")
+        u_vol3 = auth_models.User.objects.create_user(
+            "vol3", "volthree@foo.test", "testpass"
+        )
+        u_vol4 = auth_models.User.objects.create_user(
+            "vol4", "four4@foo.test", "testpass"
+        )
 
         # Volunteers:
         self.vol_1 = Volunteer(
@@ -134,7 +140,10 @@ class MembersTestsMixin:
         self.vol_3.save()
 
         self.vol_4 = Volunteer(
-            member=self.mem_7, user=u_vol4, status="retired", notes="Subliminal, superluminous"
+            member=self.mem_7,
+            user=u_vol4,
+            status="retired",
+            notes="Subliminal, superluminous",
         )
         self.vol_4.save()
 
@@ -143,4 +152,5 @@ class MembersTestsMixin:
         # See toolkit/test_common.py for rationale; tests log in by username
         # via self.client.login(...), so no Users are exposed on self.
         from toolkit.test_common import create_toolkit_test_users
+
         create_toolkit_test_users()

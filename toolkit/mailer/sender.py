@@ -164,8 +164,9 @@ def send_mailout_to(
     from toolkit.audit.models import email_trigger, summarise_email_batch
 
     try:
-        with email_trigger(f"Mailout job #{job.pk}"), summarise_email_batch(
-            f"[mailout] {job.subject}"
+        with (
+            email_trigger(f"Mailout job #{job.pk}"),
+            summarise_email_batch(f"[mailout] {job.subject}"),
         ):
             for recipient in recipients:
                 now_m = time.monotonic()

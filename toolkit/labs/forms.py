@@ -6,7 +6,19 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, HTML
 from toolkit.diary.form_widgets import HtmlTextarea
 from toolkit.diary.models import get_site_config
-from .models import AreaPhoto, Bulletin, Collective, CollectiveLink, CollectiveRole, DonationItem, ExchangeItem, FoundItem, Job, LoftItemPhoto, COLLECTIVE_PALETTE
+from .models import (
+    AreaPhoto,
+    Bulletin,
+    Collective,
+    CollectiveLink,
+    CollectiveRole,
+    DonationItem,
+    ExchangeItem,
+    FoundItem,
+    Job,
+    LoftItemPhoto,
+    COLLECTIVE_PALETTE,
+)
 
 
 class ColourPickerWidget(forms.TextInput):
@@ -92,7 +104,19 @@ class ColourPickerWidget(forms.TextInput):
 class CollectiveForm(forms.ModelForm):
     class Meta:
         model = Collective
-        fields = ("colour", "volunteer_count", "about", "roles", "organising", "proud_of", "get_involved", "sample_role", "contact", "listed_publicly", "public_copy")
+        fields = (
+            "colour",
+            "volunteer_count",
+            "about",
+            "roles",
+            "organising",
+            "proud_of",
+            "get_involved",
+            "sample_role",
+            "contact",
+            "listed_publicly",
+            "public_copy",
+        )
         widgets = {
             "colour": ColourPickerWidget(),
             "about": forms.Textarea(attrs={"rows": 5}),
@@ -109,13 +133,21 @@ class CollectiveForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.layout = Layout(
-            "colour", "volunteer_count", "about", "roles", "organising", "proud_of", "get_involved", "sample_role", "contact",
+            "colour",
+            "volunteer_count",
+            "about",
+            "roles",
+            "organising",
+            "proud_of",
+            "get_involved",
+            "sample_role",
+            "contact",
             HTML(
                 '<hr style="margin: 1.5rem 0 1rem;">'
                 '<h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem;">Public directory</h2>'
                 '<p class="text-muted" style="font-size: 0.85rem; margin-bottom: 1rem;">'
-                'Controls whether this collective appears on the public <code>/labs/collectives/public/</code> page. '
-                'Both the checkbox and a non-empty public description are required to be listed.</p>'
+                "Controls whether this collective appears on the public <code>/labs/collectives/public/</code> page. "
+                "Both the checkbox and a non-empty public description are required to be listed.</p>"
             ),
             "listed_publicly",
             "public_copy",
@@ -130,14 +162,18 @@ CollectiveLinkFormSet = inlineformset_factory(
     max_num=3,
     can_delete=True,
     widgets={
-        "label": forms.TextInput(attrs={
-            "placeholder": "e.g. WhatsApp group",
-            "class": "form-control form-control-sm",
-        }),
-        "url": forms.URLInput(attrs={
-            "placeholder": "https://...",
-            "class": "form-control form-control-sm",
-        }),
+        "label": forms.TextInput(
+            attrs={
+                "placeholder": "e.g. WhatsApp group",
+                "class": "form-control form-control-sm",
+            }
+        ),
+        "url": forms.URLInput(
+            attrs={
+                "placeholder": "https://...",
+                "class": "form-control form-control-sm",
+            }
+        ),
     },
 )
 
@@ -145,24 +181,41 @@ CollectiveLinkFormSet = inlineformset_factory(
 class CollectiveRoleForm(forms.ModelForm):
     class Meta:
         model = CollectiveRole
-        fields = ("title", "time_commitment", "description", "getting_started", "needs_volunteers", "open_to_new_volunteers")
+        fields = (
+            "title",
+            "time_commitment",
+            "description",
+            "getting_started",
+            "needs_volunteers",
+            "open_to_new_volunteers",
+        )
         widgets = {
-            "title": forms.TextInput(attrs={
-                "placeholder": "e.g. Head Cook",
-                "class": "form-control form-control-sm",
-            }),
-            "time_commitment": forms.TextInput(attrs={
-                "placeholder": "e.g. ~3hrs/month",
-                "class": "form-control form-control-sm",
-            }),
-            "description": forms.Textarea(attrs={
-                "rows": 2, "class": "form-control form-control-sm",
-                "placeholder": "What does this role involve?",
-            }),
-            "getting_started": forms.Textarea(attrs={
-                "rows": 2, "class": "form-control form-control-sm",
-                "placeholder": "e.g. Come to our next meeting, message us on Signal…",
-            }),
+            "title": forms.TextInput(
+                attrs={
+                    "placeholder": "e.g. Head Cook",
+                    "class": "form-control form-control-sm",
+                }
+            ),
+            "time_commitment": forms.TextInput(
+                attrs={
+                    "placeholder": "e.g. ~3hrs/month",
+                    "class": "form-control form-control-sm",
+                }
+            ),
+            "description": forms.Textarea(
+                attrs={
+                    "rows": 2,
+                    "class": "form-control form-control-sm",
+                    "placeholder": "What does this role involve?",
+                }
+            ),
+            "getting_started": forms.Textarea(
+                attrs={
+                    "rows": 2,
+                    "class": "form-control form-control-sm",
+                    "placeholder": "e.g. Come to our next meeting, message us on Signal…",
+                }
+            ),
         }
 
     def __init__(self, *args, **kwargs):
@@ -219,11 +272,20 @@ BULLETIN_BODY_MAX = 2000
 # - Bidi-override / direction marks (used for homoglyph-style URL spoofing)
 # - Zero-width spaces / joiners and the byte-order mark
 _BULLETIN_STRIP_CHARS = (
-    set(range(0x00, 0x09)) | {0x0B} | set(range(0x0E, 0x20))  # C0 minus \t\n
-    | set(range(0x7F, 0xA0))                                  # DEL + C1
-    | {0x200B, 0x200C, 0x200D, 0x200E, 0x200F, 0xFEFF}        # ZW marks + LRM/RLM + BOM
-    | set(range(0x202A, 0x202F))                              # LRE/RLE/PDF/LRO/RLO
-    | set(range(0x2066, 0x206A))                              # LRI/RLI/FSI/PDI
+    set(range(0x00, 0x09))
+    | {0x0B}
+    | set(range(0x0E, 0x20))  # C0 minus \t\n
+    | set(range(0x7F, 0xA0))  # DEL + C1
+    | {
+        0x200B,
+        0x200C,
+        0x200D,
+        0x200E,
+        0x200F,
+        0xFEFF,
+    }  # ZW marks + LRM/RLM + BOM
+    | set(range(0x202A, 0x202F))  # LRE/RLE/PDF/LRO/RLO
+    | set(range(0x2066, 0x206A))  # LRI/RLI/FSI/PDI
 )
 
 
@@ -236,10 +298,16 @@ class BulletinForm(forms.ModelForm):
         model = Bulletin
         fields = ("title", "body")
         widgets = {
-            "title": forms.TextInput(attrs={"class": "form-control", "maxlength": 200}),
-            "body": forms.Textarea(attrs={
-                "rows": 4, "class": "form-control", "maxlength": BULLETIN_BODY_MAX,
-            }),
+            "title": forms.TextInput(
+                attrs={"class": "form-control", "maxlength": 200}
+            ),
+            "body": forms.Textarea(
+                attrs={
+                    "rows": 4,
+                    "class": "form-control",
+                    "maxlength": BULLETIN_BODY_MAX,
+                }
+            ),
         }
 
     def __init__(self, *args, **kwargs):
@@ -277,7 +345,16 @@ class BulletinExpiryForm(forms.ModelForm):
 class DonationItemForm(forms.ModelForm):
     class Meta:
         model = DonationItem
-        fields = ("name", "category", "status", "active", "display_order", "notes", "internal_notes", "contact")
+        fields = (
+            "name",
+            "category",
+            "status",
+            "active",
+            "display_order",
+            "notes",
+            "internal_notes",
+            "contact",
+        )
         widgets = {
             "notes": forms.Textarea(attrs={"rows": 3}),
             "internal_notes": forms.Textarea(attrs={"rows": 3}),
@@ -300,15 +377,43 @@ class DonationsIntroForm(forms.Form):
 class FoundItemLogForm(forms.ModelForm):
     class Meta:
         model = FoundItem
-        fields = ("report_type", "description", "location_found", "found_on", "logged_by", "reporter_contact", "photo", "notes")
+        fields = (
+            "report_type",
+            "description",
+            "location_found",
+            "found_on",
+            "logged_by",
+            "reporter_contact",
+            "photo",
+            "notes",
+        )
         widgets = {
-            "report_type": forms.RadioSelect(attrs={"class": "laf-type-radio"}),
-            "description": forms.TextInput(attrs={"class": "form-control", "autocomplete": "off"}),
-            "location_found": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Bar, Cinema, Toilets"}),
-            "found_on": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "report_type": forms.RadioSelect(
+                attrs={"class": "laf-type-radio"}
+            ),
+            "description": forms.TextInput(
+                attrs={"class": "form-control", "autocomplete": "off"}
+            ),
+            "location_found": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "e.g. Bar, Cinema, Toilets",
+                }
+            ),
+            "found_on": forms.DateInput(
+                attrs={"class": "form-control", "type": "date"}
+            ),
             "logged_by": forms.TextInput(attrs={"class": "form-control"}),
-            "reporter_contact": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Name, phone number, email — whatever they're comfortable leaving"}),
-            "notes": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "reporter_contact": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 3,
+                    "placeholder": "Name, phone number, email — whatever they're comfortable leaving",
+                }
+            ),
+            "notes": forms.Textarea(
+                attrs={"class": "form-control", "rows": 3}
+            ),
         }
 
     def __init__(self, *args, **kwargs):
@@ -316,7 +421,9 @@ class FoundItemLogForm(forms.ModelForm):
         self.fields["photo"].required = False
         self.fields["notes"].required = False
         self.fields["reporter_contact"].required = False
-        self.fields["reporter_contact"].label = "Reporter's contact details (private)"
+        self.fields["reporter_contact"].label = (
+            "Reporter's contact details (private)"
+        )
         self.helper = FormHelper()
         self.helper.form_tag = False
 
@@ -357,27 +464,40 @@ class ExchangeItemForm(forms.ModelForm):
             "image",
         )
         widgets = {
-            "listing_type": forms.RadioSelect(attrs={"class": "form-check-input"}),
+            "listing_type": forms.RadioSelect(
+                attrs={"class": "form-check-input"}
+            ),
             "name": forms.TextInput(attrs={"class": "form-control"}),
-            "description": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
+            "description": forms.Textarea(
+                attrs={"rows": 3, "class": "form-control"}
+            ),
             "category": forms.Select(attrs={"class": "form-select"}),
             "condition": forms.Select(attrs={"class": "form-select"}),
             "quantity": forms.TextInput(attrs={"class": "form-control"}),
-            "available_until": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "available_until": forms.DateInput(
+                attrs={"class": "form-control", "type": "date"}
+            ),
             "owner_type": forms.Select(attrs={"class": "form-select"}),
             "owner_volunteer": forms.Select(attrs={"class": "form-select"}),
             "location_notes": forms.TextInput(attrs={"class": "form-control"}),
             "status": forms.Select(attrs={"class": "form-select"}),
-            "notes": forms.Textarea(attrs={"rows": 2, "class": "form-control"}),
+            "notes": forms.Textarea(
+                attrs={"rows": 2, "class": "form-control"}
+            ),
         }
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         from toolkit.members.models import Volunteer
+
         self.fields["owner_volunteer"].queryset = (
-            Volunteer.objects.active().select_related("member").order_by("member__name")
+            Volunteer.objects.active()
+            .select_related("member")
+            .order_by("member__name")
         )
-        self.fields["owner_volunteer"].label_from_instance = lambda v: v.member.name
+        self.fields["owner_volunteer"].label_from_instance = (
+            lambda v: v.member.name
+        )
 
 
 class LoftItemPhotoForm(forms.ModelForm):

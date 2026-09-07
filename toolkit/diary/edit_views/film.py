@@ -29,7 +29,11 @@ def omdb_search(request):
     GET /diary/edit/omdb/search/?q=...
     Returns JSON list of results or {"error": "..."}.
     """
-    from toolkit.diary.omdb import OmdbAuthError, OmdbRateLimitError, search_works
+    from toolkit.diary.omdb import (
+        OmdbAuthError,
+        OmdbRateLimitError,
+        search_works,
+    )
     import urllib.error
 
     api_key = _get_omdb_api_key()
@@ -97,7 +101,11 @@ def link_film(request, event_id):
     Returns JSON with the film summary and a suggested film_information string.
     """
     from toolkit.diary.models import Film
-    from toolkit.diary.omdb import OmdbAuthError, OmdbRateLimitError, fetch_film_details
+    from toolkit.diary.omdb import (
+        OmdbAuthError,
+        OmdbRateLimitError,
+        fetch_film_details,
+    )
     import urllib.error
 
     event = get_object_or_404(Event, pk=event_id)

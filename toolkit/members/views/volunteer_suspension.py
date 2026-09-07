@@ -3,7 +3,9 @@
 maintainability pass — see MAINTAINABILITY_PASS.md). Verbatim move; no
 behaviour change. Group: suspension.
 """
+
 from ._common import *
+
 
 @panopticon_required
 @require_POST
@@ -14,7 +16,9 @@ def toggle_volunteer_suspension(request, volunteer_id):
 
     if action == "suspend" and volunteer.status != Volunteer.STATUS_SUSPENDED:
         volunteer.status = Volunteer.STATUS_SUSPENDED
-        volunteer.suspension_reason = request.POST.get("suspension_reason", "").strip()
+        volunteer.suspension_reason = request.POST.get(
+            "suspension_reason", ""
+        ).strip()
         volunteer.save()
         request.session[f"suspension_email_pending_{volunteer.pk}"] = True
         messages.warning(
@@ -24,13 +28,18 @@ def toggle_volunteer_suspension(request, volunteer_id):
             f"See the suspension email panel below to notify them.",
         )
         logger.info(
-            "Volunteer pk=%s suspended by %s", volunteer.pk, request.user.username
+            "Volunteer pk=%s suspended by %s",
+            volunteer.pk,
+            request.user.username,
         )
         return HttpResponseRedirect(
             reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
             + "#suspension-email-preview"
         )
-    elif action == "reinstate" and volunteer.status == Volunteer.STATUS_SUSPENDED:
+    elif (
+        action == "reinstate"
+        and volunteer.status == Volunteer.STATUS_SUSPENDED
+    ):
         volunteer.status = Volunteer.STATUS_ACTIVE
         volunteer.suspension_reason = ""
         volunteer.save()
@@ -40,7 +49,9 @@ def toggle_volunteer_suspension(request, volunteer_id):
             f"restored. Any shifts they were removed from were not re-added automatically.",
         )
         logger.info(
-            "Volunteer pk=%s reinstated by %s", volunteer.pk, request.user.username
+            "Volunteer pk=%s reinstated by %s",
+            volunteer.pk,
+            request.user.username,
         )
     else:
         messages.error(request, "Invalid suspension action.")
@@ -58,7 +69,10 @@ def send_suspension_email(request, volunteer_id):
     member = volunteer.member
 
     if not member.email:
-        messages.error(request, f"{member.name} has no email address — suspension email not sent.")
+        messages.error(
+            request,
+            f"{member.name} has no email address — suspension email not sent.",
+        )
         return HttpResponseRedirect(
             reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
         )
@@ -67,8 +81,12 @@ def send_suspension_email(request, volunteer_id):
     venue_name = settings.VENUE.get("longname", settings.VENUE.get("name", ""))
     vol_name = member.name or ""
 
-    subject = _render_admin_email(site_config.suspension_email_subject, vol_name, venue_name)
-    body = _render_admin_email(site_config.suspension_email_body, vol_name, venue_name)
+    subject = _render_admin_email(
+        site_config.suspension_email_subject, vol_name, venue_name
+    )
+    body = _render_admin_email(
+        site_config.suspension_email_body, vol_name, venue_name
+    )
 
     try:
         send_mail(
@@ -92,10 +110,14 @@ def send_suspension_email(request, volunteer_id):
         )
     logger.info(
         "EMAIL SENT: suspension email to %s (volunteer pk=%s) by %s",
-        member.email, volunteer.pk, request.user.username,
+        member.email,
+        volunteer.pk,
+        request.user.username,
     )
     request.session.pop(f"suspension_email_pending_{volunteer_id}", None)
-    messages.success(request, f"Suspension email sent to {member.name} ({member.email}).")
+    messages.success(
+        request, f"Suspension email sent to {member.name} ({member.email})."
+    )
     return HttpResponseRedirect(
         reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
     )
@@ -109,5 +131,3 @@ def skip_suspension_email(request, volunteer_id):
     return HttpResponseRedirect(
         reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
     )
-
-

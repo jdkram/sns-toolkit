@@ -12,6 +12,7 @@ Seed/reseed commands legitimately mass-delete events; they set
 suppress_event_deletion_log() around the wipe so the table isn't flooded
 (the demo homeserver reseeds every 3 days).
 """
+
 import logging
 import threading
 import traceback
@@ -35,7 +36,9 @@ def suppress_event_deletion_log():
         _state.suppressed = False
 
 
-@receiver(pre_delete, sender="diary.Event", dispatch_uid="audit_event_pre_delete")
+@receiver(
+    pre_delete, sender="diary.Event", dispatch_uid="audit_event_pre_delete"
+)
 def _log_event_deletion(sender, instance, **kwargs):
     if getattr(_state, "suppressed", False):
         return

@@ -5,7 +5,14 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from toolkit.diary.models import Event, Role, RotaEntry, Showing, SiteConfiguration, get_site_config
+from toolkit.diary.models import (
+    Event,
+    Role,
+    RotaEntry,
+    Showing,
+    SiteConfiguration,
+    get_site_config,
+)
 from toolkit.members.tests.common import MembersTestsMixin
 
 
@@ -39,7 +46,9 @@ class VolunteerStatsViewTests(MembersTestsMixin, TestCase):
         event = event or self.event
         base = timezone.now() - timedelta(days=400)
         for i in range(n):
-            _make_confirmed_showing(event, base + timedelta(days=i * 7), role, volunteer)
+            _make_confirmed_showing(
+                event, base + timedelta(days=i * 7), role, volunteer
+            )
 
     # ── Access ────────────────────────────────────────────────────────────────
 
@@ -102,7 +111,11 @@ class VolunteerStatsViewTests(MembersTestsMixin, TestCase):
         response = self.client.get(self.url_own)
         labels = [r["label"] for r in response.context["role_breakdown"]]
         self.assertIn("Bar", labels)
-        bar_row = next(r for r in response.context["role_breakdown"] if r["label"] == "Bar")
+        bar_row = next(
+            r
+            for r in response.context["role_breakdown"]
+            if r["label"] == "Bar"
+        )
         self.assertEqual(bar_row["count"], 5)
 
     def test_role_breakdown_uses_name_when_no_label(self):
@@ -128,6 +141,7 @@ class VolunteerStatsViewTests(MembersTestsMixin, TestCase):
 
     def test_programming_gate_excludes_training_tagged_events(self):
         from toolkit.diary.models import EventTag
+
         tag = EventTag.objects.create(name="induction", slug="induction")
         training_event = Event.objects.create(name="Induction Session")
         training_event.tags.add(tag)
@@ -135,7 +149,12 @@ class VolunteerStatsViewTests(MembersTestsMixin, TestCase):
         cfg = get_site_config()
         cfg.stats_training_tag_slugs = ["induction"]
         cfg.programming_min_event_shifts = 5
-        cfg.save(update_fields=["stats_training_tag_slugs", "programming_min_event_shifts"])
+        cfg.save(
+            update_fields=[
+                "stats_training_tag_slugs",
+                "programming_min_event_shifts",
+            ]
+        )
 
         # 4 normal shifts + 3 training shifts = 4 event shifts (below threshold of 5)
         self._add_past_shifts(self.vol_1, 4)

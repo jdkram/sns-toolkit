@@ -699,7 +699,7 @@ class TestEditMemberViewNotLoggedIn(MembersTestsMixin, TestCase):
 
     # POST tests ###########################################
     def test_edit_post_form_minimal_data(self):
-        new_name = "N\u018EW Name"
+        new_name = "N\u018eW Name"
 
         member = Member.objects.get(pk=2)
         self.assertEqual(member.name, "Tw\u020d Member")
@@ -742,7 +742,7 @@ class TestEditMemberViewNotLoggedIn(MembersTestsMixin, TestCase):
 
     @override_settings(MEMBERSHIP_EXPIRY_ENABLED=True)
     def test_edit_post_form_all_data(self):
-        new_name = "N\u018EW Name"
+        new_name = "N\u018eW Name"
 
         member = Member.objects.get(pk=2)
         self.assertEqual(member.name, "Tw\u020d Member")
@@ -800,7 +800,7 @@ class TestEditMemberViewNotLoggedIn(MembersTestsMixin, TestCase):
         self.assertContains(response, "Member 02 updated")
 
     def test_edit_post_form_invalid_emails(self):
-        new_name = "N\u018EW Name"
+        new_name = "N\u018eW Name"
 
         member = Member.objects.get(pk=2)
         self.assertEqual(member.name, "Tw\u020d Member")
@@ -904,7 +904,7 @@ class TestEditMemberViewLoggedIn(MembersTestsMixin, TestCase):
     # POST tests ###########################################
     # Only test differences from not logged in view...
     def _test_edit_post_form_minimal_data_common(self):
-        new_name = "N\u018EW Name"
+        new_name = "N\u018eW Name"
 
         member = Member.objects.get(pk=2)
         self.assertEqual(member.name, "Tw\u020d Member")
@@ -1242,7 +1242,9 @@ class TestMemberPIIPermissionBoundary(MembersTestsMixin, TestCase):
         self.assertEqual(resp.status_code, 403)
 
     def test_read_only_denied_member_view(self):
-        resp = self.client.get(reverse("view-member", kwargs={"member_id": self.mem_1.pk}))
+        resp = self.client.get(
+            reverse("view-member", kwargs={"member_id": self.mem_1.pk})
+        )
         self.assertEqual(resp.status_code, 403)
 
     def test_read_only_denied_member_statistics(self):

@@ -3,7 +3,9 @@
 maintainability pass — see MAINTAINABILITY_PASS.md). Verbatim move; no
 behaviour change. Group: edit.
 """
+
 from ._common import *
+
 
 @login_required
 def edit_volunteer(request, volunteer_id, create_new=False):
@@ -46,7 +48,9 @@ def edit_volunteer(request, volunteer_id, create_new=False):
     if request.method == "POST":
         # Three forms, one for each set of data
         vol_form = VolunteerForm(
-            request.POST, request.FILES, instance=volunteer,
+            request.POST,
+            request.FILES,
+            instance=volunteer,
             is_superuser=request.user.is_superuser,
         )
         mem_form = MemberFormWithoutNotes(request.POST, instance=member)
@@ -70,7 +74,11 @@ def edit_volunteer(request, volunteer_id, create_new=False):
                     username=username,
                     email=member.email or "",
                     first_name=member.name.split()[0] if member.name else "",
-                    last_name=" ".join(member.name.split()[1:]) if member.name else "",
+                    last_name=(
+                        " ".join(member.name.split()[1:])
+                        if member.name
+                        else ""
+                    ),
                 )
                 user.set_unusable_password()
                 user.save()
@@ -123,7 +131,8 @@ def edit_volunteer(request, volunteer_id, create_new=False):
                     try:
                         _send_password_set_email(request, user, welcome=True)
                         logger.info(
-                            "Welcome email sent to new volunteer pk=%s", volunteer.pk
+                            "Welcome email sent to new volunteer pk=%s",
+                            volunteer.pk,
                         )
                     except Exception:
                         logger.exception(
@@ -170,9 +179,13 @@ def edit_volunteer(request, volunteer_id, create_new=False):
                         )
             # After a new suspension, stay on the edit page with email preview.
             if not create_new and now_suspended and not was_suspended:
-                request.session[f"suspension_email_pending_{volunteer.pk}"] = True
+                request.session[f"suspension_email_pending_{volunteer.pk}"] = (
+                    True
+                )
                 return HttpResponseRedirect(
-                    reverse("edit-volunteer", kwargs={"volunteer_id": volunteer.pk})
+                    reverse(
+                        "edit-volunteer", kwargs={"volunteer_id": volunteer.pk}
+                    )
                     + "#suspension-email-preview"
                 )
             # Go to the volunteer list view (summary for panopticon, list for others):
@@ -180,10 +193,16 @@ def edit_volunteer(request, volunteer_id, create_new=False):
                 return HttpResponseRedirect(reverse("view-volunteer-summary"))
             return HttpResponseRedirect(reverse("view-volunteer-list"))
     else:
-        vol_form = VolunteerForm(instance=volunteer, is_superuser=request.user.is_superuser)
+        vol_form = VolunteerForm(
+            instance=volunteer, is_superuser=request.user.is_superuser
+        )
         mem_form = MemberFormWithoutNotes(instance=volunteer.member)
 
-    show_user_mgmt = settings.VENUE.get("show_user_management") and user is not None and request.user.is_superuser
+    show_user_mgmt = (
+        settings.VENUE.get("show_user_management")
+        and user is not None
+        and request.user.is_superuser
+    )
     user_form = UserForm(instance=user) if show_user_mgmt else None
 
     if new_training_record:
@@ -194,20 +213,31 @@ def edit_volunteer(request, volunteer_id, create_new=False):
         training_record_form = None
 
     from toolkit.members.models import Qualification
+
     site_config = get_site_config()
 
     suspension_email_preview = None
     session_key = f"suspension_email_pending_{volunteer.pk}"
-    if not create_new and (
-        request.session.get(session_key)
-        or request.GET.get("suspension_email_pending") == "1"
-    ) and volunteer.status == Volunteer.STATUS_SUSPENDED:
-        venue_name = settings.VENUE.get("longname", settings.VENUE.get("name", ""))
+    if (
+        not create_new
+        and (
+            request.session.get(session_key)
+            or request.GET.get("suspension_email_pending") == "1"
+        )
+        and volunteer.status == Volunteer.STATUS_SUSPENDED
+    ):
+        venue_name = settings.VENUE.get(
+            "longname", settings.VENUE.get("name", "")
+        )
         vol_name = volunteer.member.name or ""
         suspension_email_preview = {
             "to": volunteer.member.email or "",
-            "subject": _render_admin_email(site_config.suspension_email_subject, vol_name, venue_name),
-            "body": _render_admin_email(site_config.suspension_email_body, vol_name, venue_name),
+            "subject": _render_admin_email(
+                site_config.suspension_email_subject, vol_name, venue_name
+            ),
+            "body": _render_admin_email(
+                site_config.suspension_email_body, vol_name, venue_name
+            ),
         }
         request.session[session_key] = True
 
@@ -299,21 +329,29 @@ def set_volunteer_password(request, volunteer_id):
     user = volunteer.user
     if user is None:
         messages.error(request, "This volunteer has no linked user account.")
-        return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}))
+        return HttpResponseRedirect(
+            reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
+        )
 
     form = SetPasswordForm(user, request.POST)
     if form.is_valid():
         form.save()
         logger.info(
-            "Password set for volunteer pk=%s by %s", volunteer_id, request.user.username
+            "Password set for volunteer pk=%s by %s",
+            volunteer_id,
+            request.user.username,
         )
-        messages.success(request, f"Password updated for {volunteer.member.name}.")
+        messages.success(
+            request, f"Password updated for {volunteer.member.name}."
+        )
     else:
         for field_errors in form.errors.values():
             for error in field_errors:
                 messages.error(request, error)
 
-    return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}))
+    return HttpResponseRedirect(
+        reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
+    )
 
 
 def _send_password_set_email(request, user, welcome=False):
@@ -334,21 +372,31 @@ def send_volunteer_password_reset(request, volunteer_id):
     volunteer = get_object_or_404(Volunteer, pk=volunteer_id)
     user = volunteer.user
     if user is None or not user.email:
-        messages.error(request, "This volunteer has no linked user account or no email address.")
-        return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}))
+        messages.error(
+            request,
+            "This volunteer has no linked user account or no email address.",
+        )
+        return HttpResponseRedirect(
+            reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
+        )
 
     _send_password_set_email(request, user, welcome=False)
     logger.info(
-        "Password reset email sent to volunteer pk=%s by %s", volunteer_id, request.user.username
+        "Password reset email sent to volunteer pk=%s by %s",
+        volunteer_id,
+        request.user.username,
     )
     messages.success(request, f"Password reset email sent to {user.email}.")
-    return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}))
+    return HttpResponseRedirect(
+        reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
+    )
 
 
 @panopticon_required
 @require_POST
 def add_volunteer_qualification(request, volunteer_id):
     from toolkit.members.models import Qualification, VolunteerQualification
+
     volunteer = get_object_or_404(Volunteer, id=volunteer_id)
     qual_id = request.POST.get("qualification_id")
     granted_by = request.POST.get("granted_by", "").strip()
@@ -356,30 +404,47 @@ def add_volunteer_qualification(request, volunteer_id):
         qualification = Qualification.objects.get(pk=qual_id)
     except Qualification.DoesNotExist:
         messages.error(request, "Qualification not found.")
-        return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}))
+        return HttpResponseRedirect(
+            reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
+        )
     _, created = VolunteerQualification.objects.get_or_create(
         volunteer=volunteer,
         qualification=qualification,
         defaults={"granted_by": granted_by},
     )
     if created:
-        messages.success(request, f"'{qualification.name}' qualification recorded for {volunteer.member.name}.")
+        messages.success(
+            request,
+            f"'{qualification.name}' qualification recorded for {volunteer.member.name}.",
+        )
     else:
-        messages.warning(request, f"{volunteer.member.name} already holds the '{qualification.name}' qualification.")
-    return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}) + "#vol-qualifications")
+        messages.warning(
+            request,
+            f"{volunteer.member.name} already holds the '{qualification.name}' qualification.",
+        )
+    return HttpResponseRedirect(
+        reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
+        + "#vol-qualifications"
+    )
 
 
 @panopticon_required
 @require_POST
 def remove_volunteer_qualification(request, vq_id):
     from toolkit.members.models import VolunteerQualification
+
     vq = get_object_or_404(VolunteerQualification, pk=vq_id)
     volunteer_id = vq.volunteer_id
     qual_name = vq.qualification.name
     vol_name = vq.volunteer.member.name
     vq.delete()
-    messages.success(request, f"'{qual_name}' qualification removed from {vol_name}.")
-    return HttpResponseRedirect(reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id}) + "#vol-qualifications")
+    messages.success(
+        request, f"'{qual_name}' qualification removed from {vol_name}."
+    )
+    return HttpResponseRedirect(
+        reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
+        + "#vol-qualifications"
+    )
 
 
 @panopticon_required
@@ -395,9 +460,12 @@ def save_volunteer_permissions(request, volunteer_id):
         user_form.save(granted_by=request.user)
         logger.info(
             "Permissions updated for volunteer pk=%s by %s",
-            volunteer.pk, request.user.username,
+            volunteer.pk,
+            request.user.username,
         )
-        messages.success(request, f"Permissions updated for {volunteer.member.name}.")
+        messages.success(
+            request, f"Permissions updated for {volunteer.member.name}."
+        )
     else:
         for field, errors in user_form.errors.items():
             for error in errors:
@@ -405,5 +473,3 @@ def save_volunteer_permissions(request, volunteer_id):
     return HttpResponseRedirect(
         reverse("edit-volunteer", kwargs={"volunteer_id": volunteer_id})
     )
-
-

@@ -5,6 +5,7 @@ These cover the mechanical behaviour that previously had to be checked by hand,
 including the specific points raised during manual testing (slug not doubling the
 year, username format, capacity enforcement).
 """
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.utils import timezone
@@ -20,7 +21,9 @@ from toolkit.members.models import Member, Volunteer
 
 
 def _mk_signup(session, name, email=""):
-    return InductionSignup.objects.create(session=session, name=name, email=email)
+    return InductionSignup.objects.create(
+        session=session, name=name, email=email
+    )
 
 
 class SlugGeneration(InductionsTestsMixin, TestCase):
@@ -41,8 +44,13 @@ class SlugGeneration(InductionsTestsMixin, TestCase):
 
 class PublicSignup(InductionsTestsMixin, TestCase):
     def test_valid_signup_creates_record(self):
-        url = self.session.get_signup_url() if hasattr(self.session, "get_signup_url") else None
+        url = (
+            self.session.get_signup_url()
+            if hasattr(self.session, "get_signup_url")
+            else None
+        )
         from django.urls import reverse
+
         url = reverse("inductions:signup", args=[self.session.slug])
         resp = self.client.post(url, self.valid_signup_post())
         self.assertEqual(resp.status_code, 302)
@@ -52,20 +60,27 @@ class PublicSignup(InductionsTestsMixin, TestCase):
 
     def test_consent_required(self):
         from django.urls import reverse
+
         url = reverse("inductions:signup", args=[self.session.slug])
         resp = self.client.post(url, self.valid_signup_post(consent=""))
         self.assertEqual(resp.status_code, 200)  # re-rendered with errors
-        self.assertFalse(self.session.signups.filter(email="bob@test.example").exists())
+        self.assertFalse(
+            self.session.signups.filter(email="bob@test.example").exists()
+        )
 
     def test_age_confirm_required(self):
         from django.urls import reverse
+
         url = reverse("inductions:signup", args=[self.session.slug])
         resp = self.client.post(url, self.valid_signup_post(age_confirm=""))
         self.assertEqual(resp.status_code, 200)
-        self.assertFalse(self.session.signups.filter(email="bob@test.example").exists())
+        self.assertFalse(
+            self.session.signups.filter(email="bob@test.example").exists()
+        )
 
     def test_closed_session_not_signable(self):
         from django.urls import reverse
+
         self.session.status = InductionSession.STATUS_CLOSED
         self.session.save()
         url = reverse("inductions:signup", args=[self.session.slug])
@@ -91,49 +106,76 @@ class Capacity(InductionsTestsMixin, TestCase):
 
     def test_full_session_shows_full_page(self):
         from django.urls import reverse
+
         self.session.max_signups = 1  # already has one signup from the mixin
         self.session.save()
         self.assertTrue(self.session.is_full)
-        resp = self.client.get(reverse("inductions:signup", args=[self.session.slug]))
+        resp = self.client.get(
+            reverse("inductions:signup", args=[self.session.slug])
+        )
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, "inductions/signup_full.html")
 
     def test_full_session_rejects_signup_post(self):
         from django.urls import reverse
+
         self.session.max_signups = 1
         self.session.save()
         url = reverse("inductions:signup", args=[self.session.slug])
         self.client.post(url, self.valid_signup_post())
-        self.assertFalse(self.session.signups.filter(email="bob@test.example").exists())
+        self.assertFalse(
+            self.session.signups.filter(email="bob@test.example").exists()
+        )
 
     def test_over_cap_banner_hidden_within_cap(self):
         from django.urls import reverse
+
         self.session.max_signups = 5  # only 1 signup (from the mixin) exists
         self.session.save()
         self.login_admin()
-        resp = self.client.get(reverse("inductions:manage_session_detail", args=[self.session.slug]))
+        resp = self.client.get(
+            reverse(
+                "inductions:manage_session_detail", args=[self.session.slug]
+            )
+        )
         self.assertNotContains(resp, "over the cap")
 
     def test_over_cap_banner_shown_and_last_signups_flagged(self):
         from django.urls import reverse
+
         self.session.max_signups = 1  # lowered after signups already exist
         self.session.save()
-        InductionSignup.objects.create(session=self.session, name="Late One", email="late1@test.example")
-        InductionSignup.objects.create(session=self.session, name="Late Two", email="late2@test.example")
+        InductionSignup.objects.create(
+            session=self.session, name="Late One", email="late1@test.example"
+        )
+        InductionSignup.objects.create(
+            session=self.session, name="Late Two", email="late2@test.example"
+        )
         self.login_admin()
-        resp = self.client.get(reverse("inductions:manage_session_detail", args=[self.session.slug]))
+        resp = self.client.get(
+            reverse(
+                "inductions:manage_session_detail", args=[self.session.slug]
+            )
+        )
         self.assertContains(resp, "2 over the cap")
         # The two most recent sign-ups are flagged over-cap; the original mixin signup is not.
         over_cap_ids = {s.pk for s in resp.context["signups"] if s.is_over_cap}
         self.assertEqual(
             over_cap_ids,
-            set(self.session.signups.exclude(pk=self.signup.pk).values_list("pk", flat=True)),
+            set(
+                self.session.signups.exclude(pk=self.signup.pk).values_list(
+                    "pk", flat=True
+                )
+            ),
         )
 
     def test_set_cap_updates_session(self):
         from django.urls import reverse
+
         self.login_admin()
-        url = reverse("inductions:manage_session_set_cap", args=[self.session.slug])
+        url = reverse(
+            "inductions:manage_session_set_cap", args=[self.session.slug]
+        )
         resp = self.client.post(url, {"max_signups": "4"})
         self.assertEqual(resp.json(), {"ok": True, "max_signups": 4})
         self.session.refresh_from_db()
@@ -141,10 +183,13 @@ class Capacity(InductionsTestsMixin, TestCase):
 
     def test_set_cap_blank_clears_to_unlimited(self):
         from django.urls import reverse
+
         self.session.max_signups = 4
         self.session.save()
         self.login_admin()
-        url = reverse("inductions:manage_session_set_cap", args=[self.session.slug])
+        url = reverse(
+            "inductions:manage_session_set_cap", args=[self.session.slug]
+        )
         resp = self.client.post(url, {"max_signups": ""})
         self.assertEqual(resp.json(), {"ok": True, "max_signups": None})
         self.session.refresh_from_db()
@@ -152,8 +197,11 @@ class Capacity(InductionsTestsMixin, TestCase):
 
     def test_set_cap_rejects_negative(self):
         from django.urls import reverse
+
         self.login_admin()
-        url = reverse("inductions:manage_session_set_cap", args=[self.session.slug])
+        url = reverse(
+            "inductions:manage_session_set_cap", args=[self.session.slug]
+        )
         resp = self.client.post(url, {"max_signups": "-1"})
         self.assertFalse(resp.json()["ok"])
         self.session.refresh_from_db()
@@ -163,6 +211,7 @@ class Capacity(InductionsTestsMixin, TestCase):
 class SessionFormCapacityPrefill(InductionsTestsMixin, TestCase):
     def test_new_session_form_prefills_max_signups_with_site_default(self):
         from toolkit.inductions.forms import InductionSessionForm
+
         cfg = InductionsSettings.load()
         cfg.default_max_signups = 6
         cfg.save()
@@ -171,6 +220,7 @@ class SessionFormCapacityPrefill(InductionsTestsMixin, TestCase):
 
     def test_edit_form_prefills_max_signups_when_blank_on_session(self):
         from toolkit.inductions.forms import InductionSessionForm
+
         cfg = InductionsSettings.load()
         cfg.default_max_signups = 8
         cfg.save()
@@ -181,6 +231,7 @@ class SessionFormCapacityPrefill(InductionsTestsMixin, TestCase):
 
     def test_edit_form_does_not_override_existing_session_value(self):
         from toolkit.inductions.forms import InductionSessionForm
+
         cfg = InductionsSettings.load()
         cfg.default_max_signups = 8
         cfg.save()
@@ -192,20 +243,30 @@ class SessionFormCapacityPrefill(InductionsTestsMixin, TestCase):
 
 class UsernameGeneration(InductionsTestsMixin, TestCase):
     def test_two_part_name(self):
-        v = _create_volunteer_from_signup(_mk_signup(self.session, "John Doe", "jd@test.example"))
+        v = _create_volunteer_from_signup(
+            _mk_signup(self.session, "John Doe", "jd@test.example")
+        )
         self.assertEqual(v.user.username, "JohnDoe")
 
     def test_middle_name_dropped(self):
-        v = _create_volunteer_from_signup(_mk_signup(self.session, "Mary Anne Smith", "ms@test.example"))
+        v = _create_volunteer_from_signup(
+            _mk_signup(self.session, "Mary Anne Smith", "ms@test.example")
+        )
         self.assertEqual(v.user.username, "MarySmith")
 
     def test_single_name(self):
-        v = _create_volunteer_from_signup(_mk_signup(self.session, "Cher", "cher@test.example"))
+        v = _create_volunteer_from_signup(
+            _mk_signup(self.session, "Cher", "cher@test.example")
+        )
         self.assertEqual(v.user.username, "Cher")
 
     def test_collision_suffixed(self):
-        a = _create_volunteer_from_signup(_mk_signup(self.session, "John Doe", "jd1@test.example"))
-        b = _create_volunteer_from_signup(_mk_signup(self.session, "John Doe", "jd2@test.example"))
+        a = _create_volunteer_from_signup(
+            _mk_signup(self.session, "John Doe", "jd1@test.example")
+        )
+        b = _create_volunteer_from_signup(
+            _mk_signup(self.session, "John Doe", "jd2@test.example")
+        )
         self.assertEqual(a.user.username, "JohnDoe")
         self.assertEqual(b.user.username, "JohnDoe-1")
 
@@ -220,8 +281,12 @@ class UsernameGeneration(InductionsTestsMixin, TestCase):
 class Attendance(InductionsTestsMixin, TestCase):
     def test_mark_attendance_toggles(self):
         from django.urls import reverse
+
         self.login_admin()
-        url = reverse("inductions:manage_mark_attendance", args=[self.session.slug, self.signup.pk])
+        url = reverse(
+            "inductions:manage_mark_attendance",
+            args=[self.session.slug, self.signup.pk],
+        )
         self.client.post(url)
         self.signup.refresh_from_db()
         self.assertEqual(self.signup.status, InductionSignup.STATUS_CHECKED_IN)
@@ -237,48 +302,68 @@ class CreateAccounts(InductionsTestsMixin, TestCase):
 
     def test_creates_volunteer_for_checked_in(self):
         from django.urls import reverse
+
         self._check_in(self.signup)
         self.login_admin()
-        url = reverse("inductions:manage_create_accounts", args=[self.session.slug])
+        url = reverse(
+            "inductions:manage_create_accounts", args=[self.session.slug]
+        )
         self.client.post(url)
         self.signup.refresh_from_db()
         self.assertIsNotNone(self.signup.volunteer_id)
-        self.assertTrue(Volunteer.objects.filter(pk=self.signup.volunteer_id).exists())
+        self.assertTrue(
+            Volunteer.objects.filter(pk=self.signup.volunteer_id).exists()
+        )
 
     def test_pending_signup_not_processed(self):
         from django.urls import reverse
+
         self.login_admin()  # self.signup is still PENDING
-        url = reverse("inductions:manage_create_accounts", args=[self.session.slug])
+        url = reverse(
+            "inductions:manage_create_accounts", args=[self.session.slug]
+        )
         self.client.post(url)
         self.signup.refresh_from_db()
         self.assertIsNone(self.signup.volunteer_id)
 
     def test_duplicate_email_surfaced_not_created(self):
         from django.urls import reverse
+
         # Existing volunteer with the same email as the signup
-        mem = Member.objects.create(name="Existing Person", email="dup@test.example")
+        mem = Member.objects.create(
+            name="Existing Person", email="dup@test.example"
+        )
         user = User.objects.create_user("existing", "dup@test.example", "x")
         Volunteer.objects.create(member=mem, user=user)
 
         dup = _mk_signup(self.session, "New Person", "dup@test.example")
         self._check_in(dup)
         self.login_admin()
-        url = reverse("inductions:manage_create_accounts", args=[self.session.slug])
+        url = reverse(
+            "inductions:manage_create_accounts", args=[self.session.slug]
+        )
         resp = self.client.post(url)
         dup.refresh_from_db()
-        self.assertIsNone(dup.volunteer_id)  # not created — flagged as duplicate
+        self.assertIsNone(
+            dup.volunteer_id
+        )  # not created — flagged as duplicate
         self.assertContains(resp, "dup@test.example")
 
     def test_force_creates_despite_duplicate(self):
         from django.urls import reverse
-        mem = Member.objects.create(name="Existing Person", email="dup2@test.example")
+
+        mem = Member.objects.create(
+            name="Existing Person", email="dup2@test.example"
+        )
         user = User.objects.create_user("existing2", "dup2@test.example", "x")
         Volunteer.objects.create(member=mem, user=user)
 
         dup = _mk_signup(self.session, "New Person", "dup2@test.example")
         self._check_in(dup)
         self.login_admin()
-        url = reverse("inductions:manage_create_accounts", args=[self.session.slug])
+        url = reverse(
+            "inductions:manage_create_accounts", args=[self.session.slug]
+        )
         self.client.post(url, {"force_signup_ids": str(dup.pk)})
         dup.refresh_from_db()
         self.assertIsNotNone(dup.volunteer_id)
@@ -287,16 +372,27 @@ class CreateAccounts(InductionsTestsMixin, TestCase):
 class Walkin(InductionsTestsMixin, TestCase):
     def test_walkin_requires_first_name(self):
         from django.urls import reverse
+
         self.login_admin()
         url = reverse("inductions:manage_add_walkin", args=[self.session.slug])
-        resp = self.client.post(url, {"first_name": "", "email": "x@test.example"})
+        resp = self.client.post(
+            url, {"first_name": "", "email": "x@test.example"}
+        )
         self.assertFalse(resp.json()["ok"])
 
     def test_walkin_creates_pending_signup(self):
         from django.urls import reverse
+
         self.login_admin()
         url = reverse("inductions:manage_add_walkin", args=[self.session.slug])
-        resp = self.client.post(url, {"first_name": "Eve", "last_name": "Taylor", "email": "eve@test.example"})
+        resp = self.client.post(
+            url,
+            {
+                "first_name": "Eve",
+                "last_name": "Taylor",
+                "email": "eve@test.example",
+            },
+        )
         self.assertTrue(resp.json()["ok"])
         s = self.session.signups.get(email="eve@test.example")
         self.assertEqual(s.name, "Eve Taylor")
@@ -306,6 +402,7 @@ class Walkin(InductionsTestsMixin, TestCase):
 class CsvExport(InductionsTestsMixin, TestCase):
     def test_export_is_headerless_first_last_email_for_checked_in(self):
         from django.urls import reverse
+
         # one checked-in, one pending — only the checked-in should appear
         ci = _mk_signup(self.session, "Dana Lee", "dana@test.example")
         ci.status = InductionSignup.STATUS_CHECKED_IN

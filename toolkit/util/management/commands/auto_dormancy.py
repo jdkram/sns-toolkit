@@ -62,7 +62,12 @@ class Command(BaseCommand):
             )
             return
 
-        self._report("Inactive (no login)", inactive, dry_run, lambda v: v.user.last_login)
+        self._report(
+            "Inactive (no login)",
+            inactive,
+            dry_run,
+            lambda v: v.user.last_login,
+        )
         self._report(
             "Never logged in", never_logged_in, dry_run, lambda v: None
         )

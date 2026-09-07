@@ -5,6 +5,7 @@ Mirrors the LabsTestsMixin pattern: one superuser ("admin"), one authenticated
 non-superuser ("nobody"), the inductions feature enabled, and a single open
 session with one pending signup. Per-test data is layered on top.
 """
+
 from django.contrib.auth.models import User
 from django.utils import timezone
 
@@ -27,7 +28,9 @@ class InductionsTestsMixin:
         self.settings = InductionsSettings.load()
         self.settings.inductions_enabled = True
         self.settings.access_needs_enabled = True
-        self.settings.default_max_signups = None  # no cap unless a test sets one
+        self.settings.default_max_signups = (
+            None  # no cap unless a test sets one
+        )
         self.settings.organiser_notification_email = "organiser@test.example"
         self.settings.save()
 
@@ -45,10 +48,14 @@ class InductionsTestsMixin:
 
     # ── helpers ──────────────────────────────────────────────────────────
     def login_admin(self):
-        self.assertTrue(self.client.login(username="admin", password="T3stPassword!"))
+        self.assertTrue(
+            self.client.login(username="admin", password="T3stPassword!")
+        )
 
     def login_nobody(self):
-        self.assertTrue(self.client.login(username="nobody", password="T3stPassword!2"))
+        self.assertTrue(
+            self.client.login(username="nobody", password="T3stPassword!2")
+        )
 
     def valid_signup_post(self, **overrides):
         """A minimally-valid public sign-up POST (consent + age gate ticked)."""

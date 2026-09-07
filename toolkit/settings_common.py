@@ -235,9 +235,9 @@ LOGIN_URL = django.urls.reverse_lazy("login")
 LOGIN_REDIRECT_URL = django.urls.reverse_lazy("toolkit-index")
 
 # django-axes brute-force protection
-AXES_FAILURE_LIMIT = 5          # lock out after 5 consecutive failures
-AXES_COOLOFF_TIME = 1           # unlock after 1 hour
-AXES_RESET_ON_SUCCESS = True    # reset failure count on successful login
+AXES_FAILURE_LIMIT = 5  # lock out after 5 consecutive failures
+AXES_COOLOFF_TIME = 1  # unlock after 1 hour
+AXES_RESET_ON_SUCCESS = True  # reset failure count on successful login
 # Lock by IP+username combination — tighter than IP-only, looser than username-only.
 # IP-only risks locking out shared NATs; username-only lets an attacker rotate IPs freely.
 AXES_LOCKOUT_PARAMETERS = [["ip_address", "username"]]

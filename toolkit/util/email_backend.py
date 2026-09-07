@@ -14,6 +14,7 @@ toolkit.audit.models.record_email -- imported lazily so importing this
 module at settings load time doesn't touch the app registry. The audit
 write must never block the send; record_email swallows its own failures.
 """
+
 import logging
 
 from django.conf import settings

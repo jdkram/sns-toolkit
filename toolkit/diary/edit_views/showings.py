@@ -47,7 +47,9 @@ def _get_oneshot_roles_for_showing(showing):
                 "rotaentry", filter=_Q(rotaentry__volunteer__isnull=False)
             ),
         )
-        .values("pk", "name", "description", "current_count", "signed_up_count")
+        .values(
+            "pk", "name", "description", "current_count", "signed_up_count"
+        )
         .distinct()
     )
 

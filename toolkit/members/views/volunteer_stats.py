@@ -3,7 +3,9 @@
 maintainability pass — see MAINTAINABILITY_PASS.md). Verbatim move; no
 behaviour change. Group: stats.
 """
+
 from ._common import *
+
 
 @login_required
 @require_safe
@@ -12,7 +14,9 @@ def volunteer_stats(request):
         volunteer = request.user.volunteer
     except Volunteer.DoesNotExist:
         return HttpResponseRedirect(reverse("login"))
-    volunteer = Volunteer.objects.select_related("member", "user").get(pk=volunteer.pk)
+    volunteer = Volunteer.objects.select_related("member", "user").get(
+        pk=volunteer.pk
+    )
 
     config = get_site_config()
     now = timezone.now()
@@ -43,6 +47,7 @@ def volunteer_stats(request):
 
     # Per-month bar chart for upcoming shifts.
     from collections import Counter
+
     _upcoming_months: Counter = Counter()
     for entry in upcoming_shifts:
         key = entry.showing.start.strftime("%b %Y")
@@ -57,7 +62,11 @@ def volunteer_stats(request):
             _upcoming_month_order.append(key)
     _upcoming_max = max(_upcoming_months.values()) if _upcoming_months else 1
     upcoming_by_month = [
-        {"label": k, "count": _upcoming_months[k], "pct": round(_upcoming_months[k] * 100 / _upcoming_max)}
+        {
+            "label": k,
+            "count": _upcoming_months[k],
+            "pct": round(_upcoming_months[k] * 100 / _upcoming_max),
+        }
         for k in _upcoming_month_order
     ]
 
@@ -99,19 +108,28 @@ def volunteer_stats(request):
         r["pct"] = round(r["count"] * 100 / year_max)
 
     # Heatmap: list of {year, months: [{mo, count, level}]} rows.
-    heatmap_raw = (
-        event_entries_qs.values(
-            yr=F("showing__start__year"), mo=F("showing__start__month")
-        )
-        .annotate(count=Count("pk"))
-    )
+    heatmap_raw = event_entries_qs.values(
+        yr=F("showing__start__year"), mo=F("showing__start__month")
+    ).annotate(count=Count("pk"))
     _heatmap_dict = {(r["yr"], r["mo"]): r["count"] for r in heatmap_raw}
-    heatmap_years = sorted({k[0] for k in _heatmap_dict}) if _heatmap_dict else []
+    heatmap_years = (
+        sorted({k[0] for k in _heatmap_dict}) if _heatmap_dict else []
+    )
     heatmap_max = max(_heatmap_dict.values()) if _heatmap_dict else 0
 
     _MONTH_NAMES = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
     ]
 
     def _heat_level(n):
@@ -169,7 +187,9 @@ def volunteer_stats(request):
                 "first_date": entry.showing.start,
                 "event_name": entry.showing.event.name,
             }
-    role_first_dates = sorted(seen_labels.values(), key=lambda x: x["first_date"])
+    role_first_dates = sorted(
+        seen_labels.values(), key=lambda x: x["first_date"]
+    )
 
     # Milestones: 1st, 5th, 10th, 25th, 50th, 100th, 150th, 200th...
     _milestone_ns = [1, 5, 10, 25, 50, 100, 150, 200, 250, 300]
@@ -177,15 +197,19 @@ def volunteer_stats(request):
     for n in _milestone_ns:
         if n <= total_shifts:
             entry = event_entries[n - 1]
-            milestones.append({
-                "n": n,
-                "date": entry.showing.start,
-                "event_name": entry.showing.event.name,
-            })
+            milestones.append(
+                {
+                    "n": n,
+                    "date": entry.showing.start,
+                    "event_name": entry.showing.event.name,
+                }
+            )
 
     # Training records and qualifications.
     training_records = list(
-        volunteer.training_records.select_related("role").order_by("training_date")
+        volunteer.training_records.select_related("role").order_by(
+            "training_date"
+        )
     )
     qualifications = list(
         volunteer.qualifications.select_related("qualification").order_by(
@@ -194,12 +218,16 @@ def volunteer_stats(request):
     )
 
     programming_min = config.programming_min_event_shifts
-    programming_gate_met = total_shifts >= programming_min if programming_min else None
+    programming_gate_met = (
+        total_shifts >= programming_min if programming_min else None
+    )
     programming_note = config.stats_programming_note
 
     # Full shift log: all confirmed past shifts, newest first, for the history table.
     all_past_shifts = list(
-        base_qs.select_related("showing__event", "role").order_by("-showing__start")
+        base_qs.select_related("showing__event", "role").order_by(
+            "-showing__start"
+        )
     )
 
     # Keyholding shifts: roles flagged as keyholder_only.
@@ -254,5 +282,3 @@ def volunteer_stats(request):
             "keyholder_by_year": keyholder_by_year,
         },
     )
-
-

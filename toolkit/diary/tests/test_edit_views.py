@@ -206,7 +206,9 @@ class PreferencesTests(DiaryTestsMixin, TestCase):
 
     def _get_prefs_json(self, **kwargs):
         # set_edit_preferences returns JSON of current prefs:
-        response = self.client.get(reverse("set_edit_preferences"), data=kwargs)
+        response = self.client.get(
+            reverse("set_edit_preferences"), data=kwargs
+        )
         self.assertEqual(response.status_code, 200)
         return json.loads(response.content)
 
@@ -306,6 +308,7 @@ class EditDiaryListViewTests(DiaryTestsMixin, TestCase):
     @override_settings(MULTIROOM_ENABLED=True)
     def test_multiroom_thead_has_room_name_columns(self):
         from toolkit.diary.models import Room
+
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         for room in Room.objects.all():
@@ -392,5 +395,3 @@ class PastEventsSearchViewTests(DiaryTestsMixin, TestCase):
             "edit-event-details-view", kwargs={"event_id": self.past_event.pk}
         )
         self.assertContains(response, expected_url)
-
-

@@ -21,7 +21,12 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 import django.utils.timezone as timezone
 
-from toolkit.diary.models import RotaEntry, Showing, VolunteerEventMark, get_site_config
+from toolkit.diary.models import (
+    RotaEntry,
+    Showing,
+    VolunteerEventMark,
+    get_site_config,
+)
 from toolkit.labs.models import NeedFlag
 from toolkit.members.models import Volunteer
 
@@ -48,7 +53,11 @@ def _build_shopping_lines():
     lines = []
     for flag in open_flags:
         pledge = getattr(flag, "pledge", None)
-        pledger = pledge.pledged_by.member.name if (pledge and pledge.pledged_by) else None
+        pledger = (
+            pledge.pledged_by.member.name
+            if (pledge and pledge.pledged_by)
+            else None
+        )
         if pledger:
             lines.append(f"{flag.item.name} — {pledger} is getting it")
         else:
@@ -171,7 +180,9 @@ class Command(BaseCommand):
         config = get_site_config()
         digest_day = config.volunteer_digest_day
         if digest_day == 0:
-            self.stdout.write("Volunteer digest is disabled in Site settings (digest day = 0). Nothing sent.")
+            self.stdout.write(
+                "Volunteer digest is disabled in Site settings (digest day = 0). Nothing sent."
+            )
             return
         if now.isoweekday() != digest_day:
             day_name = config.get_volunteer_digest_day_display()
@@ -198,9 +209,8 @@ class Command(BaseCommand):
 
         subject = f"Your {settings.VENUE['cinemaname']} volunteer digest — week of {week_of}"
         from_email = settings.DEFAULT_FROM_EMAIL
-        toolkit_url = (
-            settings.VENUE.get("siteurl", "").rstrip("/")
-            + reverse("view-volunteer-list")
+        toolkit_url = settings.VENUE.get("siteurl", "").rstrip("/") + reverse(
+            "view-volunteer-list"
         )
 
         # Open a single SMTP connection for the whole batch rather than one per email.
@@ -215,7 +225,9 @@ class Command(BaseCommand):
 
                 if not email:
                     self.stdout.write(
-                        self.style.WARNING(f"  Skipping {name}: no email address")
+                        self.style.WARNING(
+                            f"  Skipping {name}: no email address"
+                        )
                     )
                     skipped += 1
                     continue
@@ -223,7 +235,9 @@ class Command(BaseCommand):
                 sections = _build_digest(volunteer, now, shopping_lines)
 
                 if not any(sections.values()):
-                    self.stdout.write(f"  Skipping {name} <{email}>: nothing to report")
+                    self.stdout.write(
+                        f"  Skipping {name} <{email}>: nothing to report"
+                    )
                     skipped += 1
                     continue
 
@@ -248,23 +262,45 @@ class Command(BaseCommand):
                 body = render_to_string("volunteer_digest_email.txt", context)
 
                 if dry_run:
-                    self.stdout.write(f"  [DRY RUN] Would send to {name} <{email}>")
+                    self.stdout.write(
+                        f"  [DRY RUN] Would send to {name} <{email}>"
+                    )
                     self.stdout.write(f"    Shifts: {len(sections['shifts'])}")
-                    self.stdout.write(f"    New programme: {len(sections['new_programme'])}")
-                    self.stdout.write(f"    Starred: {len(sections['starred'])}")
-                    self.stdout.write(f"    Shopping: {len(sections['shopping'])}")
+                    self.stdout.write(
+                        f"    New programme: {len(sections['new_programme'])}"
+                    )
+                    self.stdout.write(
+                        f"    Starred: {len(sections['starred'])}"
+                    )
+                    self.stdout.write(
+                        f"    Shopping: {len(sections['shopping'])}"
+                    )
                 else:
                     try:
-                        msg = EmailMessage(subject, body, from_email, [email], connection=connection)
+                        msg = EmailMessage(
+                            subject,
+                            body,
+                            from_email,
+                            [email],
+                            connection=connection,
+                        )
                         msg.send()
                         volunteer.last_digest_sent_at = now
                         volunteer.save(update_fields=["last_digest_sent_at"])
-                        self.stdout.write(self.style.SUCCESS(f"  Sent to {name} <{email}>"))
+                        self.stdout.write(
+                            self.style.SUCCESS(f"  Sent to {name} <{email}>")
+                        )
                         sent += 1
                     except Exception as exc:
-                        logger.exception("Failed to send volunteer digest to %s <%s>", name, email)
+                        logger.exception(
+                            "Failed to send volunteer digest to %s <%s>",
+                            name,
+                            email,
+                        )
                         self.stdout.write(
-                            self.style.ERROR(f"  Failed to send to {name} <{email}>: {exc}")
+                            self.style.ERROR(
+                                f"  Failed to send to {name} <{email}>: {exc}"
+                            )
                         )
                         skipped += 1
         finally:

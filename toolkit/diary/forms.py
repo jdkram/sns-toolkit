@@ -56,9 +56,7 @@ class EventTemplateForm(forms.ModelForm):
             elif isinstance(widget, (forms.Select, forms.SelectMultiple)):
                 existing = widget.attrs.get("class", "")
                 if "form-select" not in existing:
-                    widget.attrs["class"] = (
-                        existing + " form-select"
-                    ).strip()
+                    widget.attrs["class"] = (existing + " form-select").strip()
             else:
                 existing = widget.attrs.get("class", "")
                 if "form-control" not in existing:
@@ -1429,13 +1427,13 @@ class PrintedProgrammeSeasonFormMixin:
         super().__init__(*args, **kwargs)
         if self.instance.pk:
             self.fields["start_year"].initial = self.instance.start_month.year
-            self.fields[
-                "start_form_month"
-            ].initial = self.instance.start_month.month
+            self.fields["start_form_month"].initial = (
+                self.instance.start_month.month
+            )
             self.fields["end_year"].initial = self.instance.end_month.year
-            self.fields[
-                "end_form_month"
-            ].initial = self.instance.end_month.month
+            self.fields["end_form_month"].initial = (
+                self.instance.end_month.month
+            )
 
     def clean(self):
         cleaned_data = super().clean()
@@ -1463,8 +1461,10 @@ class PrintedProgrammeSeasonFormMixin:
             )
             return cleaned_data
 
-        overlapping = toolkit.diary.models.PrintedProgramme.objects.seasons_overlapping(
-            start_month, end_month
+        overlapping = (
+            toolkit.diary.models.PrintedProgramme.objects.seasons_overlapping(
+                start_month, end_month
+            )
         )
         if self.instance.pk:
             overlapping = overlapping.exclude(pk=self.instance.pk)
@@ -1502,7 +1502,9 @@ def _season_month_field(initial):
     )
 
 
-class NewPrintedProgrammeForm(PrintedProgrammeSeasonFormMixin, forms.ModelForm):
+class NewPrintedProgrammeForm(
+    PrintedProgrammeSeasonFormMixin, forms.ModelForm
+):
     start_year = _season_month_year_field(datetime.date.today().year)
     start_form_month = _season_month_field(datetime.date.today().month)
     end_year = _season_month_year_field(datetime.date.today().year)
@@ -1630,7 +1632,11 @@ class SiteConfigurationForm(forms.ModelForm):
 
         import urllib.error
 
-        from toolkit.diary.omdb import OmdbAuthError, OmdbRateLimitError, verify_api_key
+        from toolkit.diary.omdb import (
+            OmdbAuthError,
+            OmdbRateLimitError,
+            verify_api_key,
+        )
 
         try:
             verify_api_key(key)

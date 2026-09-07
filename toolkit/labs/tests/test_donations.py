@@ -21,7 +21,10 @@ class DonationListTests(LabsTestsMixin, TestCase):
 
     def test_hides_inactive_items(self):
         hidden = DonationItem.objects.create(
-            name="Secret stash", category="Other", status=DonationItem.STATUS_WANTED, active=False
+            name="Secret stash",
+            category="Other",
+            status=DonationItem.STATUS_WANTED,
+            active=False,
         )
         response = self.client.get(reverse("labs-donations"))
         self.assertNotContains(response, hidden.name)
@@ -59,7 +62,9 @@ class DonationManageTests(LabsTestsMixin, TestCase):
         }
         response = self.client.post(reverse("labs-donations-manage"), data)
         self.assertRedirects(response, reverse("labs-donations-manage"))
-        self.assertTrue(DonationItem.objects.filter(name="Spare projector bulb").exists())
+        self.assertTrue(
+            DonationItem.objects.filter(name="Spare projector bulb").exists()
+        )
 
     def test_add_action_sets_last_edited_by(self):
         data = {
@@ -94,7 +99,9 @@ class DonationManageTests(LabsTestsMixin, TestCase):
         self.assertRedirects(response, reverse("labs-donations-manage"))
         self.don_wanted.refresh_from_db()
         self.assertEqual(self.don_wanted.name, "Old Sofa (updated)")
-        self.assertEqual(self.don_wanted.status, DonationItem.STATUS_CHECK_FIRST)
+        self.assertEqual(
+            self.don_wanted.status, DonationItem.STATUS_CHECK_FIRST
+        )
 
     def test_delete_action_removes_item(self):
         item_pk = self.don_not_needed.pk

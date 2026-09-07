@@ -39,7 +39,9 @@ class LabsSecurityTests(LabsTestsMixin, TestCase):
         self._assert_anon_redirects("labs-collectives-print")
 
     def test_anon_cannot_access_collective_edit(self):
-        self._assert_anon_redirects("labs-collective-edit", {"slug": self.col_open.slug})
+        self._assert_anon_redirects(
+            "labs-collective-edit", {"slug": self.col_open.slug}
+        )
 
     def test_anon_cannot_join_collective(self):
         self._assert_anon_redirects(
@@ -48,14 +50,18 @@ class LabsSecurityTests(LabsTestsMixin, TestCase):
 
     def test_anon_cannot_leave_collective(self):
         self._assert_anon_redirects(
-            "labs-collective-leave", {"slug": self.col_open.slug}, method="post"
+            "labs-collective-leave",
+            {"slug": self.col_open.slug},
+            method="post",
         )
 
     def test_anon_cannot_access_floorplan(self):
         self._assert_anon_redirects("labs-floorplan")
 
     def test_anon_cannot_access_room_note(self):
-        self._assert_anon_redirects("labs-room-note", {"room_id": "room-cinema"})
+        self._assert_anon_redirects(
+            "labs-room-note", {"room_id": "room-cinema"}
+        )
 
     def test_anon_cannot_access_donation_manage(self):
         self._assert_anon_redirects("labs-donations-manage")
@@ -68,7 +74,9 @@ class LabsSecurityTests(LabsTestsMixin, TestCase):
         self._assert_anon_redirects("labs-job-add")
 
     def test_anon_cannot_access_job_edit(self):
-        self._assert_anon_redirects("labs-job-edit", {"job_id": self.job_open.pk})
+        self._assert_anon_redirects(
+            "labs-job-edit", {"job_id": self.job_open.pk}
+        )
 
     def test_anon_cannot_claim_job(self):
         self._assert_anon_redirects(
@@ -98,12 +106,16 @@ class LabsSecurityTests(LabsTestsMixin, TestCase):
 
     def test_collective_join_get_returns_405(self):
         self.client.login(username="volunteer", password="T3stPassword!3")
-        url = reverse("labs-collective-join", kwargs={"slug": self.col_open.slug})
+        url = reverse(
+            "labs-collective-join", kwargs={"slug": self.col_open.slug}
+        )
         self.assertEqual(self.client.get(url).status_code, 405)
 
     def test_collective_leave_get_returns_405(self):
         self.client.login(username="volunteer", password="T3stPassword!3")
-        url = reverse("labs-collective-leave", kwargs={"slug": self.col_open.slug})
+        url = reverse(
+            "labs-collective-leave", kwargs={"slug": self.col_open.slug}
+        )
         self.assertEqual(self.client.get(url).status_code, 405)
 
     def test_job_claim_get_returns_405(self):
@@ -113,7 +125,9 @@ class LabsSecurityTests(LabsTestsMixin, TestCase):
 
     def test_job_unclaim_get_returns_405(self):
         self.client.login(username="volunteer", password="T3stPassword!3")
-        url = reverse("labs-job-unclaim", kwargs={"job_id": self.job_claimed.pk})
+        url = reverse(
+            "labs-job-unclaim", kwargs={"job_id": self.job_claimed.pk}
+        )
         self.assertEqual(self.client.get(url).status_code, 405)
 
     def test_job_resolve_get_returns_405(self):
@@ -123,12 +137,16 @@ class LabsSecurityTests(LabsTestsMixin, TestCase):
 
     def test_bulletin_pin_get_returns_405(self):
         self.client.login(username="admin", password="T3stPassword!")
-        url = reverse("labs-bulletin-pin", kwargs={"bulletin_id": self.bulletin.pk})
+        url = reverse(
+            "labs-bulletin-pin", kwargs={"bulletin_id": self.bulletin.pk}
+        )
         self.assertEqual(self.client.get(url).status_code, 405)
 
     def test_bulletin_delete_get_returns_405(self):
         self.client.login(username="admin", password="T3stPassword!")
-        url = reverse("labs-bulletin-delete", kwargs={"bulletin_id": self.bulletin.pk})
+        url = reverse(
+            "labs-bulletin-delete", kwargs={"bulletin_id": self.bulletin.pk}
+        )
         self.assertEqual(self.client.get(url).status_code, 405)
 
     def test_bulletin_read_all_get_returns_405(self):
@@ -158,19 +176,25 @@ class LabsSecurityTests(LabsTestsMixin, TestCase):
 
     def test_no_write_cannot_pin_bulletin(self):
         self.client.login(username="read_only", password="T3stPassword!1")
-        url = reverse("labs-bulletin-pin", kwargs={"bulletin_id": self.bulletin.pk})
+        url = reverse(
+            "labs-bulletin-pin", kwargs={"bulletin_id": self.bulletin.pk}
+        )
         self.assertEqual(self.client.post(url).status_code, 403)
 
     def test_no_write_cannot_expire_bulletin(self):
         self.client.login(username="read_only", password="T3stPassword!1")
-        url = reverse("labs-bulletin-expire", kwargs={"bulletin_id": self.bulletin.pk})
+        url = reverse(
+            "labs-bulletin-expire", kwargs={"bulletin_id": self.bulletin.pk}
+        )
         self.assertEqual(self.client.get(url).status_code, 403)
         self.assertEqual(self.client.post(url).status_code, 403)
 
     def test_non_superuser_cannot_delete_bulletin(self):
         # bulletin_delete checks is_superuser manually inside the view
         self.client.login(username="admin", password="T3stPassword!")
-        url = reverse("labs-bulletin-delete", kwargs={"bulletin_id": self.bulletin.pk})
+        url = reverse(
+            "labs-bulletin-delete", kwargs={"bulletin_id": self.bulletin.pk}
+        )
         self.assertEqual(self.client.post(url).status_code, 403)
 
     def test_anon_cannot_access_shopping_list(self):
@@ -178,19 +202,30 @@ class LabsSecurityTests(LabsTestsMixin, TestCase):
 
     def test_anon_cannot_flag_item(self):
         from toolkit.labs.models import ConsumableItem
-        item = ConsumableItem.objects.create(name="Security test item", category=ConsumableItem.CATEGORY_OTHER)
-        self._assert_anon_redirects("labs-shopping-flag", {"item_id": item.pk}, method="post")
+
+        item = ConsumableItem.objects.create(
+            name="Security test item", category=ConsumableItem.CATEGORY_OTHER
+        )
+        self._assert_anon_redirects(
+            "labs-shopping-flag", {"item_id": item.pk}, method="post"
+        )
 
     def test_shopping_flag_get_returns_405(self):
         from toolkit.labs.models import ConsumableItem
-        item = ConsumableItem.objects.create(name="Security test item 2", category=ConsumableItem.CATEGORY_OTHER)
+
+        item = ConsumableItem.objects.create(
+            name="Security test item 2", category=ConsumableItem.CATEGORY_OTHER
+        )
         self.client.login(username="volunteer", password="T3stPassword!3")
         url = reverse("labs-shopping-flag", kwargs={"item_id": item.pk})
         self.assertEqual(self.client.get(url).status_code, 405)
 
     def test_shopping_resolve_get_returns_405(self):
         from toolkit.labs.models import ConsumableItem, NeedFlag
-        item = ConsumableItem.objects.create(name="Security test item 3", category=ConsumableItem.CATEGORY_OTHER)
+
+        item = ConsumableItem.objects.create(
+            name="Security test item 3", category=ConsumableItem.CATEGORY_OTHER
+        )
         flag = NeedFlag.objects.create(item=item, flagged_by=self.vol)
         self.client.login(username="volunteer", password="T3stPassword!3")
         url = reverse("labs-shopping-resolve", kwargs={"flag_id": flag.pk})

@@ -21,7 +21,12 @@ def _get_password(use):
 
 
 def _create_or_update_user(
-    name, email, permissions, is_superuser=False, is_staff=False, password=None,
+    name,
+    email,
+    permissions,
+    is_superuser=False,
+    is_staff=False,
+    password=None,
     force_password=False,
 ):
     if not auth_models.User.objects.filter(username=name).exists():
@@ -84,7 +89,9 @@ def _configure_users(password=None, force_password=False):
     # Create the "Programmers" group (toolkit.write + toolkit.read + rota edit).
     # Programmers can create/edit events, manage templates and tags, but cannot
     # delete roles or access volunteer/member/CMS admin sections.
-    programmers_group, _ = auth_models.Group.objects.get_or_create(name="Programmers")
+    programmers_group, _ = auth_models.Group.objects.get_or_create(
+        name="Programmers"
+    )
     programmers_group.permissions.set(
         [write_permission, read_permission, edit_rota_permission]
     )
@@ -106,7 +113,9 @@ def _configure_users(password=None, force_password=False):
         email="admin@localhost",
         defaults={"name": "Demo Admin"},
     )
-    Volunteer.objects.get_or_create(user=admin_user, defaults={"member": admin_member})
+    Volunteer.objects.get_or_create(
+        user=admin_user, defaults={"member": admin_member}
+    )
 
     # --- Programmer tier ---
     # Programmer accounts also get a Member + Volunteer record so the

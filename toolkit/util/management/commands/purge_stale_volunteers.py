@@ -11,6 +11,7 @@ Anonymisation (not deletion) is reused from Volunteer.anonymise, so rota history
 and the audit log survive while personal data is cleared. This command is never
 scheduled — it is a conscious, manual action.
 """
+
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
@@ -69,7 +70,8 @@ class Command(BaseCommand):
         for vol in all_candidates:
             m = vol.member
             is_active_member = (
-                m.membership_expires is not None and m.membership_expires >= today
+                m.membership_expires is not None
+                and m.membership_expires >= today
             )
             if is_active_member and not include_members:
                 active_member_skipped.append(vol)

@@ -6,6 +6,12 @@ class EmailOrUsernameAuthForm(AuthenticationForm):
         super().__init__(*args, **kwargs)
         self.fields["username"].label = "Username or email"
         self.fields["username"].widget.attrs["autocomplete"] = "username"
-        self.fields["username"].widget.attrs["aria-describedby"] = "username_error"
-        self.fields["password"].widget.attrs["autocomplete"] = "current-password"
-        self.fields["password"].widget.attrs["aria-describedby"] = "password_error"
+        self.fields["username"].widget.attrs[
+            "aria-describedby"
+        ] = "username_error"
+        self.fields["password"].widget.attrs[
+            "autocomplete"
+        ] = "current-password"
+        self.fields["password"].widget.attrs[
+            "aria-describedby"
+        ] = "password_error"

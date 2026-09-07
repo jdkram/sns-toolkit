@@ -13,7 +13,9 @@ class SignupForm(forms.Form):
     first_name = forms.CharField(max_length=100, label="First name")
     last_name = forms.CharField(max_length=100, label="Last name")
     email = forms.EmailField(label="Email address")
-    phone = forms.CharField(max_length=64, required=False, label="Phone number")
+    phone = forms.CharField(
+        max_length=64, required=False, label="Phone number"
+    )
     address = forms.CharField(max_length=128, required=False, label="Address")
     postcode = forms.CharField(max_length=16, required=False, label="Postcode")
 
@@ -55,17 +57,24 @@ class SignupForm(forms.Form):
                 qtype = q.get("type", "text")
                 if qtype == "checkbox":
                     self.fields[field_name] = forms.BooleanField(
-                        label=label, required=required,
+                        label=label,
+                        required=required,
                     )
                 elif qtype == "select":
                     options = q.get("options", [])
-                    choices = [("", "— please select —")] + [(o, o) for o in options]
+                    choices = [("", "— please select —")] + [
+                        (o, o) for o in options
+                    ]
                     self.fields[field_name] = forms.ChoiceField(
-                        label=label, choices=choices, required=required,
+                        label=label,
+                        choices=choices,
+                        required=required,
                     )
                 else:
                     self.fields[field_name] = forms.CharField(
-                        label=label, required=required, max_length=500,
+                        label=label,
+                        required=required,
+                        max_length=500,
                     )
 
     def get_custom_responses(self):
@@ -112,12 +121,21 @@ class InductionSessionForm(forms.ModelForm):
     class Meta:
         model = InductionSession
         fields = [
-            "title", "session_type", "date", "location",
-            "max_signups", "status", "purge_after",
+            "title",
+            "session_type",
+            "date",
+            "location",
+            "max_signups",
+            "status",
+            "purge_after",
         ]
         widgets = {
-            "date": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
-            "purge_after": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
+            "date": forms.DateTimeInput(
+                attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"
+            ),
+            "purge_after": forms.DateTimeInput(
+                attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"
+            ),
         }
 
     def __init__(self, *args, **kwargs):
@@ -129,15 +147,19 @@ class InductionSessionForm(forms.ModelForm):
         # Pre-fill purge_after default for new sessions
         if not self.instance.pk:
             cfg = InductionsSettings.load()
-            self.fields["purge_after"].initial = (
-                timezone.now() + timezone.timedelta(days=cfg.induction_purge_days + 7)
+            self.fields[
+                "purge_after"
+            ].initial = timezone.now() + timezone.timedelta(
+                days=cfg.induction_purge_days + 7
             )
 
         # Pre-fill max_signups with the site default whenever it's not already set on
         # this session, so admins see a concrete number rather than a blank field.
         # Explicitly clearing it back to blank means "unlimited" for this session.
         if self.instance.max_signups is None:
-            self.fields["max_signups"].initial = InductionsSettings.load().default_max_signups
+            self.fields["max_signups"].initial = (
+                InductionsSettings.load().default_max_signups
+            )
 
 
 class InductionsSettingsForm(forms.ModelForm):
@@ -164,11 +186,21 @@ class InductionsSettingsForm(forms.ModelForm):
             "access_needs_ack_body",
         ]
         widgets = {
-            "access_needs_intro_text": forms.Textarea(attrs={"rows": 5, "class": "form-control"}),
-            "confirmation_email_body": forms.Textarea(attrs={"rows": 8, "class": "form-control"}),
-            "reminder_email_body": forms.Textarea(attrs={"rows": 8, "class": "form-control"}),
-            "welcome_email_body": forms.Textarea(attrs={"rows": 10, "class": "form-control"}),
-            "access_needs_ack_body": forms.Textarea(attrs={"rows": 8, "class": "form-control"}),
+            "access_needs_intro_text": forms.Textarea(
+                attrs={"rows": 5, "class": "form-control"}
+            ),
+            "confirmation_email_body": forms.Textarea(
+                attrs={"rows": 8, "class": "form-control"}
+            ),
+            "reminder_email_body": forms.Textarea(
+                attrs={"rows": 8, "class": "form-control"}
+            ),
+            "welcome_email_body": forms.Textarea(
+                attrs={"rows": 10, "class": "form-control"}
+            ),
+            "access_needs_ack_body": forms.Textarea(
+                attrs={"rows": 8, "class": "form-control"}
+            ),
         }
 
     def __init__(self, *args, **kwargs):
@@ -186,10 +218,20 @@ class InductionRequestAdminForm(forms.ModelForm):
 
     class Meta:
         model = InductionRequest
-        fields = ["status", "linked_session", "notes", "contacted_at", "purge_after"]
+        fields = [
+            "status",
+            "linked_session",
+            "notes",
+            "contacted_at",
+            "purge_after",
+        ]
         widgets = {
-            "contacted_at": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
-            "purge_after": forms.DateTimeInput(attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
+            "contacted_at": forms.DateTimeInput(
+                attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"
+            ),
+            "purge_after": forms.DateTimeInput(
+                attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"
+            ),
             "notes": forms.Textarea(attrs={"rows": 4}),
         }
 
@@ -204,4 +246,5 @@ class InductionRequestAdminForm(forms.ModelForm):
 def _question_key(label: str) -> str:
     """Stable field name for a custom question label."""
     import re
+
     return re.sub(r"[^a-z0-9]+", "_", label.lower())[:50]

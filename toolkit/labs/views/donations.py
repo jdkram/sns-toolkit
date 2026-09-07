@@ -1,4 +1,3 @@
-
 from django.contrib import messages
 from toolkit.toolkit_auth.decorators import (
     feature_required,

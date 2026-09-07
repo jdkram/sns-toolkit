@@ -14,7 +14,8 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--dry-run", action="store_true",
+            "--dry-run",
+            action="store_true",
             help="Show what would be sent without actually sending emails or updating reminder_sent_at.",
         )
 
@@ -47,7 +48,9 @@ class Command(BaseCommand):
             failed = 0
             for signup in pending:
                 if dry_run:
-                    self.stdout.write(f"  [dry-run] Would send reminder to {signup.email} ({signup.name})")
+                    self.stdout.write(
+                        f"  [dry-run] Would send reminder to {signup.email} ({signup.name})"
+                    )
                     sent += 1
                     continue
                 try:
@@ -57,7 +60,9 @@ class Command(BaseCommand):
                     _send_reminder_no_request(signup)
                     sent += 1
                 except Exception:
-                    logger.exception(f"Failed to send reminder for signup #{signup.pk}")
+                    logger.exception(
+                        f"Failed to send reminder for signup #{signup.pk}"
+                    )
                     failed += 1
 
             if not dry_run:
@@ -83,7 +88,10 @@ def _send_reminder_no_request(signup):
     # Build an absolute ICS URL from the SITE_URL setting (expected: "https://host")
     site_url = getattr(settings, "SITE_URL", "").rstrip("/")
     from django.urls import reverse
-    ics_path = reverse("inductions:calendar_ics", kwargs={"slug": session.slug})
+
+    ics_path = reverse(
+        "inductions:calendar_ics", kwargs={"slug": session.slug}
+    )
     calendar_url = f"{site_url}{ics_path}" if site_url else ics_path
 
     vars = {

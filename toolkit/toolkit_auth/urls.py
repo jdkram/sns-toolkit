@@ -14,7 +14,6 @@ from django.contrib.auth.views import (
 
 from toolkit.toolkit_auth.forms import EmailOrUsernameAuthForm
 
-
 urlpatterns = [
     re_path(
         r"^login/$",

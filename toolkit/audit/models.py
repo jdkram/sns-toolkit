@@ -7,6 +7,7 @@ access. Log lines rotate away with the container; these rows persist until
 the retention purge (purge_audit_logs command, driven by the
 email_log_retain_days / deletion_log_retain_days SiteConfiguration fields).
 """
+
 import logging
 import threading
 from contextlib import contextmanager
@@ -26,7 +27,9 @@ class SentEmailLog(models.Model):
     """
 
     sent_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    recipients = models.TextField(help_text="Comma-joined; usually one address")
+    recipients = models.TextField(
+        help_text="Comma-joined; usually one address"
+    )
     subject = models.CharField(max_length=255)
     success = models.BooleanField()
     error = models.TextField(blank=True)
@@ -92,7 +95,9 @@ class DeletionLog(models.Model):
         return f"{self.deleted_at:%Y-%m-%d %H:%M} {self.model} pk={self.object_pk}: {self.description}"
 
 
-def log_deletion(model, object_pk, description, deleted_by=None, via=DeletionLog.VIA_EDIT_UI):
+def log_deletion(
+    model, object_pk, description, deleted_by=None, via=DeletionLog.VIA_EDIT_UI
+):
     """Write a DeletionLog row; never let a logging failure break the deletion."""
     try:
         DeletionLog.objects.create(

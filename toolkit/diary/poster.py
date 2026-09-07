@@ -11,13 +11,17 @@ from PIL import Image, ImageDraw, ImageFont
 
 _FONTS_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "util", "management", "commands", "seed_data", "fonts",
+    "util",
+    "management",
+    "commands",
+    "seed_data",
+    "fonts",
 )
 
 # Preferred display fonts in order — heavy/black weight gives the best poster look
 _FONT_CANDIDATES = [
-    os.path.join(_FONTS_DIR, "Anton-Regular.ttf"),        # bundled — preferred
-    os.path.join(_FONTS_DIR, "DejaVuSans-Bold.ttf"),      # bundled fallback
+    os.path.join(_FONTS_DIR, "Anton-Regular.ttf"),  # bundled — preferred
+    os.path.join(_FONTS_DIR, "DejaVuSans-Bold.ttf"),  # bundled fallback
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
     "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
@@ -74,11 +78,16 @@ def make_poster_image(event_name, bg_colour, width=600, height=900):
     pixels = []
     for y in range(height):
         t = y / max(height - 1, 1)
-        pixels.extend([(
-            int(top_c[0] + (bot_c[0] - top_c[0]) * t),
-            int(top_c[1] + (bot_c[1] - top_c[1]) * t),
-            int(top_c[2] + (bot_c[2] - top_c[2]) * t),
-        )] * width)
+        pixels.extend(
+            [
+                (
+                    int(top_c[0] + (bot_c[0] - top_c[0]) * t),
+                    int(top_c[1] + (bot_c[1] - top_c[1]) * t),
+                    int(top_c[2] + (bot_c[2] - top_c[2]) * t),
+                )
+            ]
+            * width
+        )
 
     img = Image.new("RGB", (width, height))
     img.putdata(pixels)
@@ -133,15 +142,23 @@ def make_poster_image(event_name, bg_colour, width=600, height=900):
     for line, (tw, th), slot_h in zip(raw_lines, bboxes, slot_hs):
         scale_x = width / tw
         scale_y = slot_h / th
-        scale = min(scale_x, scale_y)   # uniform fit — no distortion, no clipping
+        scale = min(
+            scale_x, scale_y
+        )  # uniform fit — no distortion, no clipping
         rw = max(1, int(tw * scale))
         rh = max(1, int(th * scale))
-        x = (width - rw) // 2          # centre horizontally within image
+        x = (width - rw) // 2  # centre horizontally within image
 
         text_img = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
-        ImageDraw.Draw(text_img).text((-probe_draw.textbbox((0,0), line, font=f)[0],
-                                       -probe_draw.textbbox((0,0), line, font=f)[1]),
-                                      line, fill=(*text_colour, 255), font=f)
+        ImageDraw.Draw(text_img).text(
+            (
+                -probe_draw.textbbox((0, 0), line, font=f)[0],
+                -probe_draw.textbbox((0, 0), line, font=f)[1],
+            ),
+            line,
+            fill=(*text_colour, 255),
+            font=f,
+        )
         rendered = text_img.resize((rw, rh), resample=resample)
         img.paste(rendered, (x, y), rendered)
         y += slot_h + gap
@@ -166,19 +183,22 @@ def generate_event_placeholder(event, tag=None, colour_hex=None):
     # Determine background colour: explicit hex takes priority, then tag, then default
     if colour_hex:
         # Parse hex colour like "#FF5733" -> (255, 87, 51)
-        hex_clean = colour_hex.lstrip('#')
-        bg_colour = tuple(int(hex_clean[i:i+2], 16) for i in (0, 2, 4))
+        hex_clean = colour_hex.lstrip("#")
+        bg_colour = tuple(int(hex_clean[i : i + 2], 16) for i in (0, 2, 4))
     else:
         if tag is None:
             tag = event.tags.first()
-        if tag and hasattr(tag, 'colour') and tag.colour:
-            hex_colour = tag.colour.lstrip('#')
-            bg_colour = tuple(int(hex_colour[i:i+2], 16) for i in (0, 2, 4))
+        if tag and hasattr(tag, "colour") and tag.colour:
+            hex_colour = tag.colour.lstrip("#")
+            bg_colour = tuple(
+                int(hex_colour[i : i + 2], 16) for i in (0, 2, 4)
+            )
         else:
             bg_colour = (180, 40, 40)  # Default deep red
 
     # Generate the image at the configured thumbnail dimensions
     from toolkit.diary.models import get_site_config
+
     cfg = get_site_config()
     img = make_poster_image(
         event.name,
@@ -189,7 +209,7 @@ def generate_event_placeholder(event, tag=None, colour_hex=None):
 
     # Save to BytesIO
     buffer = BytesIO()
-    img.save(buffer, format='JPEG', quality=90)
+    img.save(buffer, format="JPEG", quality=90)
     buffer.seek(0)
 
     # Create MediaItem
@@ -201,7 +221,9 @@ def generate_event_placeholder(event, tag=None, colour_hex=None):
 
     # Save the file
     filename = f"event_{event.id}_poster.jpg"
-    media_item.media_file.save(filename, ContentFile(buffer.getvalue()), save=True)
+    media_item.media_file.save(
+        filename, ContentFile(buffer.getvalue()), save=True
+    )
 
     # Attach to event
     event.media.add(media_item)

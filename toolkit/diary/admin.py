@@ -26,7 +26,12 @@ class EventTemplateRoleInline(admin.TabularInline):
 class EventTemplateRoomInline(admin.TabularInline):
     model = EventTemplateRoom
     extra = 1
-    fields = ("room", "date_offset", "start_delta_minutes", "end_delta_minutes")
+    fields = (
+        "room",
+        "date_offset",
+        "start_delta_minutes",
+        "end_delta_minutes",
+    )
 
 
 @admin.register(EventTemplate)
@@ -37,10 +42,21 @@ class EventTemplateAdmin(admin.ModelAdmin):
     inlines = (EventTemplateRoleInline, EventTemplateRoomInline)
     fieldsets = (
         (None, {"fields": ("name", "tags")}),
-        ("Defaults applied to new events", {
-            "fields": ("pricing", "copy", "copy_summary", "terms", "film_information",
-                       "private", "outside_hire", "rota_notes"),
-        }),
+        (
+            "Defaults applied to new events",
+            {
+                "fields": (
+                    "pricing",
+                    "copy",
+                    "copy_summary",
+                    "terms",
+                    "film_information",
+                    "private",
+                    "outside_hire",
+                    "rota_notes",
+                ),
+            },
+        ),
     )
 
 
@@ -60,12 +76,30 @@ class RoleAdmin(admin.ModelAdmin):
 
 @admin.register(Film)
 class FilmAdmin(admin.ModelAdmin):
-    list_display = ("title", "year", "media_type", "director", "runtime_minutes", "imdb_id")
+    list_display = (
+        "title",
+        "year",
+        "media_type",
+        "director",
+        "runtime_minutes",
+        "imdb_id",
+    )
     search_fields = ("title", "director", "imdb_id")
     readonly_fields = ("created_at",)
     fieldsets = (
         (None, {"fields": ("title", "original_title", "year", "media_type")}),
-        ("Details", {"fields": ("runtime_minutes", "countries", "languages", "overview", "poster_url")}),
+        (
+            "Details",
+            {
+                "fields": (
+                    "runtime_minutes",
+                    "countries",
+                    "languages",
+                    "overview",
+                    "poster_url",
+                )
+            },
+        ),
         ("External IDs", {"fields": ("imdb_id",)}),
         ("Notes", {"fields": ("notes",)}),
         ("Metadata", {"fields": ("created_at",), "classes": ("collapse",)}),
@@ -88,13 +122,23 @@ class MediaItemAdmin(admin.ModelAdmin):
 
     @admin.display(description="Alt text")
     def alt_text_short(self, obj):
-        return obj.alt_text[:60] + "…" if len(obj.alt_text) > 60 else obj.alt_text or "—"
+        return (
+            obj.alt_text[:60] + "…"
+            if len(obj.alt_text) > 60
+            else obj.alt_text or "—"
+        )
 
 
 class ShowingInline(admin.TabularInline):
     model = Showing
     extra = 0
-    fields = ("start", "booked_by", "confirmed", "cancelled", "hide_in_programme")
+    fields = (
+        "start",
+        "booked_by",
+        "confirmed",
+        "cancelled",
+        "hide_in_programme",
+    )
     readonly_fields = ("start",)
 
 
@@ -108,7 +152,13 @@ class EventLinkInline(admin.TabularInline):
 class EventTermsRevisionInline(admin.TabularInline):
     model = EventTermsRevision
     extra = 0
-    readonly_fields = ("saved_at", "saved_by", "terms_text", "outside_hire", "private")
+    readonly_fields = (
+        "saved_at",
+        "saved_by",
+        "terms_text",
+        "outside_hire",
+        "private",
+    )
     can_delete = False
     ordering = ("-saved_at",)
 

@@ -58,9 +58,13 @@ class SecurityTests(MembersTestsMixin, TestCase):
         for view_name, kwargs in views_to_test.items():
             url = reverse(view_name, kwargs=kwargs)
             response = self.client.get(url)
-            self.assertEqual(response.status_code, 403, f"Expected 403 for GET {url}")
+            self.assertEqual(
+                response.status_code, 403, f"Expected 403 for GET {url}"
+            )
             response = self.client.post(url)
-            self.assertEqual(response.status_code, 403, f"Expected 403 for POST {url}")
+            self.assertEqual(
+                response.status_code, 403, f"Expected 403 for POST {url}"
+            )
 
     def test_need_login(self):
         """

@@ -3,6 +3,7 @@
 
 Recipient addresses are PII, so both pages are superuser-gated.
 """
+
 from django.conf import settings
 from django.core.paginator import Paginator
 from django.db.models import Q
@@ -63,16 +64,23 @@ def email_log(request):
     )
 
     page = Paginator(logs, PAGE_SIZE).get_page(request.GET.get("page"))
-    return render(request, "audit/email_log.html", {
-        "page": page,
-        "status": status,
-        "search": search,
-        "failure_count": SentEmailLog.objects.filter(success=False).count(),
-        "configured_backend": configured_backend,
-        "configured_backend_description": BACKEND_DESCRIPTIONS.get(
-            configured_backend, f"Unrecognised backend ({configured_backend})."
-        ),
-    })
+    return render(
+        request,
+        "audit/email_log.html",
+        {
+            "page": page,
+            "status": status,
+            "search": search,
+            "failure_count": SentEmailLog.objects.filter(
+                success=False
+            ).count(),
+            "configured_backend": configured_backend,
+            "configured_backend_description": BACKEND_DESCRIPTIONS.get(
+                configured_backend,
+                f"Unrecognised backend ({configured_backend}).",
+            ),
+        },
+    )
 
 
 @panopticon_required
@@ -88,7 +96,11 @@ def deletion_log(request):
         )
 
     page = Paginator(logs, PAGE_SIZE).get_page(request.GET.get("page"))
-    return render(request, "audit/deletion_log.html", {
-        "page": page,
-        "search": search,
-    })
+    return render(
+        request,
+        "audit/deletion_log.html",
+        {
+            "page": page,
+            "search": search,
+        },
+    )

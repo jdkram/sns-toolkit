@@ -48,7 +48,11 @@ def task_add(request):
             return redirect("operations-schedule")
     else:
         form = operations_forms.MaintenanceTaskForm()
-    return render(request, "operations/maintenance_task_form.html", {"form": form, "action": "Add"})
+    return render(
+        request,
+        "operations/maintenance_task_form.html",
+        {"form": form, "action": "Add"},
+    )
 
 
 @login_required
@@ -56,14 +60,22 @@ def task_add(request):
 def task_edit(request, task_id):
     task = get_object_or_404(MaintenanceTask, pk=task_id)
     if request.method == "POST":
-        form = operations_forms.MaintenanceTaskForm(request.POST, instance=task)
+        form = operations_forms.MaintenanceTaskForm(
+            request.POST, instance=task
+        )
         if form.is_valid():
             form.save()
-            messages.success(request, f"Maintenance task '{task.name}' updated.")
+            messages.success(
+                request, f"Maintenance task '{task.name}' updated."
+            )
             return redirect("operations-schedule")
     else:
         form = operations_forms.MaintenanceTaskForm(instance=task)
-    return render(request, "operations/maintenance_task_form.html", {"form": form, "task": task, "action": "Edit"})
+    return render(
+        request,
+        "operations/maintenance_task_form.html",
+        {"form": form, "task": task, "action": "Edit"},
+    )
 
 
 @login_required
@@ -86,7 +98,9 @@ def task_mark_done(request, task_id):
             return redirect("operations-schedule")
     else:
         form = operations_forms.MaintenanceRecordForm()
-    return render(request, "operations/mark_done_form.html", {"form": form, "task": task})
+    return render(
+        request, "operations/mark_done_form.html", {"form": form, "task": task}
+    )
 
 
 @login_required
@@ -107,7 +121,9 @@ def task_commit(request, task_id):
 def task_uncommit(request, task_id):
     task = get_object_or_404(MaintenanceTask, pk=task_id)
     volunteer = _user_volunteer(request.user)
-    if task.committed_to == volunteer or request.user.has_perm("toolkit.write"):
+    if task.committed_to == volunteer or request.user.has_perm(
+        "toolkit.write"
+    ):
         task.committed_to = None
         task.committed_on = None
         task.save(update_fields=["committed_to", "committed_on"])

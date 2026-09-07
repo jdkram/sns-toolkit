@@ -56,10 +56,14 @@ def _check_enabled():
 
 def signup(request, slug):
     _check_enabled()
-    session = get_object_or_404(InductionSession, slug=slug, status=InductionSession.STATUS_OPEN)
+    session = get_object_or_404(
+        InductionSession, slug=slug, status=InductionSession.STATUS_OPEN
+    )
 
     if session.is_full:
-        return render(request, "inductions/signup_full.html", {"session": session})
+        return render(
+            request, "inductions/signup_full.html", {"session": session}
+        )
 
     if request.method == "POST":
         form = SignupForm(request.POST, session=session)
@@ -80,26 +84,36 @@ def signup(request, slug):
             try:
                 send_new_signup_notification(session, new_signup)
             except Exception:
-                logger.exception("Failed to send new-signup organiser notification")
+                logger.exception(
+                    "Failed to send new-signup organiser notification"
+                )
             if session.is_full:
                 try:
                     send_session_full_notification(session)
                 except Exception:
-                    logger.exception("Failed to send session-full organiser notification")
+                    logger.exception(
+                        "Failed to send session-full organiser notification"
+                    )
             return redirect("inductions:signup_thanks", slug=slug)
     else:
         form = SignupForm(session=session)
 
-    return render(request, "inductions/signup.html", {
-        "form": form,
-        "session": session,
-    })
+    return render(
+        request,
+        "inductions/signup.html",
+        {
+            "form": form,
+            "session": session,
+        },
+    )
 
 
 def signup_thanks(request, slug):
     _check_enabled()
     session = get_object_or_404(InductionSession, slug=slug)
-    return render(request, "inductions/signup_thanks.html", {"session": session})
+    return render(
+        request, "inductions/signup_thanks.html", {"session": session}
+    )
 
 
 def calendar_ics(request, slug):
@@ -147,7 +161,9 @@ def access_needs_signup(request):
                 name=form.cleaned_data["name"],
                 email=form.cleaned_data["email"],
                 access_needs=form.cleaned_data["access_needs"],
-                rough_availability=form.cleaned_data.get("rough_availability", ""),
+                rough_availability=form.cleaned_data.get(
+                    "rough_availability", ""
+                ),
             )
             try:
                 send_access_needs_ack(request, req)
@@ -161,10 +177,14 @@ def access_needs_signup(request):
     else:
         form = AccessNeedsForm()
 
-    return render(request, "inductions/access_needs_signup.html", {
-        "form": form,
-        "intro_text": cfg.access_needs_intro_text,
-    })
+    return render(
+        request,
+        "inductions/access_needs_signup.html",
+        {
+            "form": form,
+            "intro_text": cfg.access_needs_intro_text,
+        },
+    )
 
 
 def access_needs_thanks(request):
@@ -172,24 +192,31 @@ def access_needs_thanks(request):
     cfg = get_inductions_settings()
     if not cfg.access_needs_enabled:
         raise Http404
-    return render(request, "inductions/access_needs_thanks.html", {
-        "organiser_email": cfg.organiser_notification_email,
-    })
+    return render(
+        request,
+        "inductions/access_needs_thanks.html",
+        {
+            "organiser_email": cfg.organiser_notification_email,
+        },
+    )
 
 
 def session_list_public(request):
     """Public listing of all currently-open induction sessions."""
     _check_enabled()
     sessions = (
-        InductionSession.objects
-        .filter(status=InductionSession.STATUS_OPEN)
+        InductionSession.objects.filter(status=InductionSession.STATUS_OPEN)
         .exclude(session_type=InductionSession.TYPE_ONE_TO_ONE)
         .order_by("date")
     )
-    return render(request, "inductions/session_list_public.html", {
-        "sessions": sessions,
-        "cfg": get_inductions_settings(),
-    })
+    return render(
+        request,
+        "inductions/session_list_public.html",
+        {
+            "sessions": sessions,
+            "cfg": get_inductions_settings(),
+        },
+    )
 
 
 # ─── Panopticon management views ─────────────────────────────────────────────
@@ -197,10 +224,16 @@ def session_list_public(request):
 
 @panopticon_required
 def manage_session_list(request):
-    sessions = InductionSession.objects.prefetch_related("signups").order_by("-date")
-    return render(request, "inductions/manage/session_list.html", {
-        "sessions": sessions,
-    })
+    sessions = InductionSession.objects.prefetch_related("signups").order_by(
+        "-date"
+    )
+    return render(
+        request,
+        "inductions/manage/session_list.html",
+        {
+            "sessions": sessions,
+        },
+    )
 
 
 @panopticon_required
@@ -212,21 +245,28 @@ def manage_session_new(request):
             session.created_by = request.user
             session.save()
             messages.success(request, f"Session '{session.title}' created.")
-            return redirect("inductions:manage_session_detail", slug=session.slug)
+            return redirect(
+                "inductions:manage_session_detail", slug=session.slug
+            )
     else:
         form = InductionSessionForm()
 
-    return render(request, "inductions/manage/session_form.html", {
-        "form": form,
-        "title": "New induction session",
-        "custom_questions_json": "[]",
-    })
+    return render(
+        request,
+        "inductions/manage/session_form.html",
+        {
+            "form": form,
+            "title": "New induction session",
+            "custom_questions_json": "[]",
+        },
+    )
 
 
 @panopticon_required
 def manage_session_edit(request, slug):
     session = get_object_or_404(InductionSession, slug=slug)
     import json
+
     if request.method == "POST":
         form = InductionSessionForm(request.POST, instance=session)
         raw_questions = request.POST.get("custom_questions_raw", "[]")
@@ -244,18 +284,26 @@ def manage_session_edit(request, slug):
     else:
         form = InductionSessionForm(instance=session)
 
-    return render(request, "inductions/manage/session_form.html", {
-        "form": form,
-        "session": session,
-        "title": f"Edit — {session.title}",
-        "custom_questions_json": json.dumps(session.custom_questions),
-    })
+    return render(
+        request,
+        "inductions/manage/session_form.html",
+        {
+            "form": form,
+            "session": session,
+            "title": f"Edit — {session.title}",
+            "custom_questions_json": json.dumps(session.custom_questions),
+        },
+    )
 
 
 @panopticon_required
 def manage_session_detail(request, slug):
     session = get_object_or_404(InductionSession, slug=slug)
-    signups = list(session.signups.select_related("volunteer__member", "volunteer__user", "checked_in_by"))
+    signups = list(
+        session.signups.select_related(
+            "volunteer__member", "volunteer__user", "checked_in_by"
+        )
+    )
     signup_url = request.build_absolute_uri(
         reverse("inductions:signup", kwargs={"slug": slug})
     )
@@ -271,13 +319,17 @@ def manage_session_detail(request, slug):
         for s in signups:
             s.is_over_cap = False
 
-    return render(request, "inductions/manage/session_detail.html", {
-        "session": session,
-        "signups": signups,
-        "signup_url": signup_url,
-        "accounts_created": accounts_created,
-        "over_cap_count": over_cap_count,
-    })
+    return render(
+        request,
+        "inductions/manage/session_detail.html",
+        {
+            "session": session,
+            "signups": signups,
+            "signup_url": signup_url,
+            "accounts_created": accounts_created,
+            "over_cap_count": over_cap_count,
+        },
+    )
 
 
 @require_POST
@@ -294,7 +346,9 @@ def manage_session_set_cap(request, slug):
         except ValueError:
             return JsonResponse({"ok": False, "error": "Invalid value."})
         if value < 0:
-            return JsonResponse({"ok": False, "error": "Cap cannot be negative."})
+            return JsonResponse(
+                {"ok": False, "error": "Cap cannot be negative."}
+            )
         session.max_signups = value
     session.save()
     return JsonResponse({"ok": True, "max_signups": session.max_signups})
@@ -306,7 +360,9 @@ def manage_session_close(request, slug):
     session = get_object_or_404(InductionSession, slug=slug)
     session.status = InductionSession.STATUS_CLOSED
     session.save()
-    messages.success(request, f"'{session.title}' is now closed to new sign-ups.")
+    messages.success(
+        request, f"'{session.title}' is now closed to new sign-ups."
+    )
     return redirect("inductions:manage_session_detail", slug=slug)
 
 
@@ -341,11 +397,13 @@ def manage_check_in(request, slug, signup_id):
             f"{request.user} checked in {signup.name} (signup #{signup.pk}) "
             f"for session '{session.title}'"
         )
-        return JsonResponse({
-            "ok": True,
-            "volunteer_id": volunteer.pk,
-            "checked_in_at": signup.checked_in_at.strftime("%H:%M"),
-        })
+        return JsonResponse(
+            {
+                "ok": True,
+                "volunteer_id": volunteer.pk,
+                "checked_in_at": signup.checked_in_at.strftime("%H:%M"),
+            }
+        )
     except Exception as exc:
         logger.exception(f"Check-in failed for signup #{signup_id}")
         return JsonResponse({"ok": False, "error": str(exc)})
@@ -363,7 +421,12 @@ def manage_mark_attendance(request, slug, signup_id):
 
     if signup.volunteer_id:
         # Account already created — cannot unmark
-        return JsonResponse({"ok": False, "error": "Account already created — cannot unmark attendance."})
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "Account already created — cannot unmark attendance.",
+            }
+        )
 
     if signup.status == InductionSignup.STATUS_CHECKED_IN:
         signup.status = InductionSignup.STATUS_PENDING
@@ -379,7 +442,12 @@ def manage_mark_attendance(request, slug, signup_id):
         signup.save()
         return JsonResponse({"ok": True, "status": "checked_in"})
 
-    return JsonResponse({"ok": False, "error": f"Cannot mark attendance for a {signup.get_status_display()} signup."})
+    return JsonResponse(
+        {
+            "ok": False,
+            "error": f"Cannot mark attendance for a {signup.get_status_display()} signup.",
+        }
+    )
 
 
 @require_POST
@@ -411,30 +479,62 @@ def manage_create_accounts(request, slug):
         if signup.pk not in forced_ids:
             existing = _find_existing_volunteer(signup)
             if existing:
-                duplicates.append({
-                    "signup_id": signup.pk,
-                    "name": signup.name,
-                    "match_type": "email" if (signup.email and existing.user.email.lower() == signup.email.lower()) else "name",
-                    "existing_volunteer_id": existing.pk,
-                    "existing_username": existing.user.username,
-                    "existing_email": existing.user.email,
-                })
+                duplicates.append(
+                    {
+                        "signup_id": signup.pk,
+                        "name": signup.name,
+                        "match_type": (
+                            "email"
+                            if (
+                                signup.email
+                                and existing.user.email.lower()
+                                == signup.email.lower()
+                            )
+                            else "name"
+                        ),
+                        "existing_volunteer_id": existing.pk,
+                        "existing_username": existing.user.username,
+                        "existing_email": existing.user.email,
+                    }
+                )
                 continue
         try:
             volunteer = _create_volunteer_from_signup(signup)
             send_welcome_email(request, signup, volunteer.user)
             signup.volunteer = volunteer
             signup.save()
-            created.append({"signup_id": signup.pk, "name": signup.name, "volunteer_id": volunteer.pk, "username": volunteer.user.username})
+            created.append(
+                {
+                    "signup_id": signup.pk,
+                    "name": signup.name,
+                    "volunteer_id": volunteer.pk,
+                    "username": volunteer.user.username,
+                }
+            )
             logger.info(
                 f"{request.user} created account for {signup.name} (signup #{signup.pk}) "
                 f"for session '{session.title}'"
             )
         except Exception as exc:
-            logger.exception(f"Account creation failed for signup #{signup.pk}")
-            errors.append({"signup_id": signup.pk, "name": signup.name, "error": str(exc)})
+            logger.exception(
+                f"Account creation failed for signup #{signup.pk}"
+            )
+            errors.append(
+                {
+                    "signup_id": signup.pk,
+                    "name": signup.name,
+                    "error": str(exc),
+                }
+            )
 
-    return JsonResponse({"ok": True, "created": created, "errors": errors, "duplicates": duplicates})
+    return JsonResponse(
+        {
+            "ok": True,
+            "created": created,
+            "errors": errors,
+            "duplicates": duplicates,
+        }
+    )
 
 
 @require_POST
@@ -445,7 +545,12 @@ def manage_edit_signup(request, slug, signup_id):
     signup = get_object_or_404(InductionSignup, pk=signup_id, session=session)
 
     if signup.volunteer_id:
-        return JsonResponse({"ok": False, "error": "Account already created — edit the volunteer profile instead."})
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "Account already created — edit the volunteer profile instead.",
+            }
+        )
 
     name = request.POST.get("name", "").strip()
     email = request.POST.get("email", "").strip()
@@ -458,12 +563,14 @@ def manage_edit_signup(request, slug, signup_id):
     signup.desired_username = desired_username
     signup.save()
 
-    return JsonResponse({
-        "ok": True,
-        "name": signup.name,
-        "email": signup.email,
-        "desired_username": signup.desired_username,
-    })
+    return JsonResponse(
+        {
+            "ok": True,
+            "name": signup.name,
+            "email": signup.email,
+            "desired_username": signup.desired_username,
+        }
+    )
 
 
 @require_POST
@@ -473,7 +580,12 @@ def manage_no_show(request, slug, signup_id):
     session = get_object_or_404(InductionSession, slug=slug)
     signup = get_object_or_404(InductionSignup, pk=signup_id, session=session)
     if signup.status == InductionSignup.STATUS_CHECKED_IN:
-        return JsonResponse({"ok": False, "error": "Already checked in — cannot mark as no-show."})
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "Already checked in — cannot mark as no-show.",
+            }
+        )
     if signup.status == InductionSignup.STATUS_NO_SHOW:
         signup.status = InductionSignup.STATUS_PENDING
         signup.save()
@@ -487,7 +599,9 @@ def manage_no_show(request, slug, signup_id):
 def manage_export_csv(request, slug):
     """Download a Simplelists-ready CSV of checked-in attendees."""
     session = get_object_or_404(InductionSession, slug=slug)
-    checked_in = session.signups.filter(status=InductionSignup.STATUS_CHECKED_IN)
+    checked_in = session.signups.filter(
+        status=InductionSignup.STATUS_CHECKED_IN
+    )
 
     response = HttpResponse(content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = (
@@ -501,15 +615,21 @@ def manage_export_csv(request, slug):
 
 @panopticon_required
 def manage_access_needs_list(request):
-    requests = InductionRequest.objects.exclude(status=InductionRequest.STATUS_PURGED)
+    requests = InductionRequest.objects.exclude(
+        status=InductionRequest.STATUS_PURGED
+    )
     status_filter = request.GET.get("status")
     if status_filter:
         requests = requests.filter(status=status_filter)
-    return render(request, "inductions/manage/access_needs_list.html", {
-        "requests": requests,
-        "status_choices": InductionRequest.STATUS_CHOICES,
-        "current_status": status_filter,
-    })
+    return render(
+        request,
+        "inductions/manage/access_needs_list.html",
+        {
+            "requests": requests,
+            "status_choices": InductionRequest.STATUS_CHOICES,
+            "current_status": status_filter,
+        },
+    )
 
 
 @panopticon_required
@@ -520,14 +640,20 @@ def manage_access_needs_detail(request, request_id):
         if form.is_valid():
             form.save()
             messages.success(request, "Request updated.")
-            return redirect("inductions:manage_access_needs_detail", request_id=request_id)
+            return redirect(
+                "inductions:manage_access_needs_detail", request_id=request_id
+            )
     else:
         form = InductionRequestAdminForm(instance=req)
 
-    return render(request, "inductions/manage/access_needs_detail.html", {
-        "req": req,
-        "form": form,
-    })
+    return render(
+        request,
+        "inductions/manage/access_needs_detail.html",
+        {
+            "req": req,
+            "form": form,
+        },
+    )
 
 
 @require_POST
@@ -545,7 +671,12 @@ def manage_add_walkin(request, slug):
     if not first_name:
         return JsonResponse({"ok": False, "error": "First name is required."})
     if not email:
-        return JsonResponse({"ok": False, "error": "Email address is required — it's needed to create a volunteer account."})
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "Email address is required — it's needed to create a volunteer account.",
+            }
+        )
 
     name = f"{first_name} {last_name}".strip()
     signup = InductionSignup.objects.create(
@@ -557,14 +688,16 @@ def manage_add_walkin(request, slug):
         postcode=postcode,
         status=InductionSignup.STATUS_PENDING,
     )
-    return JsonResponse({
-        "ok": True,
-        "signup_id": signup.pk,
-        "name": signup.name,
-        "email": signup.email,
-        "preview_username": signup.preview_username,
-        "signed_up_at": signup.signed_up_at.strftime("%-d %b %H:%M"),
-    })
+    return JsonResponse(
+        {
+            "ok": True,
+            "signup_id": signup.pk,
+            "name": signup.name,
+            "email": signup.email,
+            "preview_username": signup.preview_username,
+            "signed_up_at": signup.signed_up_at.strftime("%-d %b %H:%M"),
+        }
+    )
 
 
 @require_POST
@@ -574,9 +707,13 @@ def manage_remove_signup(request, slug, signup_id):
     session = get_object_or_404(InductionSession, slug=slug)
     signup = get_object_or_404(InductionSignup, pk=signup_id, session=session)
     if signup.status != InductionSignup.STATUS_PENDING:
-        return JsonResponse({"ok": False, "error": "Only pending sign-ups can be removed."})
+        return JsonResponse(
+            {"ok": False, "error": "Only pending sign-ups can be removed."}
+        )
     signup.delete()
-    logger.info(f"{request.user} removed signup #{signup_id} ({signup.name}) from session '{session.title}'")
+    logger.info(
+        f"{request.user} removed signup #{signup_id} ({signup.name}) from session '{session.title}'"
+    )
     return JsonResponse({"ok": True})
 
 
@@ -588,7 +725,9 @@ def manage_link_existing(request, slug, signup_id):
     signup = get_object_or_404(InductionSignup, pk=signup_id, session=session)
     existing_volunteer_id = request.POST.get("existing_volunteer_id")
     try:
-        volunteer = Volunteer.objects.select_related("user").get(pk=existing_volunteer_id)
+        volunteer = Volunteer.objects.select_related("user").get(
+            pk=existing_volunteer_id
+        )
     except (Volunteer.DoesNotExist, TypeError, ValueError):
         return JsonResponse({"ok": False, "error": "Volunteer not found."})
 
@@ -600,8 +739,15 @@ def manage_link_existing(request, slug, signup_id):
         try:
             _send_password_reset_email(request, volunteer.user)
         except Exception:
-            logger.exception(f"Password reset email failed for volunteer #{volunteer.pk}")
-            return JsonResponse({"ok": True, "warning": "Linked, but the login email could not be sent."})
+            logger.exception(
+                f"Password reset email failed for volunteer #{volunteer.pk}"
+            )
+            return JsonResponse(
+                {
+                    "ok": True,
+                    "warning": "Linked, but the login email could not be sent.",
+                }
+            )
 
     logger.info(
         f"{request.user} linked signup #{signup.pk} ({signup.name}) to existing volunteer #{volunteer.pk}"
@@ -621,15 +767,21 @@ def manage_settings(request):
     else:
         form = InductionsSettingsForm(instance=cfg)
 
-    return render(request, "inductions/manage/settings.html", {
-        "form": form,
-        "sample_vars": _test_template_vars(request, cfg),
-        "test_email_url": reverse("inductions:manage_send_test_email"),
-        "mark_policy_updated_url": reverse("inductions:manage_mark_policy_updated"),
-        "policy_version": cfg.privacy_policy_version,
-        "policy_updated_at": cfg.privacy_policy_updated_at,
-        "user_email": request.user.email or "",
-    })
+    return render(
+        request,
+        "inductions/manage/settings.html",
+        {
+            "form": form,
+            "sample_vars": _test_template_vars(request, cfg),
+            "test_email_url": reverse("inductions:manage_send_test_email"),
+            "mark_policy_updated_url": reverse(
+                "inductions:manage_mark_policy_updated"
+            ),
+            "policy_version": cfg.privacy_policy_version,
+            "policy_updated_at": cfg.privacy_policy_updated_at,
+            "user_email": request.user.email or "",
+        },
+    )
 
 
 @require_POST
@@ -664,7 +816,12 @@ def manage_send_test_email(request):
         cfg = InductionsSettings.load()
         recipient = cfg.organiser_notification_email
         if not recipient:
-            return JsonResponse({"ok": False, "error": "No organiser notification email is configured."})
+            return JsonResponse(
+                {
+                    "ok": False,
+                    "error": "No organiser notification email is configured.",
+                }
+            )
         try:
             send_test_notification_email(recipient)
         except Exception as exc:
@@ -676,20 +833,33 @@ def manage_send_test_email(request):
     # the requesting user's own email address so they can see what variables resolve to.
     recipient = request.user.email
     if not recipient:
-        return JsonResponse({"ok": False, "error": "Your account has no email address set."})
+        return JsonResponse(
+            {"ok": False, "error": "Your account has no email address set."}
+        )
 
     cfg = InductionsSettings.load()
     sample_vars = _test_template_vars(request, cfg)
-    from_email = settings.VENUE.get("mailout_from_address") or settings.DEFAULT_FROM_EMAIL
+    from_email = (
+        settings.VENUE.get("mailout_from_address")
+        or settings.DEFAULT_FROM_EMAIL
+    )
 
     template_map = {
-        "confirmation": (cfg.get_confirmation_subject(), cfg.get_confirmation_body()),
+        "confirmation": (
+            cfg.get_confirmation_subject(),
+            cfg.get_confirmation_body(),
+        ),
         "reminder": (cfg.get_reminder_subject(), cfg.get_reminder_body()),
         "welcome": (cfg.get_welcome_subject(), cfg.get_welcome_body()),
-        "access_needs_ack": (cfg.get_access_needs_ack_subject(), cfg.get_access_needs_ack_body()),
+        "access_needs_ack": (
+            cfg.get_access_needs_ack_subject(),
+            cfg.get_access_needs_ack_body(),
+        ),
     }
     if template_type not in template_map:
-        return JsonResponse({"ok": False, "error": f"Unknown template type: {template_type}"})
+        return JsonResponse(
+            {"ok": False, "error": f"Unknown template type: {template_type}"}
+        )
 
     raw_subject, raw_body = template_map[template_type]
     try:
@@ -773,11 +943,19 @@ def _create_volunteer_from_signup(signup: InductionSignup) -> Volunteer:
 def _find_existing_volunteer(signup: InductionSignup):
     """Return a matching Volunteer if one exists with the same email or name, else None."""
     if signup.email:
-        user = User.objects.filter(email__iexact=signup.email).select_related("volunteer").first()
+        user = (
+            User.objects.filter(email__iexact=signup.email)
+            .select_related("volunteer")
+            .first()
+        )
         if user and hasattr(user, "volunteer"):
             return user.volunteer
     if signup.name:
-        member = Member.objects.filter(name__iexact=signup.name).select_related("volunteer").first()
+        member = (
+            Member.objects.filter(name__iexact=signup.name)
+            .select_related("volunteer")
+            .first()
+        )
         if member and hasattr(member, "volunteer"):
             return member.volunteer
     return None
@@ -813,8 +991,9 @@ def _send_password_reset_email(request, user):
 def _test_template_vars(request, cfg: InductionsSettings) -> dict:
     """Sample variable values used when sending template preview emails and rendering tooltips."""
     validity = password_emails.password_reset_validity()
-    sample_date = (timezone.now().replace(hour=18, minute=30, second=0, microsecond=0)
-                   + timezone.timedelta(days=7))
+    sample_date = timezone.now().replace(
+        hour=18, minute=30, second=0, microsecond=0
+    ) + timezone.timedelta(days=7)
     venue = password_emails.venue_name()
     requester_name = request.user.get_full_name() or request.user.username
     return {
@@ -824,18 +1003,28 @@ def _test_template_vars(request, cfg: InductionsSettings) -> dict:
         "session_title": "Test Induction Session",
         "session_date": sample_date.strftime("%A %-d %B %Y at %H:%M"),
         "session_location": "Cinema",
-        "calendar_url": request.build_absolute_uri("/inductions/test-session/calendar.ics"),
-        "password_url": request.build_absolute_uri("/accounts/reset/Mg/abc-123-def456/"),
-        "password_reset_url": request.build_absolute_uri(reverse("password_reset")),
+        "calendar_url": request.build_absolute_uri(
+            "/inductions/test-session/calendar.ics"
+        ),
+        "password_url": request.build_absolute_uri(
+            "/accounts/reset/Mg/abc-123-def456/"
+        ),
+        "password_reset_url": request.build_absolute_uri(
+            reverse("password_reset")
+        ),
         "validity": validity,
-        "welcome_pack_url": cfg.welcome_pack_url or "(no welcome pack URL configured)",
+        "welcome_pack_url": cfg.welcome_pack_url
+        or "(no welcome pack URL configured)",
     }
 
 
 def _purge_session(session: InductionSession) -> int:
     """Null PII on pending/no-show signups. Returns count of records purged."""
     to_purge = session.signups.filter(
-        status__in=[InductionSignup.STATUS_PENDING, InductionSignup.STATUS_NO_SHOW]
+        status__in=[
+            InductionSignup.STATUS_PENDING,
+            InductionSignup.STATUS_NO_SHOW,
+        ]
     )
     count = to_purge.count()
     to_purge.update(name="", email="", custom_responses={})

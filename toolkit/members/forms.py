@@ -90,7 +90,9 @@ class UserForm(forms.ModelForm):
         self.fields["is_superuser"].label = "Panopticon access"
         if self.instance and self.instance.pk:
             self._was_superuser = self.instance.is_superuser
-            self._was_programmer = self.instance.groups.filter(name="Programmers").exists()
+            self._was_programmer = self.instance.groups.filter(
+                name="Programmers"
+            ).exists()
             self.fields["programmer"].initial = self._was_programmer
         else:
             self._was_superuser = False
@@ -98,7 +100,9 @@ class UserForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
-        was_superuser = self.instance and self.instance.pk and self.instance.is_superuser
+        was_superuser = (
+            self.instance and self.instance.pk and self.instance.is_superuser
+        )
         will_be_superuser = cleaned.get("is_superuser", False)
         if will_be_superuser and not was_superuser:
             if not cleaned.get("panopticon_reason", "").strip():
@@ -185,7 +189,10 @@ class VolunteerForm(forms.ModelForm):
 
         # Collectives: superusers see all; others see only open collectives.
         from toolkit.labs.models import Collective
-        qs = Collective.objects.filter(active=True).order_by("display_order", "name")
+
+        qs = Collective.objects.filter(active=True).order_by(
+            "display_order", "name"
+        )
         if not is_superuser:
             qs = qs.filter(invite_only=False)
         self.fields["collectives"].queryset = qs
@@ -210,22 +217,37 @@ class VolunteerForm(forms.ModelForm):
     class Meta:
         model = toolkit.members.models.Volunteer
         fields = (
-            "portrait", "notes", "status",
-            "retention_exempt", "retention_exempt_reason",
-            "access_intro", "access_needs", "access_links",
-            "emergency_contact_name", "emergency_contact_relationship", "emergency_contact_phone",
-            "dir_share_listed", "dir_share_name_style",
-            "dir_share_pronouns", "dir_share_email",
-            "dir_share_phone", "dir_share_access_rider", "dir_share_collectives",
+            "portrait",
+            "notes",
+            "status",
+            "retention_exempt",
+            "retention_exempt_reason",
+            "access_intro",
+            "access_needs",
+            "access_links",
+            "emergency_contact_name",
+            "emergency_contact_relationship",
+            "emergency_contact_phone",
+            "dir_share_listed",
+            "dir_share_name_style",
+            "dir_share_pronouns",
+            "dir_share_email",
+            "dir_share_phone",
+            "dir_share_access_rider",
+            "dir_share_collectives",
             "collectives",
             "weekly_digest",
         )
         widgets = {
             "notes": forms.Textarea(attrs={"wrap": "soft", "rows": 4}),
             "status": forms.RadioSelect(),
-            "access_intro": forms.Textarea(attrs={"rows": 3, "maxlength": 500}),
+            "access_intro": forms.Textarea(
+                attrs={"rows": 3, "maxlength": 500}
+            ),
             "access_needs": forms.Textarea(attrs={"rows": 5}),
-            "access_links": forms.Textarea(attrs={"rows": 3, "maxlength": 500}),
+            "access_links": forms.Textarea(
+                attrs={"rows": 3, "maxlength": 500}
+            ),
             "collectives": forms.CheckboxSelectMultiple(),
         }
 
@@ -278,6 +300,7 @@ class TrainingRecordForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from toolkit.diary.models import get_site_config
+
         if not get_site_config().general_training_enabled:
             self.fields["training_type"].choices = [
                 (TrainingRecord.ROLE_TRAINING, "Role Specific Training")
@@ -298,16 +321,22 @@ class GroupTrainingForm(forms.Form):
     training_date = forms.DateField(
         required=True,
         initial=datetime.date.today,
-        widget=forms.DateInput(attrs={"type": "date", "class": "form-control form-control-sm"}),
+        widget=forms.DateInput(
+            attrs={"type": "date", "class": "form-control form-control-sm"}
+        ),
     )
     trainer = forms.CharField(
         min_length=2,
         max_length=128,
         required=True,
-        widget=forms.TextInput(attrs={"class": "form-control form-control-sm"}),
+        widget=forms.TextInput(
+            attrs={"class": "form-control form-control-sm"}
+        ),
     )
     notes = forms.CharField(
-        widget=forms.Textarea(attrs={"class": "form-control form-control-sm", "rows": "3"}),
+        widget=forms.Textarea(
+            attrs={"class": "form-control form-control-sm", "rows": "3"}
+        ),
         required=False,
         help_text="(will be added to all selected volunteer's training "
         "records)",

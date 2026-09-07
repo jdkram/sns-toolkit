@@ -3,7 +3,9 @@
 maintainability pass — see MAINTAINABILITY_PASS.md). Verbatim move; no
 behaviour change. Group: pool_admin.
 """
+
 from ._common import *
+
 
 @panopticon_required
 @require_safe
@@ -60,7 +62,9 @@ def view_volunteer_pool_health(request):
 
     status_counts = {
         row["status"]: row["count"]
-        for row in Volunteer.objects.values("status").annotate(count=Count("pk"))
+        for row in Volunteer.objects.values("status").annotate(
+            count=Count("pk")
+        )
     }
 
     context = {
@@ -111,11 +115,15 @@ def bulk_anonymise_volunteers(request):
                 selected_ids = [int(i) for i in raw_ids if i]
             except ValueError:
                 messages.error(request, "Invalid volunteer selection.")
-                return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+                return HttpResponseRedirect(
+                    reverse("view-volunteer-pool-health")
+                )
 
             if not selected_ids:
                 messages.warning(request, "No volunteers selected.")
-                return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+                return HttpResponseRedirect(
+                    reverse("view-volunteer-pool-health")
+                )
 
             candidates = (
                 Volunteer.objects.purge_candidates(purge_days)
@@ -130,7 +138,9 @@ def bulk_anonymise_volunteers(request):
                     "None of the selected volunteers are currently purge candidates "
                     "(they may have been edited since the page loaded).",
                 )
-                return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+                return HttpResponseRedirect(
+                    reverse("view-volunteer-pool-health")
+                )
 
             return render(
                 request,
@@ -148,7 +158,9 @@ def bulk_anonymise_volunteers(request):
                 selected_ids = [int(i) for i in raw_ids if i]
             except ValueError:
                 messages.error(request, "Invalid volunteer selection.")
-                return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+                return HttpResponseRedirect(
+                    reverse("view-volunteer-pool-health")
+                )
 
             candidates = list(
                 Volunteer.objects.purge_candidates(purge_days)
@@ -215,11 +227,15 @@ def bulk_delete_never_onboarded(request):
                 selected_ids = [int(i) for i in raw_ids if i]
             except ValueError:
                 messages.error(request, "Invalid volunteer selection.")
-                return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+                return HttpResponseRedirect(
+                    reverse("view-volunteer-pool-health")
+                )
 
             if not selected_ids:
                 messages.warning(request, "No volunteers selected.")
-                return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+                return HttpResponseRedirect(
+                    reverse("view-volunteer-pool-health")
+                )
 
             candidates = list(
                 Volunteer.objects.purge_candidates(purge_days)
@@ -232,11 +248,22 @@ def bulk_delete_never_onboarded(request):
                 .order_by("member__name")
             )
             if not candidates:
-                messages.warning(request, "None of the selected volunteers are eligible for deletion.")
-                return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+                messages.warning(
+                    request,
+                    "None of the selected volunteers are eligible for deletion.",
+                )
+                return HttpResponseRedirect(
+                    reverse("view-volunteer-pool-health")
+                )
 
-            to_delete = [v for v in candidates if v.rota_count == 0 and v.gasp_count == 0]
-            to_anonymise = [v for v in candidates if v.rota_count > 0 or v.gasp_count > 0]
+            to_delete = [
+                v
+                for v in candidates
+                if v.rota_count == 0 and v.gasp_count == 0
+            ]
+            to_anonymise = [
+                v for v in candidates if v.rota_count > 0 or v.gasp_count > 0
+            ]
 
             return render(
                 request,
@@ -256,7 +283,9 @@ def bulk_delete_never_onboarded(request):
                 selected_ids = [int(i) for i in raw_ids if i]
             except ValueError:
                 messages.error(request, "Invalid volunteer selection.")
-                return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
+                return HttpResponseRedirect(
+                    reverse("view-volunteer-pool-health")
+                )
 
             candidates = list(
                 Volunteer.objects.purge_candidates(purge_days)
@@ -267,8 +296,14 @@ def bulk_delete_never_onboarded(request):
                     gasp_count=Count("last_gasp_emails", distinct=True),
                 )
             )
-            to_delete = [v for v in candidates if v.rota_count == 0 and v.gasp_count == 0]
-            to_anonymise = [v for v in candidates if v.rota_count > 0 or v.gasp_count > 0]
+            to_delete = [
+                v
+                for v in candidates
+                if v.rota_count == 0 and v.gasp_count == 0
+            ]
+            to_anonymise = [
+                v for v in candidates if v.rota_count > 0 or v.gasp_count > 0
+            ]
 
             expected_phrase = f"delete {len(to_delete)} volunteers"
             confirm_text = request.POST.get("confirm_phrase", "").strip()
@@ -321,9 +356,13 @@ def bulk_delete_never_onboarded(request):
 
             parts = []
             if deleted:
-                parts.append(f"Deleted {deleted} volunteer record{'s' if deleted != 1 else ''}")
+                parts.append(
+                    f"Deleted {deleted} volunteer record{'s' if deleted != 1 else ''}"
+                )
             if anonymised:
-                parts.append(f"anonymised {anonymised} (had rota history or a last-gasp email on record, so anonymised instead)")
+                parts.append(
+                    f"anonymised {anonymised} (had rota history or a last-gasp email on record, so anonymised instead)"
+                )
             messages.success(request, ". ".join(parts).capitalize() + ".")
             return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
 
@@ -338,8 +377,14 @@ def admin_restore_volunteer(request, volunteer_id):
         Volunteer.objects.select_related("member", "user"),
         pk=volunteer_id,
     )
-    if volunteer.status not in (Volunteer.STATUS_DORMANT, Volunteer.STATUS_RETIRED):
-        messages.warning(request, f"{volunteer.member.name} is not dormant or retired — no change made.")
+    if volunteer.status not in (
+        Volunteer.STATUS_DORMANT,
+        Volunteer.STATUS_RETIRED,
+    ):
+        messages.warning(
+            request,
+            f"{volunteer.member.name} is not dormant or retired — no change made.",
+        )
         return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
 
     volunteer.status = Volunteer.STATUS_ACTIVE
@@ -362,7 +407,9 @@ def auto_dormancy_preview(request):
     grace_days = config.volunteer_never_logged_in_grace_days
     now = timezone.now()
 
-    active = Volunteer.objects.filter(status=Volunteer.STATUS_ACTIVE).select_related("member", "user")
+    active = Volunteer.objects.filter(
+        status=Volunteer.STATUS_ACTIVE
+    ).select_related("member", "user")
 
     inactive = Volunteer.objects.none()
     if dormancy_days:
@@ -377,14 +424,18 @@ def auto_dormancy_preview(request):
             user__date_joined__lt=now - timedelta(days=grace_days),
         )
 
-    return render(request, "auto_dormancy_preview.html", {
-        "inactive": list(inactive),
-        "never_logged_in": list(never_logged_in),
-        "total": inactive.count() + never_logged_in.count(),
-        "dormancy_days": dormancy_days,
-        "grace_days": grace_days,
-        "disabled": not dormancy_days and not grace_days,
-    })
+    return render(
+        request,
+        "auto_dormancy_preview.html",
+        {
+            "inactive": list(inactive),
+            "never_logged_in": list(never_logged_in),
+            "total": inactive.count() + never_logged_in.count(),
+            "dormancy_days": dormancy_days,
+            "grace_days": grace_days,
+            "disabled": not dormancy_days and not grace_days,
+        },
+    )
 
 
 @panopticon_required
@@ -397,7 +448,9 @@ def auto_dormancy_apply(request):
     now = timezone.now()
 
     if not dormancy_days and not grace_days:
-        messages.warning(request, "Auto-dormancy is disabled — no thresholds configured.")
+        messages.warning(
+            request, "Auto-dormancy is disabled — no thresholds configured."
+        )
         return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
 
     active = Volunteer.objects.filter(status=Volunteer.STATUS_ACTIVE)
@@ -412,7 +465,10 @@ def auto_dormancy_apply(request):
             user__date_joined__lt=now - timedelta(days=grace_days),
         ).update(status=Volunteer.STATUS_DORMANT)
 
-    messages.success(request, f"Marked {count} volunteer{'s' if count != 1 else ''} as Dormant.")
+    messages.success(
+        request,
+        f"Marked {count} volunteer{'s' if count != 1 else ''} as Dormant.",
+    )
     return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
 
 
@@ -425,24 +481,32 @@ def last_gasp_email(request, volunteer_id):
         pk=volunteer_id,
     )
 
-    subject_template = config.last_gasp_email_subject or "Are you still with us at {venue}?"
+    subject_template = (
+        config.last_gasp_email_subject or "Are you still with us at {venue}?"
+    )
     body_template = config.last_gasp_email_body
     cooldown_days = config.last_gasp_cooldown_days
 
     if not config.last_gasp_email_enabled:
-        messages.warning(request, "Last-gasp email is not enabled. Turn it on in Site settings.")
+        messages.warning(
+            request,
+            "Last-gasp email is not enabled. Turn it on in Site settings.",
+        )
         return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
 
     name = volunteer.member.name
-    venue = settings.VENUE.get("longname", settings.VENUE.get("name", "the venue"))
+    venue = settings.VENUE.get(
+        "longname", settings.VENUE.get("name", "the venue")
+    )
     subject = _render_admin_email(subject_template, name, venue)
     body = _render_admin_email(body_template, name, venue)
 
     # Check cooldown
     cooldown_cutoff = timezone.now() - timedelta(days=cooldown_days)
     recent_log = (
-        LastGaspEmailLog.objects
-        .filter(volunteer=volunteer, sent_at__gt=cooldown_cutoff)
+        LastGaspEmailLog.objects.filter(
+            volunteer=volunteer, sent_at__gt=cooldown_cutoff
+        )
         .order_by("-sent_at")
         .first()
     )
@@ -455,7 +519,12 @@ def last_gasp_email(request, volunteer_id):
             )
             return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
         try:
-            send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [volunteer.member.email])
+            send_mail(
+                subject,
+                body,
+                settings.DEFAULT_FROM_EMAIL,
+                [volunteer.member.email],
+            )
         except Exception:
             logger.exception(
                 f"Failed to send last-gasp email to volunteer pk={volunteer.pk}"
@@ -466,18 +535,27 @@ def last_gasp_email(request, volunteer_id):
                 f"check their email address ({volunteer.member.email}).",
             )
             return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
-        LastGaspEmailLog.objects.create(volunteer=volunteer, sent_by=request.user)
-        messages.success(request, f"Last-gasp email sent to {name} ({volunteer.member.email}).")
+        LastGaspEmailLog.objects.create(
+            volunteer=volunteer, sent_by=request.user
+        )
+        messages.success(
+            request,
+            f"Last-gasp email sent to {name} ({volunteer.member.email}).",
+        )
         return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
 
-    return render(request, "last_gasp_email_preview.html", {
-        "volunteer": volunteer,
-        "member": volunteer.member,
-        "subject": subject,
-        "body": body,
-        "recent_log": recent_log,
-        "cooldown_days": cooldown_days,
-    })
+    return render(
+        request,
+        "last_gasp_email_preview.html",
+        {
+            "volunteer": volunteer,
+            "member": volunteer.member,
+            "subject": subject,
+            "body": body,
+            "recent_log": recent_log,
+            "cooldown_days": cooldown_days,
+        },
+    )
 
 
 @panopticon_required
@@ -494,13 +572,20 @@ def bulk_last_gasp_email(request):
     """
     config = get_site_config()
     cooldown_days = config.last_gasp_cooldown_days
-    default_subject = config.last_gasp_email_subject or "Are you still with us at {venue}?"
+    default_subject = (
+        config.last_gasp_email_subject or "Are you still with us at {venue}?"
+    )
     default_body = config.last_gasp_email_body
 
-    venue = settings.VENUE.get("longname", settings.VENUE.get("name", "the venue"))
+    venue = settings.VENUE.get(
+        "longname", settings.VENUE.get("name", "the venue")
+    )
 
     if not config.last_gasp_email_enabled:
-        messages.warning(request, "Last-gasp email is not enabled. Turn it on in Site settings.")
+        messages.warning(
+            request,
+            "Last-gasp email is not enabled. Turn it on in Site settings.",
+        )
         return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
 
     if request.method != "POST":
@@ -527,7 +612,9 @@ def bulk_last_gasp_email(request):
         .order_by("member__name")
     )
     if not volunteers:
-        messages.warning(request, "None of the selected volunteers were found.")
+        messages.warning(
+            request, "None of the selected volunteers were found."
+        )
         return HttpResponseRedirect(reverse("view-volunteer-pool-health"))
 
     cooldown_cutoff = timezone.now() - timedelta(days=cooldown_days)
@@ -553,20 +640,29 @@ def bulk_last_gasp_email(request):
         ]
         ready_count = sum(1 for r in recipients if not r["in_cooldown"])
 
-        return render(request, "bulk_last_gasp_email.html", {
-            "recipients": recipients,
-            "ready_count": ready_count,
-            "cooldown_count": len(recipients) - ready_count,
-            "volunteer_ids": selected_ids,
-            "default_subject": default_subject,
-            "default_body": default_body,
-            "cooldown_days": cooldown_days,
-            "venue": venue,
-        })
+        return render(
+            request,
+            "bulk_last_gasp_email.html",
+            {
+                "recipients": recipients,
+                "ready_count": ready_count,
+                "cooldown_count": len(recipients) - ready_count,
+                "volunteer_ids": selected_ids,
+                "default_subject": default_subject,
+                "default_body": default_body,
+                "cooldown_days": cooldown_days,
+                "venue": venue,
+            },
+        )
 
     elif action == "send":
-        subject_template = request.POST.get("subject", default_subject).strip() or default_subject
-        body_template = request.POST.get("body", default_body).strip() or default_body
+        subject_template = (
+            request.POST.get("subject", default_subject).strip()
+            or default_subject
+        )
+        body_template = (
+            request.POST.get("body", default_body).strip() or default_body
+        )
 
         if not body_template:
             messages.error(request, "Email body cannot be empty.")
@@ -587,23 +683,36 @@ def bulk_last_gasp_email(request):
             body = _render_admin_email(body_template, name, venue)
             # Catch per-volunteer so one bad address doesn't abort the rest.
             try:
-                send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [vol.member.email])
+                send_mail(
+                    subject,
+                    body,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [vol.member.email],
+                )
             except Exception:
                 logger.exception(
                     f"Failed to send bulk last-gasp email to volunteer pk={vol.pk}"
                 )
                 failed += 1
                 continue
-            LastGaspEmailLog.objects.create(volunteer=vol, sent_by=request.user)
+            LastGaspEmailLog.objects.create(
+                volunteer=vol, sent_by=request.user
+            )
             logger.info(
                 "Bulk last-gasp email sent to volunteer pk=%s (%s) by %s",
-                vol.pk, vol.member.email, request.user.username,
+                vol.pk,
+                vol.member.email,
+                request.user.username,
             )
             sent += 1
 
-        parts = [f"Last-gasp email sent to {sent} volunteer{'s' if sent != 1 else ''}"]
+        parts = [
+            f"Last-gasp email sent to {sent} volunteer{'s' if sent != 1 else ''}"
+        ]
         if skipped:
-            parts.append(f"{skipped} skipped (still within {cooldown_days}-day cooldown)")
+            parts.append(
+                f"{skipped} skipped (still within {cooldown_days}-day cooldown)"
+            )
         if failed:
             parts.append(
                 f"{failed} failed to send (their cooldown was not started, so "
@@ -635,9 +744,7 @@ def anonymise_volunteer(request, volunteer_id):
     rota_match_count = fk_matches.count() + name_matches.count()
     rota_sample = list(
         fk_matches.select_related("showing__event")[:5]
-    ) or list(
-        name_matches.select_related("showing__event")[:5]
-    )
+    ) or list(name_matches.select_related("showing__event")[:5])
 
     if request.method == "POST":
         confirm_name = request.POST.get("confirm_name", "").strip()
@@ -647,7 +754,10 @@ def anonymise_volunteer(request, volunteer_id):
                 "Name did not match — no changes were made.",
             )
             return HttpResponseRedirect(
-                reverse("anonymise-volunteer", kwargs={"volunteer_id": volunteer_id})
+                reverse(
+                    "anonymise-volunteer",
+                    kwargs={"volunteer_id": volunteer_id},
+                )
             )
 
         rota_match_count = volunteer.anonymise(performed_by=request.user)
@@ -679,5 +789,3 @@ def anonymise_volunteer(request, volunteer_id):
             "has_active_membership": has_active_membership,
         },
     )
-
-

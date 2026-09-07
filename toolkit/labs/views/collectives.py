@@ -1,4 +1,3 @@
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
@@ -50,9 +49,11 @@ def collectives(request):
         user_collective_slugs = frozenset()
         user_is_volunteer = False
     config = get_site_config()
-    has_public_collectives = Collective.objects.filter(
-        active=True, listed_publicly=True
-    ).exclude(public_copy="").exists()
+    has_public_collectives = (
+        Collective.objects.filter(active=True, listed_publicly=True)
+        .exclude(public_copy="")
+        .exists()
+    )
     return render(
         request,
         "labs/collectives.html",

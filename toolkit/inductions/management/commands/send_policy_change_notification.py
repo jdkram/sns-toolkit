@@ -10,6 +10,7 @@ than waiting for the next send_consent_renewal_reminders cron run. This
 command exists so the same notification can also be retried by hand, e.g.
 after an earlier run had delivery failures.
 """
+
 from django.core.management.base import BaseCommand
 
 from toolkit.inductions.emails import notify_policy_change
@@ -22,7 +23,8 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--dry-run", action="store_true",
+            "--dry-run",
+            action="store_true",
             help="Report who would be emailed without sending anything.",
         )
 
@@ -43,8 +45,14 @@ class Command(BaseCommand):
             return
         if dry_run:
             for volunteer in outstanding:
-                self.stdout.write(f"  [DRY RUN] Would notify {volunteer.member.name} <{volunteer.member.email}>")
+                self.stdout.write(
+                    f"  [DRY RUN] Would notify {volunteer.member.name} <{volunteer.member.email}>"
+                )
             return
 
         sent, skipped = notify_policy_change()
-        self.stdout.write(self.style.SUCCESS(f"Notified {sent} volunteer(s); {skipped} skipped."))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Notified {sent} volunteer(s); {skipped} skipped."
+            )
+        )

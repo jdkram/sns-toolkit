@@ -1,5 +1,6 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
 """Tests for the LoggingEmailBackend wrapper (9.154)."""
+
 from django.core import mail
 from django.core.mail import send_mail
 from django.core.mail.backends.base import BaseEmailBackend
@@ -46,8 +47,12 @@ class LoggingEmailBackendTests(TestCase):
     @override_settings(TOOLKIT_WRAPPED_EMAIL_BACKEND=LOCMEM)
     def test_one_log_line_per_message(self):
         messages = [
-            mail.EmailMessage("Subject one", "body", "from@example.com", ["a@example.com"]),
-            mail.EmailMessage("Subject two", "body", "from@example.com", ["b@example.com"]),
+            mail.EmailMessage(
+                "Subject one", "body", "from@example.com", ["a@example.com"]
+            ),
+            mail.EmailMessage(
+                "Subject two", "body", "from@example.com", ["b@example.com"]
+            ),
         ]
         with self.assertLogs("toolkit.email", "INFO") as logs:
             sent = mail.get_connection().send_messages(messages)

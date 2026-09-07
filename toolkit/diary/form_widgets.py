@@ -166,7 +166,7 @@ class AgeRatingChoicesWidget(forms.Widget):
                 f'aria-label="Display label"></td>'
                 f'<td><button type="button" class="btn btn-sm btn-outline-danger arc-remove" '
                 f'aria-label="Remove row">&times;</button></td>'
-                f'</tr>'
+                f"</tr>"
             )
 
         html = f"""

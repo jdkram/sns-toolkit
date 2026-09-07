@@ -5,8 +5,9 @@ from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
 
-
-DEFAULT_CONFIRMATION_SUBJECT = "[{venue}] Your induction sign-up — {session_title}"
+DEFAULT_CONFIRMATION_SUBJECT = (
+    "[{venue}] Your induction sign-up — {session_title}"
+)
 DEFAULT_CONFIRMATION_BODY = (
     "Hi {name},\n\n"
     "You're signed up for the {session_title} at {venue}.\n\n"
@@ -16,7 +17,9 @@ DEFAULT_CONFIRMATION_BODY = (
     "See you there!"
 )
 
-DEFAULT_REMINDER_SUBJECT = "[{venue}] Reminder: induction coming up — {session_title}"
+DEFAULT_REMINDER_SUBJECT = (
+    "[{venue}] Reminder: induction coming up — {session_title}"
+)
 DEFAULT_REMINDER_BODY = (
     "Hi {name},\n\n"
     "Just a reminder that the {session_title} is coming up soon.\n\n"
@@ -39,7 +42,9 @@ DEFAULT_WELCOME_BODY = (
     "If you weren't expecting this email, you can safely ignore it."
 )
 
-DEFAULT_ACCESS_NEEDS_ACK_SUBJECT = "[{venue}] We've received your induction request"
+DEFAULT_ACCESS_NEEDS_ACK_SUBJECT = (
+    "[{venue}] We've received your induction request"
+)
 DEFAULT_ACCESS_NEEDS_ACK_BODY = (
     "Hi {name},\n\n"
     "Thanks for getting in touch. We've received your request for a 1:1 induction "
@@ -60,7 +65,8 @@ class InductionsSettings(models.Model):
         help_text="Days after a session date before pending/no-show sign-ups are automatically purged.",
     )
     default_max_signups = models.PositiveIntegerField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         help_text=(
             "Suggested starting value for the 'maximum sign-ups' field when creating a new "
             "induction session — each session's own cap can then be adjusted or cleared "
@@ -71,7 +77,8 @@ class InductionsSettings(models.Model):
     # Email templates — use {name}, {venue}, {session_title}, {session_date},
     # {session_location}, {calendar_url}, {password_url}, {welcome_pack_url}, {validity}
     confirmation_email_subject = models.CharField(
-        max_length=200, blank=True,
+        max_length=200,
+        blank=True,
         help_text="Leave blank to use the default. Variables: {name} {venue} {session_title}",
     )
     confirmation_email_body = models.TextField(
@@ -79,31 +86,42 @@ class InductionsSettings(models.Model):
         help_text="Leave blank to use the default. Variables: {name} {venue} {session_title} {session_date} {session_location} {calendar_url}",
     )
     reminder_email_subject = models.CharField(
-        max_length=200, blank=True,
+        max_length=200,
+        blank=True,
         help_text="Leave blank to use the default.",
     )
     reminder_email_body = models.TextField(blank=True)
 
     welcome_email_subject = models.CharField(
-        max_length=200, blank=True,
+        max_length=200,
+        blank=True,
         help_text="Leave blank to use the default. Variables: {name} {username} {venue} {session_title} {validity} {password_url} {password_reset_url}",
     )
     welcome_email_body = models.TextField(blank=True)
 
-    access_needs_ack_subject = models.CharField(max_length=200, blank=True, verbose_name="Access needs acknowledgement subject")
-    access_needs_ack_body = models.TextField(blank=True, verbose_name="Access needs acknowledgement body")
+    access_needs_ack_subject = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Access needs acknowledgement subject",
+    )
+    access_needs_ack_body = models.TextField(
+        blank=True, verbose_name="Access needs acknowledgement body"
+    )
 
     welcome_pack_url = models.CharField(
-        max_length=500, blank=True,
+        max_length=500,
+        blank=True,
         help_text="URL to a welcome pack document included in the welcome email.",
     )
     welcome_pack_label = models.CharField(
-        max_length=100, default="Welcome pack",
+        max_length=100,
+        default="Welcome pack",
         help_text="Link text for the welcome pack URL.",
     )
 
     privacy_policy_url = models.CharField(
-        max_length=500, blank=True,
+        max_length=500,
+        blank=True,
         help_text="URL to your GDPR/privacy policy. Linked from the sign-up consent checkbox. Leave blank to omit the link.",
     )
     privacy_policy_version = models.PositiveIntegerField(
@@ -111,7 +129,8 @@ class InductionsSettings(models.Model):
         help_text="Bumped automatically when the policy is marked as updated. Volunteers who last consented to an earlier version are flagged for renewal and emailed immediately.",
     )
     privacy_policy_updated_at = models.DateTimeField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         help_text="When the privacy policy was last marked as updated.",
     )
     access_needs_enabled = models.BooleanField(
@@ -189,7 +208,9 @@ class InductionsSettings(models.Model):
         return self.welcome_email_body or DEFAULT_WELCOME_BODY
 
     def get_access_needs_ack_subject(self):
-        return self.access_needs_ack_subject or DEFAULT_ACCESS_NEEDS_ACK_SUBJECT
+        return (
+            self.access_needs_ack_subject or DEFAULT_ACCESS_NEEDS_ACK_SUBJECT
+        )
 
     def get_access_needs_ack_body(self):
         return self.access_needs_ack_body or DEFAULT_ACCESS_NEEDS_ACK_BODY
@@ -234,18 +255,23 @@ class InductionSession(models.Model):
 
     title = models.CharField(max_length=200)
     max_signups = models.PositiveIntegerField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         help_text="Maximum sign-ups for this session. Leave blank for unlimited sign-ups.",
     )
     session_type = models.CharField(
-        max_length=20, choices=TYPE_CHOICES, default=TYPE_REGULAR,
+        max_length=20,
+        choices=TYPE_CHOICES,
+        default=TYPE_REGULAR,
     )
     date = models.DateTimeField()
     location = models.CharField(max_length=200, blank=True)
     # JSON list of {"label": "...", "type": "text|checkbox|select", "required": bool, "options": [...]}
     custom_questions = models.JSONField(default=list, blank=True)
     status = models.CharField(
-        max_length=10, choices=STATUS_CHOICES, default=STATUS_OPEN,
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default=STATUS_OPEN,
     )
     slug = models.SlugField(max_length=100, unique=True)
     purge_after = models.DateTimeField(
@@ -275,11 +301,15 @@ class InductionSession(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            base = slugify(f"{self.title} {self.date:%m %d}")[:90] or "induction"
+            base = (
+                slugify(f"{self.title} {self.date:%m %d}")[:90] or "induction"
+            )
             self.slug = _unique_slug(base)
         if not self.purge_after:
             cfg = InductionsSettings.load()
-            self.purge_after = self.date + timezone.timedelta(days=cfg.induction_purge_days)
+            self.purge_after = self.date + timezone.timedelta(
+                days=cfg.induction_purge_days
+            )
         super().save(*args, **kwargs)
 
     def effective_capacity(self):
@@ -297,11 +327,15 @@ class InductionSession(models.Model):
 
     @property
     def checked_in_count(self):
-        return self.signups.filter(status=InductionSignup.STATUS_CHECKED_IN).count()
+        return self.signups.filter(
+            status=InductionSignup.STATUS_CHECKED_IN
+        ).count()
 
     @property
     def pending_count(self):
-        return self.signups.filter(status=InductionSignup.STATUS_PENDING).count()
+        return self.signups.filter(
+            status=InductionSignup.STATUS_PENDING
+        ).count()
 
     @property
     def total_count(self):
@@ -319,17 +353,22 @@ class InductionSignup(models.Model):
     ]
 
     session = models.ForeignKey(
-        InductionSession, on_delete=models.CASCADE, related_name="signups",
+        InductionSession,
+        on_delete=models.CASCADE,
+        related_name="signups",
     )
     name = models.CharField(max_length=200, blank=True)
     email = models.EmailField(blank=True)
     custom_responses = models.JSONField(default=dict, blank=True)
     status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING,
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
     )
     volunteer = models.ForeignKey(
         "members.Volunteer",
-        null=True, blank=True,
+        null=True,
+        blank=True,
         on_delete=models.SET_NULL,
         related_name="induction_signups",
     )
@@ -345,7 +384,8 @@ class InductionSignup(models.Model):
     checked_in_at = models.DateTimeField(null=True, blank=True)
     checked_in_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         on_delete=models.SET_NULL,
         related_name="checked_in_signups",
     )
@@ -400,17 +440,21 @@ class InductionRequest(models.Model):
     access_needs = models.TextField()
     rough_availability = models.TextField(blank=True)
     status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING,
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
     )
     linked_session = models.ForeignKey(
         InductionSession,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         on_delete=models.SET_NULL,
         related_name="access_requests",
     )
     volunteer = models.ForeignKey(
         "members.Volunteer",
-        null=True, blank=True,
+        null=True,
+        blank=True,
         on_delete=models.SET_NULL,
         related_name="induction_request",
     )
