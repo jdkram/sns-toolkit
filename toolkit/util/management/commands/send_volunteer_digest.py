@@ -22,6 +22,7 @@ from django.urls import reverse
 import django.utils.timezone as timezone
 
 from toolkit.diary.models import RotaEntry, Showing, VolunteerEventMark, get_site_config
+from toolkit.labs.models import NeedFlag
 from toolkit.members.models import Volunteer
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,26 @@ def _make_unsubscribe_token(volunteer):
     return signer.sign(str(volunteer.pk)).split(":", 1)[1]
 
 
-def _build_digest(volunteer, now):
+def _build_shopping_lines():
+    """Shopping list of open need flags — identical for every volunteer, so built once per run."""
+    open_flags = (
+        NeedFlag.objects.filter(resolved_at__isnull=True)
+        .select_related("item")
+        .prefetch_related("pledge__pledged_by__member")
+        .order_by("-flagged_at")
+    )
+    lines = []
+    for flag in open_flags:
+        pledge = getattr(flag, "pledge", None)
+        pledger = pledge.pledged_by.member.name if (pledge and pledge.pledged_by) else None
+        if pledger:
+            lines.append(f"{flag.item.name} — {pledger} is getting it")
+        else:
+            lines.append(f"{flag.item.name} — needs someone to get it")
+    return lines
+
+
+def _build_digest(volunteer, now, shopping_lines):
     """Return a dict of content sections for this volunteer's digest.
 
     Each section is a list of strings. Empty lists mean section is omitted.
@@ -120,26 +140,6 @@ def _build_digest(volunteer, now):
                 f"{next_showing.start.strftime('%-d %b %Y, %H:%M')}"
             )
 
-    # 4. Shopping list: items with open need flags
-    from toolkit.labs.models import NeedFlag
-    open_flags = (
-        NeedFlag.objects.filter(resolved_at__isnull=True)
-        .select_related("item")
-        .prefetch_related("pledge__pledged_by__member")
-        .order_by("-flagged_at")
-    )
-    shopping_lines = []
-    for flag in open_flags:
-        try:
-            pledge = flag.pledge
-            pledger = pledge.pledged_by.member.name if (pledge and pledge.pledged_by) else None
-        except Exception:
-            pledger = None
-        if pledger:
-            shopping_lines.append(f"{flag.item.name} — {pledger} is getting it")
-        else:
-            shopping_lines.append(f"{flag.item.name} — needs someone to get it")
-
     return {
         "shifts": shifts_lines,
         "new_programme": new_programme_lines,
@@ -194,6 +194,8 @@ class Command(BaseCommand):
         sent = 0
         skipped = 0
 
+        shopping_lines = _build_shopping_lines()
+
         subject = f"Your {settings.VENUE['cinemaname']} volunteer digest — week of {week_of}"
         from_email = settings.DEFAULT_FROM_EMAIL
         toolkit_url = (
@@ -208,8 +210,8 @@ class Command(BaseCommand):
                 connection.open()
 
             for volunteer in volunteers:
-                email = getattr(volunteer.member, "email", None)
-                name = getattr(volunteer.member, "name", None) or "Volunteer"
+                email = volunteer.member.email
+                name = volunteer.member.name or "Volunteer"
 
                 if not email:
                     self.stdout.write(
@@ -218,7 +220,7 @@ class Command(BaseCommand):
                     skipped += 1
                     continue
 
-                sections = _build_digest(volunteer, now)
+                sections = _build_digest(volunteer, now, shopping_lines)
 
                 if not any(sections.values()):
                     self.stdout.write(f"  Skipping {name} <{email}>: nothing to report")
@@ -233,7 +235,7 @@ class Command(BaseCommand):
                 )
 
                 context = {
-                    "volunteer_name": name.split()[0] if name else "Volunteer",
+                    "volunteer_name": name.split()[0],
                     "week_of": week_of,
                     "shifts": sections["shifts"],
                     "new_programme": sections["new_programme"],
@@ -260,6 +262,7 @@ class Command(BaseCommand):
                         self.stdout.write(self.style.SUCCESS(f"  Sent to {name} <{email}>"))
                         sent += 1
                     except Exception as exc:
+                        logger.exception("Failed to send volunteer digest to %s <%s>", name, email)
                         self.stdout.write(
                             self.style.ERROR(f"  Failed to send to {name} <{email}>: {exc}")
                         )
