@@ -191,12 +191,18 @@ reason the docs are wrong.
 - [x] Same plus `black` added to `requirements/docker.txt`, `docker.lock` recompiled
 - [x] `docker compose up --build -d`; verified `ruff` 0.16.6, `black` 26.3.1, `coverage` 7.16.0 in the image, and that container-side ruff picks up `pyproject.toml` (998 findings, matching the host)
 
-### Chunk 1: Mechanical fixes — NOT STARTED
+### Chunk 1: Mechanical fixes — DONE 2026-09-07
 
-`ruff check --fix` for `F401`/`F841` only: 890 fixes, no behaviour change. Its own commit, so
-the diff reads as "imports only". Then `black -l 79` as a **separate** commit — 135 files, also
-mechanical, but a large enough diff that mixing it with anything else makes review impossible.
-Full suite green before and after each.
+`ruff check --fix` for `F401`/`F841` only, then `black` as a **separate** commit — both
+mechanical, but each a large enough diff that mixing them makes review impossible. Full
+suite green after each.
+
+- [x] `ruff --select F401,F841 --fix` — 892 fixed, 823 deletions across 48 files
+      (`c336f5df`). `__init__.py` untouched; the per-file-ignore held.
+- [x] `black` at the pinned 79 — 142 files (`716002bd`). Net +3,688 lines, because
+      79 columns splits more call signatures than the previous mixed state did.
+- Result: ruff findings **998 → 110**, none auto-fixable. Those need judgement and
+  are Chunk 2's first job: 71 `ARG`, 19 `C901`, 8 `F841`, 5 `E741`, 4 `E402`, 3 `F401`.
 
 ### Chunk 2: The gates — NOT STARTED
 
