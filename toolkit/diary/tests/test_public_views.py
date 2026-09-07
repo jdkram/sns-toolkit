@@ -13,7 +13,7 @@ import os
 from django.conf import settings
 
 from .common import DiaryTestsMixin
-from toolkit.diary.models import EventTag, SiteConfiguration, get_site_config
+from toolkit.diary.models import EventTag, get_site_config
 
 uktz = zoneinfo.ZoneInfo("Europe/London")
 

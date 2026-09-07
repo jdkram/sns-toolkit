@@ -8,7 +8,6 @@ from ._common import *
 @panopticon_required
 def bulk_record(request):
     """Unified bulk-record page: training records and qualification grants, with a type selector."""
-    from toolkit.members.models import Qualification, VolunteerQualification
 
     mode = request.POST.get("mode") or request.GET.get("mode", "training")
     if mode not in ("training", "qualification"):

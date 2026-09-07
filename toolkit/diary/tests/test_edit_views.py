@@ -1,12 +1,8 @@
-import re
 import json
-import os.path
 
 import zoneinfo
-from datetime import datetime, date, time, timedelta
-import tempfile
+from datetime import datetime, timedelta
 
-from unittest.mock import patch
 
 from django.test import TestCase
 from django.test.utils import override_settings
@@ -15,19 +11,9 @@ from django.urls import reverse
 from toolkit.diary.models import (
     Showing,
     Event,
-    EventLink,
-    Role,
-    DiaryIdea,
-    EventTemplate,
-    MediaItem,
-    RotaEntry,
-    Room,
-    RoomBooking,
-    get_site_config,
 )
 
 import toolkit.diary.edit_prefs
-from toolkit.diary.form_widgets import JQueryDateTimePicker
 
 from .common import DiaryTestsMixin
 

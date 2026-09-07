@@ -2,7 +2,7 @@ import urllib.error
 from unittest.mock import patch
 
 from django import forms
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 
 from toolkit.diary.forms import SiteConfigurationForm

@@ -1,5 +1,4 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
-import json
 
 from django import forms
 from django.utils import timezone

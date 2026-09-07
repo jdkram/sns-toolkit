@@ -11,17 +11,15 @@ import io
 import os
 import random
 import re
-import tempfile
 import urllib.request
 from collections import defaultdict
 
-from django.conf import settings
 from django.contrib.auth.models import Group, User
 from django.core.management.base import BaseCommand
 from django.core.files.base import ContentFile
 from django.utils import timezone
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
 from toolkit.diary.models import (
     Event,

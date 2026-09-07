@@ -1,7 +1,7 @@
 import logging
 from functools import wraps
 
-from django.contrib.auth.decorators import permission_required, user_passes_test
+from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.signals import user_logged_in
 from django.contrib.auth.signals import user_logged_out
 from django.contrib.auth.signals import user_login_failed

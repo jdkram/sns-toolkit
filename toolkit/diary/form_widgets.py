@@ -1,7 +1,7 @@
 import json
 
 from django import forms
-from django.utils.html import format_html, escape
+from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
 

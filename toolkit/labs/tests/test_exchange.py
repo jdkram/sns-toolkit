@@ -1,5 +1,5 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 
 from toolkit.diary.models import get_site_config

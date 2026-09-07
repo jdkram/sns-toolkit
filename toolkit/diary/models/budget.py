@@ -9,7 +9,6 @@ describe everything else (catering, decoration, promotion, ...), plus the
 Incoming side (ticket sales).
 """
 
-from decimal import Decimal
 
 from django.db import models
 

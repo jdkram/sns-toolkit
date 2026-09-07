@@ -377,7 +377,6 @@ class Bulletin(models.Model):
         """Return the datetime at which this bulletin becomes inactive, or None
         if it never expires (site default is 0 and no explicit expiry).
         """
-        from django.utils import timezone
         from toolkit.diary.models import get_site_config
 
         if self.expires_at:

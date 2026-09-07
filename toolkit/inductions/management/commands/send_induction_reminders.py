@@ -4,7 +4,6 @@ import logging
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from toolkit.inductions.emails import send_reminder
 from toolkit.inductions.models import InductionSession, InductionSignup
 
 logger = logging.getLogger(__name__)

@@ -4,7 +4,6 @@ from django.http import HttpResponseRedirect, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, render
 from django.db.models import Count, Q
 from django.urls import reverse
-from django.contrib.auth.decorators import permission_required  # kept for add_member IP path
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone

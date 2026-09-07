@@ -1,6 +1,5 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
 import csv
-import io
 import logging
 from datetime import datetime
 

@@ -6,7 +6,6 @@ from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 
-from toolkit.labs.models import Collective
 
 from .common import LabsTestsMixin
 

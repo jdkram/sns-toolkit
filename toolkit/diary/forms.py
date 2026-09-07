@@ -15,7 +15,6 @@ from toolkit.diary.form_widgets import (
     HtmlTextarea,
     JQueryDateTimePicker,
     MultiDatePickerWidget,
-    ChosenSelectMultiple,
     TagPillSelect,
 )
 

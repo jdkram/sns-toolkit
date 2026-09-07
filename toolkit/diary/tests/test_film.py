@@ -9,7 +9,7 @@ from urllib.error import URLError
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from toolkit.diary.models import Event, EventTag, Film, MediaItem
+from toolkit.diary.models import EventTag, Film
 from toolkit.diary.tests.common import DiaryTestsMixin
 import toolkit.diary.omdb as omdb_module
 

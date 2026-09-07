@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from toolkit.diary.models import Event, EventTermsRevision
+from toolkit.diary.models import Event
 from toolkit.diary.tests.common import DiaryTestsMixin
 
 User = get_user_model()

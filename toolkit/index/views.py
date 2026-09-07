@@ -69,7 +69,7 @@ class ToolkitIndexView(ListView):
 
         try:
             volunteer = user.volunteer
-        except Exception as e:
+        except Exception:
             volunteer = None
 
         if volunteer:

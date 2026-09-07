@@ -1,9 +1,8 @@
 import re
 import json
-import os.path
 
 import zoneinfo
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, date, timedelta
 import tempfile
 
 from unittest.mock import patch
@@ -16,20 +15,14 @@ from toolkit.diary.models import (
     Showing,
     Event,
     EventLink,
-    EventTag,
     EventTemplate,
-    EventTemplateRole,
     Role,
     DiaryIdea,
     MediaItem,
     RotaEntry,
-    Room,
     RoomBooking,
-    get_site_config,
 )
 
-import toolkit.diary.edit_prefs
-from toolkit.diary.form_widgets import JQueryDateTimePicker
 
 from .common import DiaryTestsMixin, UKTZ
 

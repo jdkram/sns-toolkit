@@ -6,7 +6,6 @@ including the specific points raised during manual testing (slug not doubling th
 year, username format, capacity enforcement).
 """
 from django.contrib.auth.models import User
-from django.core import mail
 from django.test import TestCase
 from django.utils import timezone
 

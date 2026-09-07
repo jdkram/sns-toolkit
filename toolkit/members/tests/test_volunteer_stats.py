@@ -6,7 +6,6 @@ from django.urls import reverse
 from django.utils import timezone
 
 from toolkit.diary.models import Event, Role, RotaEntry, Showing, SiteConfiguration, get_site_config
-from toolkit.members.models import Member, Volunteer
 from toolkit.members.tests.common import MembersTestsMixin
 
 
