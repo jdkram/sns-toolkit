@@ -183,6 +183,24 @@ current first candidate, since it needs no further dev work, only deployment.
 
 ---
 
+## In progress: the quality pass (started 2026-09-07)
+
+Branch `chore/quality-pass-2026-09` carries a staged clean-up: tooling and enforcement first,
+then an external review pass, then the uplift itself. **If you are picking that work up, read
+[QUALITY_PASS.md](QUALITY_PASS.md) first** — it holds the measured findings, the chunk list
+with status markers, a resume protocol, and a Gotchas section covering traps that cost real
+time to find.
+
+Two things from it that apply to *all* work in this repo, not just that branch:
+
+- **`pyproject.toml` now owns the tool settings.** `black` and `ruff` are both pinned at
+  line-length 79 and are installed in the container. Run `ruff check toolkit` and
+  `black toolkit` with no arguments; do not pass `--line-length` by hand any more.
+- **`ruff --fix` is not universally safe.** Re-export shims and side-effect imports look like
+  dead code to it. See the Gotchas section before running it over new territory.
+
+---
+
 ## Current task: Port S+S-specific features from the `s+s` branch
 
 The `s+s` branch was the Star and Shadow production branch but ran Django 2.2 (EOL). We have started fresh from `master` (which is far more modern) and ported the S+S-specific functionality across. Initial Docker setup and basic seed data are complete; focus is now on porting remaining features.
@@ -271,6 +289,7 @@ docker compose exec toolkit /venv/bin/python3 manage.py test toolkit.diary.tests
 | Dev docker compose | [docker-compose.yml](docker-compose.yml) |
 | S+S-specific templates | [star_and_shadow_templates/](star_and_shadow_templates/) |
 | Current work / status / roadmap | [CURRENT_WORK.md](CURRENT_WORK.md) |
+| Quality pass: tooling, lint, CI, uplift | [QUALITY_PASS.md](QUALITY_PASS.md) |
 | System specification | [docs/SPEC.md](docs/SPEC.md) |
 | Logging: what's logged where, email log lines | [docs/LOGGING.md](docs/LOGGING.md) |
 | Feature specs & design rationale | [docs/TASKS.md](docs/TASKS.md) (index) → [docs/tasks/](docs/tasks/) (domain files) |

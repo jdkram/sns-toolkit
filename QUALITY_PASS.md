@@ -12,6 +12,27 @@ status: "#ai-input"
 > **Resume by:** reading this file top-to-bottom, then checking
 > `git log --oneline chore/quality-pass-2026-09` to see which chunks actually shipped.
 
+### State at the end of the last session (2026-09-07)
+
+| | |
+|---|---|
+| Branch | `chore/quality-pass-2026-09`, working tree clean |
+| Chunks done | 0, 1 |
+| Next chunk | **2 (the gates)** |
+| Tests | 1,129 passing |
+| Ruff | 110 findings, none auto-fixable, all pre-triaged in Chunk 2 below |
+| Black | clean at 79 |
+
+Commits so far, newest first:
+
+```
+94786738  docs(quality): record Chunk 1 results in the pass tracker
+716002bd  chore(quality): black reformat at the now-pinned 79 columns
+c336f5df  chore(quality): remove 892 unused imports and variables
+e5822a1b  chore(quality): add ruff/black config and the quality-pass tracker
+ccbb3d6a  fix(digest): ... (last commit on sns_2026_overhaul, the branch point)
+```
+
 ## Why this pass exists
 
 The concern that prompted it: the branch is ~49k lines of Python and ~30k lines of templates
@@ -80,6 +101,41 @@ it all.
 | 4 | 7 — feature-scope conversation (needs Jonny) |
 | 5–7 | 8–11 — the uplift; Chunk 9 may want two sessions alone |
 | 8 | 12 — re-measure and confirm |
+
+---
+
+## Gotchas for whoever picks this up
+
+Each of these cost real time to discover. None is guessable from the code.
+
+**Tests run only inside the container.** There is no local venv, and `mysqlclient` plus several
+C extensions exist only in the image. Every verification command is
+`docker compose exec -T toolkit /venv/bin/...`. The `-T` matters in a non-interactive shell.
+
+**Never `.only()` on models with a custom `__init__`.** `EventTag`, `Event`, `Showing`,
+`RotaEntry`, `Role`, `Member` and `Volunteer` cache field values in `__init__`. Deferring one
+makes accessing it call `refresh_from_db`, which constructs a new instance, which calls
+`__init__` again. Infinite recursion, one DB round-trip per frame. Use `.values()` and read the
+results as dicts. This is in CLAUDE.md too, and it is easy to reintroduce during a refactor.
+
+**Django template comments must be single-line.** A `{# ... #}` spanning multiple lines is not
+stripped reliably and leaks into the rendered HTML. Relevant to Chunk 9, which touches four
+large templates.
+
+**`ruff --fix` is not universally safe.** Two categories of correct code look like dead code to
+it: re-export shims (`members/views/__init__.py`, guarded in `pyproject.toml`) and side-effect
+imports (`audit/apps.py:11`, which registers signal handlers). Check before running `--fix`
+across new territory, not after.
+
+**A user hook rewrites the phrase "load-bearing" to "critical" on Write/Edit.** It fires on
+those tools but not on `sed` or a heredoc via Bash. It exists to strip a tell of AI authorship,
+which is fine for text the agent writes, but it will also silently rewrite *Jonny's* existing
+prose in any file those tools touch. When making a surgical change to an existing doc, prefer
+`sed`, and check `git diff` for edits you did not intend.
+
+**`opencode run` silently rejects reads outside its working directory** (Chunk 5). It prints
+the rejection to stderr only; stdout and the JSON output show an empty response with no error.
+Always run it with the repo as the working directory.
 
 ---
 
@@ -211,9 +267,28 @@ suite green after each.
   push and PR. This is the one that matters: it catches what an agent running with
   `--no-verify` would skip.
 
-Expect ~108 non-auto-fixable findings to remain after Chunk 1 (71 `ARG`, 19 `C901`, and the
-rest). Triage each on merit before the gate goes green — fix, or ignore with a stated reason.
-Do not blanket-ignore to get to green.
+**CI is simpler than it looks here:** `toolkit/test_settings.py` uses SQLite, not MySQL, so
+the workflow needs no database service container. Install Python 3.11, install
+`requirements/dev.txt`, run the three verification commands. GitHub Actions is free for public
+repos and this repo is public.
+
+**The 110 remaining ruff findings, pre-triaged 2026-09-07.** Work this list rather than
+re-deriving it. Fix or ignore-with-a-stated-reason, one at a time. Do *not* blanket-ignore to
+reach green, and do not `--fix` any of it blindly: several are correct code that ruff cannot
+understand.
+
+| Finding | Count | Verdict |
+|---|---|---|
+| `ARG001` on signal handlers (`sender`, `kwargs`) | ~10 | **Ignore by pattern.** Django's signal API dictates the signature; the receiver cannot drop them. Add a `per-file-ignores` for `*/signals.py`. |
+| `ARG002` on `handle(self, *args, **options)` | ~15 | **Ignore by pattern.** Django's `BaseCommand` API dictates it. Add `*/management/commands/*`. |
+| `ARG002` on Wagtail/Django hook methods taking `request` | ~15 | **Ignore case by case.** Framework-mandated signatures (`toolkit/content/models.py:138,142`). |
+| Remaining `ARG` | ~30 | **Judge individually.** A genuinely unused argument on our own helper is worth deleting. |
+| `C901` complex-structure | 19 | **Do not fix here.** These are the god-functions Chunks 9 and 11 exist to break up. Set `max-complexity` to the current worst value so the gate passes today, then ratchet it down as those chunks land. Worst is `seed_dev_data.handle` at 101. |
+| `E741` ambiguous name `l` | 5 | **Fix.** Trivial rename. `diary/form_widgets.py:158`, `diary/poster.py:122`, `diary/tmdb.py:100,121`, `util/image.py:54`. |
+| `E402` import not at top | 4 | **Read each.** In settings files this is deliberate layering. `diary/edit_views/events.py:47` and `film.py:22` are worth understanding before moving. |
+| `F401` in `audit/apps.py:11` | 1 | **DO NOT REMOVE.** `from . import signals` is a side-effect import that registers the signal handlers. Deleting it silently disables audit logging, and no test would catch it. Add `# noqa: F401` with a comment saying why. |
+| `F401` in `seed_dev_data.py:68,70` | 2 | **Keep.** Deliberate availability probes inside a try/except. `# noqa: F401`. |
+| `F841` unused local | 8 | **Read each; some are real bugs.** `diary/tests/test_programming_queue.py:164` assigns a `response` and never asserts on it, which is the status-code-only test problem showing up as a lint finding. `diary/edit_views/diary_overview.py:283` (`local_now`) and `rota.py:114` (`yesterday_local_date`) are dead date calculations worth understanding before deleting, in case the *use* was dropped rather than the variable being spurious. |
 
 *After this chunk, June's regression could not have happened. Everything later is optional in a
 way this is not.*

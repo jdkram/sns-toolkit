@@ -68,6 +68,34 @@ The tradeoff in one line: Ben's branch is small and maintained by someone else; 
 
 ---
 
+## Quality pass (`chore/quality-pass-2026-09`)
+
+Tracking file: [QUALITY_PASS.md](QUALITY_PASS.md). Chunks 0-1 done 2026-09-07.
+
+Prompted by a worry that quality had drifted unmeasured across ~2,180 mostly AI-assisted
+commits. The June maintainability pass was Claude reviewing Claude; its own refactor shipped
+885 unused imports and a star-import hub that went unnoticed for two and a half months,
+because this repo had no linter. So this pass puts deterministic tooling underneath the model
+layer, and routes the judgement work to a different model (MiniMax M3, ~$0.80 total).
+
+| Chunk | Status | Notes |
+|---|---|---|
+| 0 Set up | ✅ 2026-09-07 | `pyproject.toml` pins black + ruff at line-length 79; both plus `coverage` added to the image. E501 disabled with the measurement behind that decision recorded in the config. |
+| 1 Mechanical fixes | ✅ 2026-09-07 | 892 unused imports/variables removed (823 deletions, 48 files); black reformat at 79 (142 files). Ruff 998 → 110 findings. |
+| 2 The gates | ⬜ | pre-commit + GitHub Actions CI. Tests are SQLite, so no DB service container needed. The 110 remaining findings are pre-triaged in QUALITY_PASS.md. |
+| 3 Docs drift | ⬜ | 20 doc-referenced paths do not exist; `operations` and `audit` missing from the onboarding tour. |
+| 4 Baseline | ⬜ | First real per-module coverage measurement. |
+| 5 MiniMax sweep | ⬜ | ~40 files, ~$0.70. |
+| 6 Rubric | ⬜ | `docs/QUALITY_RUBRIC.md`, synthesised from the sweep. |
+| 7 Feature scope | ⬜ | Needs Jonny. Decision document on the eight `labs` mini-tools, not a deletion. |
+| 8 Deduplicate | ⬜ | Duplicated volunteer helper, three CSV exporters, two ICS generators. |
+| 9 Extract inline JS | ⬜ | 7,535 lines of JS live inside templates. Largest single item; no previous pass touched it. |
+| 10 Tests | ⬜ | `toolkit_auth` has zero tests; two destructive bulk views untested; 102 status-code-only tests. |
+| 11 Un-star + split | ⬜ | `members/views/` star-import hub, `diary/forms.py`, `inductions/views.py`. |
+| 12 Confirm | ⬜ | Re-measure, small second sweep. |
+
+---
+
 ## Maintainability pass (`chore/maintainability-pass`)
 
 Tracking file: [MAINTAINABILITY_PASS.md](MAINTAINABILITY_PASS.md). Chunks 1-5 done 2026-06-26.
