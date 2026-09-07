@@ -28,7 +28,7 @@ class ColourPickerWidget(forms.TextInput):
     field that the form actually submits.
     """
 
-    def render(self, name, value, attrs=None, renderer=None):
+    def render(self, name, value, attrs=None, renderer=None):  # noqa: ARG002
         if not value:
             value = "#343a40"
 
@@ -486,7 +486,9 @@ class ExchangeItemForm(forms.ModelForm):
             ),
         }
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):  # noqa: ARG002
+        # Accepted for call-site symmetry with the user= kwarg the view
+        # passes; not yet used to filter the queryset.
         super().__init__(*args, **kwargs)
         from toolkit.members.models import Volunteer
 

@@ -140,7 +140,7 @@ class AgeRatingChoicesWidget(forms.Widget):
     Serialises back to JSON on submit via value_from_datadict.
     """
 
-    def render(self, name, value, attrs=None, renderer=None):
+    def render(self, name, value, attrs=None, renderer=None):  # noqa: ARG002
         if isinstance(value, str):
             try:
                 entries = json.loads(value) if value else []
@@ -155,13 +155,13 @@ class AgeRatingChoicesWidget(forms.Widget):
         rows_html = ""
         for i, entry in enumerate(entries):
             v = escape(entry.get("value", ""))
-            l = escape(entry.get("label", ""))
+            label_text = escape(entry.get("label", ""))
             rows_html += (
                 f'<tr class="arc-row">'
                 f'<td><input type="text" name="{name}_value_{i}" value="{v}" '
                 f'class="form-control form-control-sm" placeholder="U" '
                 f'aria-label="Rating code"></td>'
-                f'<td><input type="text" name="{name}_label_{i}" value="{l}" '
+                f'<td><input type="text" name="{name}_label_{i}" value="{label_text}" '
                 f'class="form-control form-control-sm" placeholder="U — Universal" '
                 f'aria-label="Display label"></td>'
                 f'<td><button type="button" class="btn btn-sm btn-outline-danger arc-remove" '
@@ -221,7 +221,9 @@ class AgeRatingChoicesWidget(forms.Widget):
 """
         return mark_safe(html)
 
-    def value_from_datadict(self, data, files, name):
+    def value_from_datadict(
+        self, data, files, name  # noqa: ARG002 -- Django widget API
+    ):
         entries = []
         i = 0
         while True:

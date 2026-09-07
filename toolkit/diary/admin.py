@@ -162,7 +162,9 @@ class EventTermsRevisionInline(admin.TabularInline):
     can_delete = False
     ordering = ("-saved_at",)
 
-    def has_add_permission(self, request, obj=None):
+    def has_add_permission(
+        self, request, obj=None  # noqa: ARG002 -- Django admin API
+    ):
         return False
 
 
@@ -191,8 +193,10 @@ class SiteConfigurationAdmin(admin.ModelAdmin):
     # this registration is mainly so superusers can spot the singleton in
     # Django admin if they go looking.
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request):  # noqa: ARG002 -- Django admin API
         return not SiteConfiguration.objects.exists()
 
-    def has_delete_permission(self, request, obj=None):
+    def has_delete_permission(
+        self, request, obj=None  # noqa: ARG002 -- Django admin API
+    ):
         return False

@@ -46,9 +46,9 @@ SECRET_KEY = os.environ.get(
 # references (e.g. bootstrap.bundle.min.js.map) that aren't shipped in our
 # static tree. manifest_strict=False silences those without skipping the file.
 # The manifest format is identical so whitenoise reads it correctly.
-from django.contrib.staticfiles.storage import (
+from django.contrib.staticfiles.storage import (  # noqa: E402
     ManifestStaticFilesStorage,
-)  # noqa: E402
+)
 
 
 class _PermissiveManifestStorage(ManifestStaticFilesStorage):

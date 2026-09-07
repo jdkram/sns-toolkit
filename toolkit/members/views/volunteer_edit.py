@@ -301,7 +301,9 @@ def add_volunteer_training_record(request, volunteer_id):
 
 @panopticon_required
 @require_POST
-def delete_volunteer_training_record(request, training_record_id):
+def delete_volunteer_training_record(
+    request, training_record_id  # noqa: ARG001 -- view signature
+):
     record = get_object_or_404(TrainingRecord, id=training_record_id)
 
     if not record.volunteer.is_active:

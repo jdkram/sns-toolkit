@@ -21,6 +21,7 @@ from toolkit.members.models import (
     ExportAuditLog,
 )
 from toolkit.diary.models import Role, RotaEntry, Showing, Event
+from toolkit.labs.models import Collective
 
 from .common import MembersTestsMixin
 
@@ -1377,9 +1378,6 @@ class TestAnonymiseVolunteer(MembersTestsMixin, TestCase):
         log = AnonymisationLog.objects.first()
         self.assertEqual(log.volunteer_pk, self.vol_1.pk)
         self.assertIsNotNone(log.performed_by)
-
-
-from toolkit.labs.models import Collective
 
 
 class TestVolunteerDirectory(MembersTestsMixin, TestCase):

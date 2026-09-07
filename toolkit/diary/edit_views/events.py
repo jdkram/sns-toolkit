@@ -40,11 +40,10 @@ import toolkit.diary.validators as diary_validators
 
 # Shared utility method:
 from toolkit.diary.daterange import safe_json
+from ._common import _film_json, _get_omdb_api_key
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-from ._common import _film_json, _get_omdb_api_key
 
 
 @write_required

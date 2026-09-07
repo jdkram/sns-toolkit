@@ -323,7 +323,7 @@ class ConsumableItemModelTests(LabsTestsMixin, TestCase):
         item = ConsumableItem.objects.create(
             name="Pens", category=ConsumableItem.CATEGORY_STATIONERY
         )
-        flag = NeedFlag.objects.create(
+        NeedFlag.objects.create(
             item=item, flagged_by=self.vol, resolved_at=timezone.now()
         )
         self.assertIsNone(item.open_flag)

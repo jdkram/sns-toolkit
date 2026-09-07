@@ -238,7 +238,7 @@ def view_volunteer_directory(request):
 
 @panopticon_required
 @require_safe
-def view_volunteer_role_report(request):
+def view_volunteer_role_report(request):  # noqa: ARG001 -- view signature
     # Role assignment was removed; redirect to the qualification report which replaced it.
     # Kept as a panopticon_required view (not a bare RedirectView) so the security
     # contract is preserved: unauthenticated users get a login redirect, non-superuser

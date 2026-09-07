@@ -124,7 +124,10 @@ def send_welcome_email(request, signup, user):
     )
 
 
-def send_access_needs_ack(request, induction_request):
+def send_access_needs_ack(
+    request,  # noqa: ARG001 -- keeps signature consistent with sibling email helpers
+    induction_request,
+):
     """Acknowledgement email sent when someone submits an access needs request."""
     cfg = get_inductions_settings()
     vars = {

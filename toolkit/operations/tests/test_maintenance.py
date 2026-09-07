@@ -199,9 +199,7 @@ class TaskCommitTests(OperationsTestsMixin, TestCase):
         other_user = auth_models.User.objects.create_user(
             "other_vol", "other@test.example", "T3stPassword!4"
         )
-        other_vol = Volunteer.objects.create(
-            member=other_member, user=other_user
-        )
+        Volunteer.objects.create(member=other_member, user=other_user)
         self.client.login(username="other_vol", password="T3stPassword!4")
         url = reverse(
             "operations-task-commit",

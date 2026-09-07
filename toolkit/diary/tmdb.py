@@ -97,7 +97,7 @@ def fetch_film_details(tmdb_id: int, media_type: str, api_key: str) -> dict:
             c["iso_3166_1"] for c in data.get("production_countries", [])
         )
         languages = ", ".join(
-            l["english_name"] for l in data.get("spoken_languages", [])
+            lang["english_name"] for lang in data.get("spoken_languages", [])
         )
         imdb_id = data.get("imdb_id", "") or ""
         director = _extract_director_film(data.get("credits", {}))
@@ -118,7 +118,7 @@ def fetch_film_details(tmdb_id: int, media_type: str, api_key: str) -> dict:
         runtime_minutes = runtimes[0] if runtimes else None
         countries = ", ".join(data.get("origin_country", []))
         languages = ", ".join(
-            l["english_name"] for l in data.get("spoken_languages", [])
+            lang["english_name"] for lang in data.get("spoken_languages", [])
         )
         imdb_id = data.get("external_ids", {}).get("imdb_id", "") or ""
         director = _extract_creator_tv(data)

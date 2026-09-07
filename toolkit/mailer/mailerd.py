@@ -76,7 +76,10 @@ def run() -> None:
     clean_up()
     keep_running = True
 
-    def term_handler(signo: int, frame: Optional[FrameType]) -> None:
+    def term_handler(
+        signo: int,
+        frame: Optional[FrameType],  # noqa: ARG001 -- signal.signal() API
+    ) -> None:
         nonlocal keep_running
         keep_running = False
         logger.info(f"Received signal {signal.Signals(signo).name}")

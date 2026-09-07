@@ -43,7 +43,7 @@ def diary_settings(request):
     }
 
 
-def promoted_tags(request):
+def promoted_tags(request):  # noqa: ARG001 -- context processor API
     # This returns a QuerySet, so the database won't get accessed unless
     # 'promoted_tags' is referenced.
     return {"promoted_tags": EventTag.objects.filter(promoted=True)}

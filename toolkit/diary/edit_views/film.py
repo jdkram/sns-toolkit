@@ -15,11 +15,10 @@ from toolkit.diary.models import (
 )
 
 # Shared utility method:
+from ._common import _film_json, _get_omdb_api_key
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-from ._common import _film_json, _get_omdb_api_key
 
 
 @write_required
@@ -200,7 +199,7 @@ def link_film(request, event_id):
 
 @write_required
 @require_POST
-def unlink_film(request, event_id):
+def unlink_film(request, event_id):  # noqa: ARG001 -- view signature
     """AJAX: remove the film link from an event."""
     event = get_object_or_404(Event, pk=event_id)
     event.film = None

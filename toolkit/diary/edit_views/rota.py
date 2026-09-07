@@ -111,8 +111,6 @@ class EditRotaView(PermissionRequiredMixin, View):
         today_local_date = datetime.datetime(
             now_local.year, now_local.month, now_local.day, tzinfo=current_tz
         )
-        yesterday_local_date = today_local_date - datetime.timedelta(days=1)
-
         query_days_ahead = request.GET.get("daysahead", None)
         start_date, days_ahead = get_date_range(
             year, month, day, query_days_ahead, default_days_ahead=92
@@ -213,7 +211,15 @@ class EditRotaView(PermissionRequiredMixin, View):
 
         return render(request, "edit_rota.html", context)
 
-    def post(self, request, year=None, day=None, month=None):
+    def post(
+        self,
+        request,
+        year=None,  # noqa: ARG002
+        day=None,  # noqa: ARG002
+        month=None,  # noqa: ARG002
+    ):
+        # URLconf passes year/day/month; POST always operates on the
+        # showing/rota-entry ids in the body instead.
         # Get rota entry
         try:
             entry_id = int(request.POST["id"])

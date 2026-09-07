@@ -10,14 +10,18 @@ from django.test import TestCase, override_settings
 class FailingBackend(BaseEmailBackend):
     """Raises on every send. Referenced by dotted path in override_settings."""
 
-    def send_messages(self, email_messages):
+    def send_messages(
+        self, email_messages  # noqa: ARG002 -- BaseEmailBackend API
+    ):
         raise ConnectionRefusedError("SMTP server said no")
 
 
 class ZeroSendBackend(BaseEmailBackend):
     """Reports nothing sent without raising, as smtp does for refused recipients."""
 
-    def send_messages(self, email_messages):
+    def send_messages(
+        self, email_messages  # noqa: ARG002 -- BaseEmailBackend API
+    ):
         return 0
 
 

@@ -42,7 +42,7 @@ logger.setLevel(logging.DEBUG)
 # Used throughout this module to gate multi-room columns/UI in diary views.
 
 
-def _return_to_editindex(request):
+def _return_to_editindex(request):  # noqa: ARG001 -- view signature
     return HttpResponseRedirect(reverse("default-edit"))
 
 
@@ -279,8 +279,6 @@ def edit_diary_data(request):
         .select_related()
         .prefetch_related("event__tags", "room_bookings__room")
     )
-
-    local_now = timezone.localtime(timezone.now())
 
     results = []
     for showing in showings:

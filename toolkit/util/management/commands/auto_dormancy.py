@@ -69,7 +69,10 @@ class Command(BaseCommand):
             lambda v: v.user.last_login,
         )
         self._report(
-            "Never logged in", never_logged_in, dry_run, lambda v: None
+            "Never logged in",
+            never_logged_in,
+            dry_run,
+            lambda v: None,  # noqa: ARG005 -- matches the last_seen(v) callback shape
         )
 
         if dry_run:

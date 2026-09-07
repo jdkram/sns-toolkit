@@ -137,7 +137,7 @@ def loft_item_photo_upload(request, item_id):
 
 @login_required
 @require_POST
-def loft_photo_delete(request, photo_id):
+def loft_photo_delete(request, photo_id):  # noqa: ARG001 -- view signature
     photo = get_object_or_404(LoftItemPhoto, pk=photo_id)
     photo.image.delete(save=False)
     photo.delete()

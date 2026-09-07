@@ -119,7 +119,7 @@ def make_poster_image(event_name, bg_colour, width=600, height=900):
         tw, th = bb[2] - bb[0], bb[3] - bb[1]
         return max(1, tw), max(1, th)
 
-    bboxes = [measure(l) for l in raw_lines]
+    bboxes = [measure(line) for line in raw_lines]
     natural_hs = [max(1, int(th * width / tw)) for tw, th in bboxes]
 
     n = len(raw_lines)

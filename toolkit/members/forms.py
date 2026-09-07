@@ -112,7 +112,11 @@ class UserForm(forms.ModelForm):
                 )
         return cleaned
 
-    def save(self, granted_by=None, commit=True):
+    def save(
+        self,
+        granted_by=None,
+        commit=True,  # noqa: ARG002 -- ModelForm.save() convention
+    ):
         from django.contrib.auth.models import Group
         from toolkit.members.models import PanopticonGrant, ProgrammerGrant
 

@@ -162,6 +162,13 @@ class ProgrammingStatusUpdateTests(DiaryTestsMixin, TestCase):
 
     def test_invalid_action_returns_error(self):
         response = self._post("not_a_real_action")
+        self.assertRedirects(
+            response,
+            reverse(
+                "edit-event-details-view",
+                kwargs={"event_id": self.event.pk},
+            ),
+        )
         self.event.refresh_from_db()
         self.assertEqual(self.event.programming_status, "draft")
 

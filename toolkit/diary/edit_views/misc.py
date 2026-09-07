@@ -82,5 +82,5 @@ def toggle_event_mark(request):
 
 
 @write_required
-def view_force_error(request):
+def view_force_error(request):  # noqa: ARG001 -- view signature
     raise AssertionError("Forced exception")

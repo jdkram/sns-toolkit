@@ -395,7 +395,7 @@ class ToolkitIndexView(ListView):
         return context
 
 
-def health(request):
+def health(request):  # noqa: ARG001 -- view signature
     try:
         connection.ensure_connection()
     except OperationalError:

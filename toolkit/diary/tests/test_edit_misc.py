@@ -1164,7 +1164,6 @@ class TemplateExportImportTests(DiaryTestsMixin, TestCase):
         )
 
     def test_import_overwrites_when_flag_set(self):
-        initial_pricing = self.tmpl1.pricing
         new_json = json.dumps(
             {
                 "name": "Template 1",

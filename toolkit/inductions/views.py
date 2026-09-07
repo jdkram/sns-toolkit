@@ -575,7 +575,7 @@ def manage_edit_signup(request, slug, signup_id):
 
 @require_POST
 @panopticon_required
-def manage_no_show(request, slug, signup_id):
+def manage_no_show(request, slug, signup_id):  # noqa: ARG001 -- view signature
     """AJAX endpoint: toggle no-show (pending → no_show, or no_show → pending)."""
     session = get_object_or_404(InductionSession, slug=slug)
     signup = get_object_or_404(InductionSignup, pk=signup_id, session=session)
@@ -596,7 +596,7 @@ def manage_no_show(request, slug, signup_id):
 
 
 @panopticon_required
-def manage_export_csv(request, slug):
+def manage_export_csv(request, slug):  # noqa: ARG001 -- view signature
     """Download a Simplelists-ready CSV of checked-in attendees."""
     session = get_object_or_404(InductionSession, slug=slug)
     checked_in = session.signups.filter(
@@ -786,7 +786,7 @@ def manage_settings(request):
 
 @require_POST
 @panopticon_required
-def manage_mark_policy_updated(request):
+def manage_mark_policy_updated(request):  # noqa: ARG001 -- view signature
     """Bump the privacy policy version and immediately notify affected volunteers.
 
     Non-destructive and fully reversible in effect (worst case: one extra

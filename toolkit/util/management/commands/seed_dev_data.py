@@ -65,9 +65,12 @@ from toolkit.util.management.commands.seed_data import (
 )
 
 try:
-    from wagtail.models import Page, Site
+    from wagtail.models import Page, Site  # noqa: F401 -- availability probe
 
-    from toolkit.content.models import BasicArticlePage, SectionRootWithLinks
+    from toolkit.content.models import (  # noqa: F401 -- availability probe
+        BasicArticlePage,
+        SectionRootWithLinks,
+    )
 
     WAGTAIL_AVAILABLE = True
 except ImportError:
@@ -1130,7 +1133,7 @@ class Command(BaseCommand):
             if Job.objects.filter(title=job_data["title"]).exists():
                 continue
             resolved = job_data.get("resolved", False)
-            job = Job.objects.create(
+            Job.objects.create(
                 title=job_data["title"],
                 area=job_data.get("area", ""),
                 description=job_data.get("description", ""),
@@ -1469,7 +1472,9 @@ class Command(BaseCommand):
             )
         )
 
-    def _seed_historical_shifts(self, volunteer_objects, counts):
+    def _seed_historical_shifts(
+        self, volunteer_objects, counts
+    ):  # noqa: ARG002 -- dead param, deferred to Chunk 11's seed_dev_data rewrite
         """Seed ~4 years of past confirmed showings with FK-linked volunteer rota entries.
 
         Volunteer stats / heatmap page uses RotaEntry.volunteer FK — the existing
@@ -1701,7 +1706,9 @@ class Command(BaseCommand):
                 if created:
                     counts["demo_stars"] += 1
 
-    def _seed_recurring_events(self, rooms_dict, vol_list, counts, anchor):
+    def _seed_recurring_events(
+        self, rooms_dict, vol_list, counts, anchor
+    ):  # noqa: ARG002 -- anchor is dead, deferred to Chunk 11's seed_dev_data rewrite
         today = timezone.now().date()
         window_start = today - datetime.timedelta(weeks=8)
         window_end = today + datetime.timedelta(weeks=16)
@@ -2167,7 +2174,9 @@ class Command(BaseCommand):
             if re_created:
                 counts["rota_entries"] += 1
 
-    def _seed_programming_queue(self, rooms_dict, vol_list, counts):
+    def _seed_programming_queue(
+        self, rooms_dict, vol_list, counts
+    ):  # noqa: ARG002 -- dead param, deferred to Chunk 11's seed_dev_data rewrite
         """Seed proposed / draft events for the programming queue.
 
         These illustrate the queue's real-world states: events pencilled in
@@ -3063,7 +3072,7 @@ class Command(BaseCommand):
                 if actual_ratio > target_ratio + 0.05:  # wider than 2:3
                     canvas_w = orig_w
                     canvas_h = round(orig_w / target_ratio)
-                    paste_x, paste_y = 0, (canvas_h - orig_h) // 2
+                    paste_y = (canvas_h - orig_h) // 2
 
                     crop_h_px = orig_h
                     crop_w_px = min(int(orig_h * target_ratio), orig_w)
