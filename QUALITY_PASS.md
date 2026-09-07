@@ -17,17 +17,19 @@ status: "#ai-input"
 | | |
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
-| Chunks done | 0, 1, 2, 3 |
-| Next chunk | **4 (coverage baseline)** |
+| Chunks done | 0, 1, 2, 3, 4 |
+| Next chunk | **5 (MiniMax M3 broad sweep)** |
 | Tests | 1,129 passing |
 | Ruff | 0 findings |
 | Black | clean at 79 |
+| Coverage | 81.5% overall (21,788 statements) — see `docs/QUALITY_BASELINE.md` |
 | CI | `.github/workflows/ci.yml` + `.pre-commit-config.yaml` in place, not yet exercised by a real PR |
 
 Commits so far, newest first:
 
 ```
-(this commit)  docs(quality): fix dead paths and document the tooling (Chunk 3)
+(this commit)  docs(quality): write the Chunk 4 coverage/complexity baseline
+19e65fc3  docs(quality): fix dead paths and document the tooling (Chunk 3)
 2ff7f79d  docs(quality): record Chunk 2 results in the pass tracker
 f46c977d  ci(quality): add pre-commit and GitHub Actions gates
 b980935a  chore(quality): triage the 110 remaining ruff findings
@@ -380,11 +382,33 @@ own header), so a reference to a module that doesn't exist yet is often the poin
 Verification: full test suite (1,129 passing), ruff (0), black (clean) all re-run after the doc
 changes — doc-only, so unsurprising, but checked rather than assumed.
 
-### Chunk 4: Baseline — NOT STARTED
+### Chunk 4: Baseline — DONE 2026-09-08
 
-Per-module coverage report in the container. Write `docs/QUALITY_BASELINE.md`: LOC and
-complexity per app, coverage per module, ruff counts after Chunk 1, template size and inline-JS
-totals. The before-picture, re-measured at Chunk 12.
+Wrote [`docs/QUALITY_BASELINE.md`](docs/QUALITY_BASELINE.md): per-app Python/template LOC,
+statement coverage, and worst cyclomatic complexity, plus ruff/black status and the reused
+(not re-measured) template-debt table from this file's Measured Findings section.
+
+**How complexity was measured without adding a dependency:** `radon` isn't installed anywhere
+in the project. Ran `ruff check --select C901 --config "lint.mccabe.max-complexity=1" toolkit`
+as a one-off CLI override — this doesn't touch the committed `pyproject.toml` ratchet, it just
+makes ruff report every function's complexity as a "violation" for that single invocation, which
+is enough to extract a worst-per-app table.
+
+**One real finding surfaced by doing this properly rather than trusting the aggregate percentage:**
+`toolkit_auth` (61.6%) and `content` (91.8%) both have **zero dedicated test files** — confirmed
+with `find ... -iname '*test*'` — despite non-trivial coverage numbers. Those numbers are
+incidental: earned by other apps' tests calling through `feature_required` /
+`panopticon_required` on their way to testing something else, not by anything that tests
+`toolkit_auth` itself. `backends.py`'s `authenticate()` override sits at only 50% specifically
+because nothing exercises its failure paths. This confirms and sharpens the "zero tests" finding
+already in this file's Measured Findings section — it isn't that the code never runs under test,
+it's that nothing asserts on *its own* behaviour. Recorded in `QUALITY_BASELINE.md` so Chunk 10
+starts from this, not from re-discovering it.
+
+Also worth knowing for later: `util`'s 17.5% coverage is a measurement artefact, not a hidden
+gap — it's dominated by `seed_dev_data.py` (0% covered, complexity 101, dev-only) and three
+other operator-tool management commands nothing in the test suite ever calls. Don't read that
+percentage as "the utilities are untested"; most of the app's real coverage is fine.
 
 ### Chunk 5: MiniMax M3 broad sweep (~40 files, ~$0.70) — NOT STARTED
 

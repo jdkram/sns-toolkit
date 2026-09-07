@@ -70,7 +70,7 @@ The tradeoff in one line: Ben's branch is small and maintained by someone else; 
 
 ## Quality pass (`chore/quality-pass-2026-09`)
 
-Tracking file: [QUALITY_PASS.md](QUALITY_PASS.md). Chunks 0-3 done; 0-1 on 2026-09-07, 2-3 on 2026-09-08.
+Tracking file: [QUALITY_PASS.md](QUALITY_PASS.md). Chunks 0-4 done; 0-1 on 2026-09-07, 2-4 on 2026-09-08.
 
 Prompted by a worry that quality had drifted unmeasured across ~2,180 mostly AI-assisted
 commits. The June maintainability pass was Claude reviewing Claude; its own refactor shipped
@@ -84,7 +84,7 @@ layer, and routes the judgement work to a different model (MiniMax M3, ~$0.80 to
 | 1 Mechanical fixes | ✅ 2026-09-07 | 892 unused imports/variables removed (823 deletions, 48 files); black reformat at 79 (142 files). Ruff 998 → 110 findings. |
 | 2 The gates | ✅ 2026-09-08 | 110 ruff findings triaged (fixed, inline-noqa'd with a reason, or config-ignored by pattern) — one was a real test bug, now fixed. `.pre-commit-config.yaml` + `.github/workflows/ci.yml` added. Ruff 110 → 0. |
 | 3 Docs drift | ✅ 2026-09-08 | Fixed the ~9 that were real drift (ONBOARDING.md, SPEC.md — June's split left them pointing at deleted monolith files); added `operations`/`audit` to the onboarding tour; replaced stale black-only prose with the actual ruff/black/coverage commands. The rest of the original 20 turned out to be `docs/tasks/*.md` feature specs referencing not-yet-built paths on purpose. |
-| 4 Baseline | ⬜ | First real per-module coverage measurement. |
+| 4 Baseline | ✅ 2026-09-08 | [`docs/QUALITY_BASELINE.md`](docs/QUALITY_BASELINE.md): 81.5% overall coverage, per-app LOC/coverage/complexity. Found `toolkit_auth`/`content` coverage is entirely incidental (zero dedicated test files) — feeds Chunk 10. |
 | 5 MiniMax sweep | ⬜ | ~40 files, ~$0.70. |
 | 6 Rubric | ⬜ | `docs/QUALITY_RUBRIC.md`, synthesised from the sweep. |
 | 7 Feature scope | ⬜ | Needs Jonny. Decision document on the eight `labs` mini-tools, not a deletion. |
