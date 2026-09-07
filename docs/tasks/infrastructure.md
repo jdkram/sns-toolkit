@@ -192,7 +192,7 @@ The `JQueryDateTimePicker.value_from_datadict()` method converts `"YYYY-MM-DDTHH
 
 **Gap 2: `ROTA_CLEAR_EMAIL_PROMPT_ENABLED` not verified in context** 🟢 XS (1h)
 
-Relates to: Bug D fix in `edit_views.py` and `settings_common.py`
+Relates to: Bug D fix in `edit_views/` and `settings_common.py`
 
 The setting is passed to the rota editor template as `rota_clear_email_prompt_enabled` and then read by JavaScript. No test verifies that this context key exists or reflects the setting value.
 

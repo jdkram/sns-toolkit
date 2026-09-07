@@ -17,8 +17,8 @@ status: "#ai-input"
 | | |
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
-| Chunks done | 0, 1, 2 |
-| Next chunk | **3 (docs drift)** |
+| Chunks done | 0, 1, 2, 3 |
+| Next chunk | **4 (coverage baseline)** |
 | Tests | 1,129 passing |
 | Ruff | 0 findings |
 | Black | clean at 79 |
@@ -27,9 +27,11 @@ status: "#ai-input"
 Commits so far, newest first:
 
 ```
-(this commit)  docs(quality): record Chunk 2 results in the pass tracker
+(this commit)  docs(quality): fix dead paths and document the tooling (Chunk 3)
+2ff7f79d  docs(quality): record Chunk 2 results in the pass tracker
 f46c977d  ci(quality): add pre-commit and GitHub Actions gates
 b980935a  chore(quality): triage the 110 remaining ruff findings
+be24b41e  docs(quality): make the pass resumable by a fresh session
 94786738  docs(quality): record Chunk 1 results in the pass tracker
 716002bd  chore(quality): black reformat at the now-pinned 79 columns
 c336f5df  chore(quality): remove 892 unused imports and variables
@@ -316,12 +318,67 @@ naturally once this branch's work goes up.
 *After this chunk, June's regression could not have happened. Everything later is optional in a
 way this is not.*
 
-### Chunk 3: Docs drift — NOT STARTED
+### Chunk 3: Docs drift — DONE 2026-09-08
 
-Fix the 20 dead paths, starting with `ONBOARDING.md:280,282,298` and `SPEC.md:481` — what a new
-human hits first. Add `operations` and `audit` to the onboarding app tour. Document the new
-lint/coverage commands in `ONBOARDING.md`, replacing the prose tool settings now that
-`pyproject.toml` owns them.
+Re-measured before fixing anything: of the 20 counted in the original finding, only ~9 were
+real drift (a doc-referenced path a newcomer would actually hit and find broken). The rest live
+in `docs/tasks/*.md`, which is explicitly a feature-spec / not-yet-built index (see each file's
+own header), so a reference to a module that doesn't exist yet is often the point, not a bug.
+
+**Fixed — real drift, all in `ONBOARDING.md` and `SPEC.md`:**
+
+- `ONBOARDING.md`: `diary/models.py` → `diary/models/`, `diary/edit_views.py` →
+  `diary/edit_views/`, `members/volunteer_views.py` → `members/views/` (all three became
+  packages in June's split; `members/member_views.py` is untouched because it's still real —
+  checked it's imported live from `members/urls.py` and covered by
+  `members/tests/test_members.py`, so it is not the dead weight it looked like from the name
+  alone. It's a from-day-one Member-views module, distinct from the Volunteer-views package,
+  that the June split simply never touched).
+- `ONBOARDING.md`'s Go-Live checklist claimed a `settings_cube.py` that has never existed —
+  Cube runs on `settings_common.py` directly (it holds the Cube `VENUE` dict and is the
+  default); only Star and Shadow gets a venue-specific override file. Corrected the sentence
+  rather than inventing the file.
+- `SPEC.md §"Account auto-creation"`: five references to `members/volunteer_views.py` (deleted
+  in June) → `members/views/volunteer_edit.py` (verified via grep — all four named functions,
+  `edit_volunteer`, `_send_password_set_email`, `send_volunteer_password_reset`,
+  `set_volunteer_password`, live in that one module). Dropped a stale `lines ~329–346` pin while
+  there — line numbers rot faster than filenames and this one already had.
+- Added `operations` and `audit` to `ONBOARDING.md`'s project-structure tree, app tour, and URL
+  map — both are real, shipped apps (`MaintenanceTask`/`MaintenanceRecord` and
+  `SentEmailLog`/`DeletionLog` respectively) that appeared zero times before this.
+- Replaced `ONBOARDING.md`'s "Code formatting" section (black-only, hand-typed `--line-length
+  79`) with "Linting, formatting, and coverage": ruff, black and coverage commands as they
+  actually run now that `pyproject.toml` owns the settings, plus a paragraph on the pre-commit
+  hook and CI workflow. Ran the new coverage commands for real in the container before writing
+  them down — `coverage run --source=toolkit manage.py test ...` then `coverage report -m` both
+  work as documented (82% overall, see Chunk 4).
+- Mechanical, low-risk: bulk-replaced the backticked token `` `edit_views.py` `` →
+  `` `edit_views/` `` across `docs/tasks/*.md` (8 occurrences, 4 files) — safe in every context
+  because the package still holds that code, just split by file, so the swap can't misdirect
+  regardless of whether the surrounding sentence describes a past bug or a future one. Also
+  fixed one `diary/models.py` → `diary/models/event.py` reference in a not-yet-built spec
+  (incidentally: `EventTermsRevision`, the model that spec proposes, already exists in that
+  file — a CURRENT_WORK.md status question, out of scope here, flagging for whoever owns that
+  tracker).
+
+**Left alone, and why (so the next session doesn't re-churn this):**
+
+- `docs/tasks/operations.md`, `volunteers.md`, `public-site.md`: references to
+  `room_data.py`, `export_volunteer_shifts_enhanced_report.py` (a different repo,
+  `~/code/sns-analysis`, correctly not part of this one), `content/views.py`, and
+  `mailing_lists.html` are all paths a proposed feature would create — genuinely prospective,
+  not broken.
+- `docs/tasks/known-issues.md:432` documents Chosen's removal in the past tense ("✅ resolved
+  ... deleted") — correct as written, nothing to fix.
+- A handful of abbreviated mid-doc mentions (`edit_views/diary_overview.py`,
+  `edit_views/rota.py`, `manage/settings.html` missing their app-directory prefix) resolve fine
+  once you supply the obvious parent directory; not worth a mechanical pass that would touch
+  dozens of lines for a purely cosmetic gain.
+- `docs/REVIEW_2026_OVERHAUL.md` is gitignored (`.gitignore:64`) — a personal working document,
+  not part of the published docs set, so out of scope regardless of what it references.
+
+Verification: full test suite (1,129 passing), ruff (0), black (clean) all re-run after the doc
+changes — doc-only, so unsurprising, but checked rather than assumed.
 
 ### Chunk 4: Baseline — NOT STARTED
 

@@ -228,6 +228,8 @@ sns-toolkit/                  # Repo root
 │   ├── index/                # App: the internal dashboard/index page
 │   ├── labs/                 # App: experimental / work-in-progress features
 │   ├── toolkit_auth/         # App: login/logout and auth decorators
+│   ├── operations/           # App: building maintenance task scheduling
+│   ├── audit/                # App: sent-email and deletion audit logs
 │   ├── util/                 # Shared utilities (image processing, context processors)
 │   │
 │   ├── settings_common.py               # Settings shared across all environments
@@ -277,9 +279,9 @@ This is the largest and most central app. It manages:
 - **Event templates** — reusable defaults for recurring events
 
 Key files:
-- [toolkit/diary/models.py](toolkit/diary/models.py) — all the data models (start here to understand the domain)
+- [toolkit/diary/models/](toolkit/diary/models/) — all the data models, split by domain (start here to understand it)
 - [toolkit/diary/public_views.py](toolkit/diary/public_views.py) — the public-facing event listing
-- [toolkit/diary/edit_views.py](toolkit/diary/edit_views.py) — the event editing interface (login required)
+- [toolkit/diary/edit_views/](toolkit/diary/edit_views/) — the event editing interface (login required), split by feature area
 - [toolkit/diary/urls.py](toolkit/diary/urls.py) — URL routing for diary views
 
 URL prefixes: `/programme/` (public), `/diary/` (editing interface)
@@ -295,7 +297,7 @@ Manages people who are members or volunteers. Key concepts:
 Key files:
 - [toolkit/members/models.py](toolkit/members/models.py) — Member, Volunteer, TrainingRecord models
 - [toolkit/members/member_views.py](toolkit/members/member_views.py) — search, view, edit members
-- [toolkit/members/volunteer_views.py](toolkit/members/volunteer_views.py) — volunteer rota interface
+- [toolkit/members/views/](toolkit/members/views/) — volunteer rota interface, split by feature area
 
 URL prefixes: `/members/`, `/volunteers/`
 
@@ -332,6 +334,14 @@ Work-in-progress or venue-specific features under active development. URL prefix
 
 Login/logout views and custom decorators used throughout the codebase to protect views. URL prefix: `/auth/`
 
+### `operations` — Building Maintenance
+
+Tracks recurring and one-off building maintenance tasks (`MaintenanceTask`) and the record of when each was actually done (`MaintenanceRecord`) — scheduling, marking done, and commit/uncommit for volunteers picking up a task. URL prefix: `/operations/`
+
+### `audit` — Sent-Email and Deletion Logs
+
+Two append-only logs: `SentEmailLog` (every mailout email sent, for troubleshooting delivery questions) and `DeletionLog` (a record of destructive actions elsewhere in the toolkit, written via a signal on `Event` deletion — see `toolkit/audit/signals.py`). Not a user-facing app; the URL prefix `/audit/` serves log-viewing pages for Panopticon users. See [docs/LOGGING.md](LOGGING.md) for what's logged where.
+
 ---
 
 ## URL Map
@@ -345,6 +355,8 @@ Login/logout views and custom decorators used throughout the codebase to protect
 /mailout/                 → Mailout scheduling (login required)
 /toolkit/                 → Internal dashboard (login required)
 /labs/                    → Experimental features (login required)
+/operations/              → Building maintenance scheduling (login required)
+/audit/                   → Sent-email and deletion logs (login required)
 /auth/login               → Login page
 /cms/                     → Wagtail CMS admin
 /doc/                     → Wagtail documents
@@ -405,7 +417,7 @@ The Docker settings expect these environment variables (with defaults from `dock
 
 ## Setting Up a New Venue (Go-Live Checklist)
 
-Cube and Star and Shadow currently share this codebase via separate settings files (`settings_cube.py` / `settings_starandshadow.py`, each with a `docker_settings_*` and `docker_settings_prod_*` pair). Adding a third venue means copying that pattern — see [Multi-venue support](#key-concepts-and-patterns) below. Whether you're standing up a new venue or reviewing an existing one after a code upgrade, work through this list. Nothing here is enforced by the code — every item is a silent-default-until-someone-notices trap, which is exactly why several of them (see 9.151 in [CURRENT_WORK.md](../CURRENT_WORK.md)) were only caught after the fact.
+Cube and Star and Shadow currently share this codebase via separate settings files — Cube runs on `settings_common.py` directly (no `settings_cube.py`; it holds the Cube `VENUE` dict and is the default), Star and Shadow overrides it via `settings_starandshadow.py`, each with a `docker_settings_*` and `docker_settings_prod_*` pair. Adding a third venue means copying that pattern — see [Multi-venue support](#key-concepts-and-patterns) below. Whether you're standing up a new venue or reviewing an existing one after a code upgrade, work through this list. Nothing here is enforced by the code — every item is a silent-default-until-someone-notices trap, which is exactly why several of them (see 9.151 in [CURRENT_WORK.md](../CURRENT_WORK.md)) were only caught after the fact.
 
 ### 1. Settings file / environment variables
 
@@ -456,19 +468,43 @@ docker compose exec toolkit /venv/bin/python manage.py test toolkit.members.test
 
 Tests are in `toolkit/*/tests/` directories. The `diary` and `members` apps have the most extensive suites.
 
-### Code formatting
+### Linting, formatting, and coverage
 
-The project uses [black](https://black.readthedocs.io/) with a line length of 79 characters. Run it before committing:
+Tool settings live in [`pyproject.toml`](../pyproject.toml), not in this file — run these with
+no extra flags, and if a command here ever disagrees with what's pinned there, trust the TOML.
+
+**[ruff](https://docs.astral.sh/ruff/)** — linter. Config: `[tool.ruff]` in `pyproject.toml`
+(line length 79, target Python 3.11, `E`/`F`/`W`/`ARG`/`C901` selected). Run before committing:
 
 ```bash
-docker compose exec toolkit /venv/bin/black --line-length 79 toolkit/
+docker compose exec toolkit /venv/bin/ruff check toolkit
+```
+
+**[black](https://black.readthedocs.io/)** — formatter, pinned to line length 79 in
+`[tool.black]`. Run it before committing:
+
+```bash
+docker compose exec toolkit /venv/bin/black toolkit
 ```
 
 To check formatting without making changes:
 
 ```bash
-docker compose exec toolkit /venv/bin/black --line-length 79 --check toolkit/
+docker compose exec toolkit /venv/bin/black --check toolkit
 ```
+
+**[coverage](https://coverage.readthedocs.io/)** — measures which lines the test suite
+exercises. Run the suite under it, then view a report:
+
+```bash
+docker compose exec toolkit /venv/bin/coverage run --source=toolkit manage.py test --settings=toolkit.test_settings
+docker compose exec toolkit /venv/bin/coverage report -m
+```
+
+**Pre-commit and CI:** `.pre-commit-config.yaml` runs ruff and black on staged files —
+install once per checkout with `pip install pre-commit && pre-commit install`. The same two
+checks, plus the full test suite, run in GitHub Actions on every push and pull request
+(`.github/workflows/ci.yml`). See [QUALITY_PASS.md](../QUALITY_PASS.md) for why these exist.
 
 ---
 

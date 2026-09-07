@@ -39,7 +39,7 @@ The three-tier model (Volunteer / Programmer / Panopticon) already existed. What
    Currently: any Panopticon user can grant it (via the volunteer profile form). Is this right, or should it require a collective decision?
 
 **What to do with the answers:**
-Once ratified, update SPEC.md §2 to remove the "needs ratification" note, and document the agreed policy. If any decisions change, adjust the permission gates in `edit_views.py` and `toolkit_index.html` accordingly.
+Once ratified, update SPEC.md §2 to remove the "needs ratification" note, and document the agreed policy. If any decisions change, adjust the permission gates in `edit_views/` and `toolkit_index.html` accordingly.
 
 ---
 
