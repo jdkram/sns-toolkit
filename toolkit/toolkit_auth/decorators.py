@@ -162,6 +162,11 @@ def user_logged_out_callback(sender, request, user, **kwargs):
 @receiver(user_login_failed)
 def user_login_failed_callback(sender, request, credentials, **kwargs):
 
-    ip = request.META.get("REMOTE_ADDR")
+    # Unlike user_logged_in/out, this signal can fire with request=None --
+    # Django's authenticate() accepts an optional request and defaults it to
+    # None, so anything that calls authenticate() directly (management
+    # commands, the test Client's login() helper, some third-party auth
+    # backends) triggers this with no request to read an IP from.
+    ip = request.META.get("REMOTE_ADDR") if request is not None else "unknown"
 
     logger.warning(f"login failed for: {credentials} from {ip}")

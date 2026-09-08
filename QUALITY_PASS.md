@@ -18,8 +18,8 @@ status: "#ai-input"
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
 | Chunks done | 0, 1, 2, 3, 4, 5, 6, 7 (keep all seven `labs` tools) |
-| Next chunk | **10's `labs` portion done** (all four coverage targets at 100%, plus a follow-up: all seven `labs` tools now have their own `SiteConfiguration` on/off flag); the originally-scoped items (destructive paths, `toolkit_auth/`, `volunteer_edit.py`, status-code-only tests) still to go, then 8, 9, 11, 12 |
-| Tests | 1,266 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found, +25 exchange, +21 feature-flag-gate tests) |
+| Next chunk | **10's `labs` portion done** (all four coverage targets at 100%, a follow-up making all seven `labs` tools individually toggleable, and a follow-up-to-the-follow-up covering "strange user" edge cases); the originally-scoped items (destructive paths, `volunteer_edit.py`'s gaps, status-code-only tests) still to go, then 8, 9, 11, 12 |
+| Tests | 1,284 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found, +25 exchange, +21 feature-flag-gate, +18 edge-case-user tests) |
 | Ruff | 0 findings |
 | Black | clean at 79 |
 | Coverage | 81.5% overall (21,788 statements) — see `docs/QUALITY_BASELINE.md`, not yet re-run since the security fixes |
@@ -708,10 +708,36 @@ coverage gaps first, worst-covered to best, before the other named gaps below.
 90% remain short of full, none of them Chunk 7 targets). 1,245 tests passing (was 1,129 at
 session start).
 
+**Follow-up (same day): "strange user" edge cases**, at Jonny's request after the feature-flag
+work above. Three categories, one new file each:
+
+- `toolkit/labs/tests/test_edge_case_users.py` — logged-in users with no linked `Volunteer`
+  profile (any Panopticon/Programmer account), unicode/emoji/very-long free text in labs'
+  user-supplied fields, and GDPR-anonymised volunteers (`Volunteer.anonymise()` scrubs the
+  Member/Volunteer/User rows and disables login, but the row itself survives, still referenced
+  by `ExchangeItem.owner_volunteer`, `NeedFlag.flagged_by`, `ProcurementPledge.pledged_by`).
+  18 tests, all confirming existing behaviour rather than finding gaps in labs itself — except
+  one, below.
+- `toolkit/toolkit_auth/tests/test_login_signals.py` — **a real bug, found by the no-volunteer
+  test's `self.client.login()` calls.** `user_login_failed_callback`
+  (`toolkit_auth/decorators.py`) did `request.META.get("REMOTE_ADDR")` unconditionally, but
+  Django's `user_login_failed` signal fires with `request=None` whenever `authenticate()` is
+  called without a request — which includes Django's own test `Client.login()`, any management
+  command that authenticates directly, and some third-party auth backends. Every failed login
+  through one of those paths crashed with `AttributeError: 'NoneType' object has no attribute
+  'META'` instead of just logging a warning. Fixed with a `request is not None` guard, falling
+  back to `"unknown"` for the IP. 2 regression tests. This is also `toolkit_auth`'s first test
+  file — Chunk 10's "currently zero tests" note below no longer applies to `decorators.py`'s
+  signal handlers specifically, though the rest of the app (the auth backend itself,
+  `feature_required`, etc.) is still untested.
+
+1,284 tests passing (was 1,245 before this follow-up).
+
 Then the items originally scoped for this chunk, in the original order — not yet started:
-destructive paths (`bulk_anonymise_volunteers`, `bulk_delete_never_onboarded`), `toolkit_auth/`
-(currently zero tests), `volunteer_edit.py`'s gaps, then strengthening the 102
-status-code-only tests to assert on state rather than just HTTP 200.
+destructive paths (`bulk_anonymise_volunteers`, `bulk_delete_never_onboarded`),
+`toolkit_auth/backends.py` and the permission decorators (still untested beyond the one signal
+handler above), `volunteer_edit.py`'s gaps, then strengthening the 102 status-code-only tests
+to assert on state rather than just HTTP 200.
 
 ### Chunk 11: Un-star members/views, split what's god-sized — NOT STARTED
 
