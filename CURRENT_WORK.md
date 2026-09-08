@@ -70,12 +70,13 @@ The tradeoff in one line: Ben's branch is small and maintained by someone else; 
 
 ## Quality pass (`chore/quality-pass-2026-09`)
 
-Tracking file: [QUALITY_PASS.md](QUALITY_PASS.md). Chunks 0-7 done; 10's `labs` portion (coverage
-+ feature flags + edge-case tests) also done, 2026-09-08. All security findings from Chunks 5-6
-are now fixed (was: one unfixed stored-XSS in `inductions/manage/session_detail.html` — see
-QUALITY_PASS.md's state block for the full list and regression test names). 1,284 tests passing.
-Next: the rest of Chunk 10 (destructive-path tests, `toolkit_auth` coverage, status-code-only
-test strengthening), then Chunks 8, 9, 11, 12.
+Tracking file: [QUALITY_PASS.md](QUALITY_PASS.md). Chunks 0-7 and 10 all done. All security
+findings from Chunks 5-6 are now fixed (was: one unfixed stored-XSS in
+`inductions/manage/session_detail.html` — see QUALITY_PASS.md's state block for the full list and
+regression test names; that one still wants a manual browser check, per Chunk 9's note). 1,359
+tests passing. Next: Chunk 11 (un-star `members/views/`'s wildcard imports, split
+`diary/forms.py` and `inductions/views.py`, finish the `member_views.py` split June left
+half-done) — then Chunks 8, 9, 12.
 
 Prompted by a worry that quality had drifted unmeasured across ~2,180 mostly AI-assisted
 commits. The June maintainability pass was Claude reviewing Claude; its own refactor shipped
@@ -91,11 +92,11 @@ layer, and routes the judgement work to a different model (MiniMax M3, ~$0.80 to
 | 3 Docs drift | ✅ 2026-09-08 | Fixed the ~9 that were real drift (ONBOARDING.md, SPEC.md — June's split left them pointing at deleted monolith files); added `operations`/`audit` to the onboarding tour; replaced stale black-only prose with the actual ruff/black/coverage commands. The rest of the original 20 turned out to be `docs/tasks/*.md` feature specs referencing not-yet-built paths on purpose. |
 | 4 Baseline | ✅ 2026-09-08 | [`docs/QUALITY_BASELINE.md`](docs/QUALITY_BASELINE.md): 81.5% overall coverage, per-app LOC/coverage/complexity. Found `toolkit_auth`/`content` coverage is entirely incidental (zero dedicated test files) — feeds Chunk 10. |
 | 5 MiniMax sweep | ✅ 2026-09-08 | 68 files (scope came out larger than the ~40 estimate), $1.30 total, 0 errors. Surfaced a real, unfixed stored-XSS vector in `inductions/session_detail.html` (public signup name/email fields → unescaped `innerHTML` on the manage page) — needs its own fix, not batched into a later chunk. |
-| 6 Rubric | ⬜ | `docs/QUALITY_RUBRIC.md`, synthesised from the sweep. |
-| 7 Feature scope | ⬜ | Needs Jonny. Decision document on the eight `labs` mini-tools, not a deletion. |
+| 6 Rubric | ✅ 2026-09-08 | `docs/QUALITY_RUBRIC.md`, synthesised from the MiniMax sweep plus an out-of-band Kimi K2 security sweep (4 more confirmed vulns, fixed same session). |
+| 7 Feature scope | ✅ 2026-09-08 | `docs/QUALITY_LABS_SCOPE.md`. Decided: keep all seven `labs` mini-tools — this fork is deliberately everything-plus-kitchen-sink, cherry-picked into `master` later. |
 | 8 Deduplicate | ⬜ | Duplicated volunteer helper, three CSV exporters, two ICS generators. |
 | 9 Extract inline JS | ⬜ | 7,535 lines of JS live inside templates. Largest single item; no previous pass touched it. |
-| 10 Tests | ⬜ | `toolkit_auth` has zero tests; two destructive bulk views untested; 102 status-code-only tests. |
+| 10 Tests | ✅ 2026-09-08 | All four `labs` coverage targets to 100%; destructive bulk actions (`bulk_anonymise_volunteers`/`bulk_delete_never_onboarded`) 54%→99%; `toolkit_auth` backends+decorators 79%/98%→100%; `volunteer_edit.py` 63%→97%; 31 weak status-code-only assertions strengthened. A cheap MiniMax spot-review of the new tests caught a real pluralisation bug in the confirm-phrase views, now fixed. |
 | 11 Un-star + split | ⬜ | `members/views/` star-import hub, `diary/forms.py`, `inductions/views.py`. |
 | 12 Confirm | ⬜ | Re-measure, small second sweep. |
 
