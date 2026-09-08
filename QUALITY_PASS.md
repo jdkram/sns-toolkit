@@ -801,8 +801,27 @@ permission — the first draft assumed a 403 and the test failed, confirming the
 before pinning it. `backends.py`: 79% → 100%; `decorators.py`: 98% → 100%. 1,341 tests passing (was
 1,317).
 
-Then the remaining items originally scoped for this chunk, in order: `volunteer_edit.py`'s gaps,
-then strengthening the 102 status-code-only tests to assert on state rather than just HTTP 200.
+**`volunteer_edit.py`'s gaps — done 2026-09-08.** New `test_volunteer_edit_extra.py` (18 tests)
+covers the username-collision-on-create loop, the non-superuser save-target redirect (a plain
+volunteer editing their own profile lands on `view-volunteer-list`, not the Panopticon summary),
+the suspension-lifted message and the suspension-email preview block (suspend via the dedicated
+`toggle_volunteer_suspension` view, then confirm `edit_volunteer`'s GET renders the pending
+preview), and the five standalone endpoints that had no coverage at all:
+`set_volunteer_password`, `send_volunteer_password_reset`,
+`add_volunteer_qualification`/`remove_volunteer_qualification`, and
+`save_volunteer_permissions` (including the Panopticon-grant-needs-a-reason validation branch).
+`volunteer_edit.py`: 63% → **97%**. The remaining 3% is two genuinely unreachable branches, left
+uncovered rather than contorted around: `Volunteer.user` is a non-nullable `OneToOneField`, so the
+"volunteer has no linked user" defensive checks in `set_volunteer_password` and
+`save_volunteer_permissions` can never fire; and `edit_volunteer`'s own "just got suspended"
+message/redirect branch is dead too — `VolunteerForm` explicitly excludes `STATUS_SUSPENDED` from
+its choices (suspension is "handled outside this form...via a dedicated toggle action", per the
+form's own comment), so that transition can only ever happen through
+`toggle_volunteer_suspension`, which carries its own equivalent messaging. 1,359 tests passing
+(was 1,341).
+
+Then the last item originally scoped for this chunk: strengthening the 102 status-code-only tests
+to assert on state rather than just HTTP 200.
 
 ### Chunk 11: Un-star members/views, split what's god-sized — NOT STARTED
 
