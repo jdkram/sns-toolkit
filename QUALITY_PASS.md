@@ -82,34 +82,52 @@ failures) than Kimi K2 Thinking's. Kimi found real things a general-quality pass
 (see the Chunk 6 follow-up entry below), so a security-focused second opinion from a different
 model is still worth considering occasionally — just not as the default.
 
+**2026-09-08: `Co-Authored-By`/`Claude-Session` trailers stripped from all 45 commits on this
+branch**, at Jonny's explicit request. Same precedent as the `sns_2026_overhaul` rewrite documented
+in `CLAUDE.md` ("Disclosure of AI involvement lives in the file-level `ai-contributors:` tags
+instead"). Trees are byte-identical (checked via `git diff` against a backup tag); only the trailer
+lines are gone. Old tip preserved as tag `backup/pre-trailer-strip/chore-quality-pass-2026-09`.
+Branch was never pushed anywhere (checked `origin`/`homeserver` before rewriting), so this was a
+safe local-only history edit — every hash below changed as a result. **Going forward: no more
+`Co-Authored-By`/`Claude-Session` trailers on this branch's commits.**
+
 Commits so far, newest first:
 
 ```
-c084aede  refactor(quality): split inductions/views.py into a package (Chunk 11)
-3c80f3ed  refactor(quality): split diary/forms.py into a package (Chunk 11)
-652d386c  refactor(quality): remove old member_views.py path (Chunk 11 follow-up)
-51588940  refactor(quality): fold member_views.py into members/views/ package (Chunk 11)
-cf40624c  docs(quality): record Chunk 11 part 1 completion
-d619a090  refactor(quality): un-star members/views imports (Chunk 11, part 1)
-a970e9dc  docs(quality): sync CURRENT_WORK.md with Chunk 6/7/10 completion
-cb4d6a3c  test(quality): strengthen status-code-only assertions, close Chunk 10
-e7a38220  test(quality): close volunteer_edit.py's coverage gaps (Chunk 10)
-9b4afbd8  test(quality): give toolkit_auth its own tests (Chunk 10)
-495508a2  fix(members): pluralise bulk-confirm phrases, strengthen weak test assertions
-3b004c97  test(quality): cover the destructive bulk volunteer-pool actions (Chunk 10)
-8bf26460  test(labs): add "strange user" edge-case coverage, fix a real login-signal crash
-16f7527b  feat(labs): make every labs mini-tool toggleable via SiteConfiguration
-7eca2501  test(quality): close the exchange.py coverage gap, all four labs targets done
-cd068462  test(quality): close the lost_found.py coverage gap (Chunk 10, third target)
-70fb63ae  test(quality): close the shopping.py coverage gap (Chunk 10, second target)
-238dd150  feat(quality): record the Chunk 7 decision, close the building-map coverage gap
-71c68490  docs(quality): write the Chunk 7 labs feature-scope decision document
-393b08d6  docs(quality): fold the session_detail.html XSS fix into Chunk 9's browser-check note
-239af162  fix(security): patch the 6 findings flagged by the Chunk 5/6 review sweeps
-99946c72  docs(quality): update resume commit log with the R14 resolution commit
-a835716d  docs(quality): resolve R14 (shared-resource access stays open), set MiniMax as default model
-8810a7fd  docs(quality): fix placeholder commit hash in the resume log
-4fe4c50a  docs(quality): synthesise Chunk 6 rubric, run Kimi security sweep, flag 4 new XSS/CSVi findings
+036f85bb  fix(quality): stop session_detail.js's modal crash cascading, restore onclick resilience
+77178035  refactor(quality): extract edit_rota.html's inline JS/CSS, close Chunk 9 (4/4)
+93aa7f9a  refactor(quality): extract form_event.html's inline JS/CSS (Chunk 9, 3/4)
+40a8131a  refactor(quality): extract session_detail.html's inline JS/CSS (Chunk 9, 2/4)
+a6af238d  refactor(quality): extract floorplan.html's inline JS/CSS (Chunk 9, 1/4)
+d80d2fe2  refactor(quality): close Chunk 8, deduplicate cross-app helpers
+6aa9a4a5  docs(quality): close Chunk 12, re-measured baseline confirms uplift
+dedeed38  docs(quality): record Chunk 11 completion, all four sub-tasks
+b80d8225  refactor(quality): split inductions/views.py into a package (Chunk 11)
+cdaad9fa  refactor(quality): split diary/forms.py into a package (Chunk 11)
+8c4ee34e  refactor(quality): remove old member_views.py path (Chunk 11 follow-up)
+14282f8c  refactor(quality): fold member_views.py into members/views/ package (Chunk 11)
+8fbc083a  docs(quality): record Chunk 11 part 1 completion
+d7da82ef  refactor(quality): un-star members/views imports (Chunk 11, part 1)
+3785d363  docs(quality): sync CURRENT_WORK.md with Chunk 6/7/10 completion
+2911a5c9  test(quality): strengthen status-code-only assertions, close Chunk 10
+13edee54  test(quality): close volunteer_edit.py's coverage gaps (Chunk 10)
+8111cea5  test(quality): give toolkit_auth its own tests (Chunk 10)
+4b96934c  fix(members): pluralise bulk-confirm phrases, strengthen weak test assertions
+c407776a  test(quality): cover the destructive bulk volunteer-pool actions (Chunk 10)
+6b9a8cb5  docs(quality): bring the resume log and CURRENT_WORK.md up to date for handoff
+88242d42  test(labs): add "strange user" edge-case coverage, fix a real login-signal crash
+7bd27a7a  feat(labs): make every labs mini-tool toggleable via SiteConfiguration
+0dedc80b  test(quality): close the exchange.py coverage gap, all four labs targets done
+31341f73  test(quality): close the lost_found.py coverage gap (Chunk 10, third target)
+56a4d2fb  test(quality): close the shopping.py coverage gap (Chunk 10, second target)
+75a5723e  feat(quality): record the Chunk 7 decision, close the building-map coverage gap
+99ed0eb1  docs(quality): write the Chunk 7 labs feature-scope decision document
+df6231f3  docs(quality): fold the session_detail.html XSS fix into Chunk 9's browser-check note
+ea3024b8  fix(security): patch the 6 findings flagged by the Chunk 5/6 review sweeps
+c497b556  docs(quality): update resume commit log with the R14 resolution commit
+04d0f9ce  docs(quality): resolve R14 (shared-resource access stays open), set MiniMax as default model
+33432d1a  docs(quality): fix placeholder commit hash in the resume log
+da57229a  docs(quality): synthesise Chunk 6 rubric, run Kimi security sweep, flag 4 new XSS/CSVi findings
 08a87fb8  docs(quality): record the Chunk 5 MiniMax sweep and an XSS finding
 bd202cd6  docs(quality): write the Chunk 4 coverage/complexity baseline
 19e65fc3  docs(quality): fix dead paths and document the tooling (Chunk 3)
