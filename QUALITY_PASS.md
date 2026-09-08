@@ -18,8 +18,8 @@ status: "#ai-input"
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
 | Chunks done | 0, 1, 2, 3, 4, 5, 6, 7 (keep all seven `labs` tools) |
-| Next chunk | **10, reordered** — building map done; shopping, lost & found, exchange still to go |
-| Tests | 1,165 passing (was 1,129 at session start — +7 security-fix regressions, +29 new building-map tests) |
+| Next chunk | **10, reordered** — building map and shopping done; lost & found, exchange still to go |
+| Tests | 1,199 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map tests, +34 shopping tests) |
 | Ruff | 0 findings |
 | Black | clean at 79 |
 | Coverage | 81.5% overall (21,788 statements) — see `docs/QUALITY_BASELINE.md`, not yet re-run since the security fixes |
@@ -645,7 +645,14 @@ coverage gaps first, worst-covered to best, before the other named gaps below.
    free-text, volunteer-editable). Switched to `daterange.safe_json()`, same fix as the earlier
    `_rooms_json()` finding. Regression tests: `test_notes_json_is_script_safe`,
    `test_loft_items_json_is_script_safe`.
-2. **Shopping** (`shopping.py` 42%, "3 of 13 endpoints tested" per `docs/QUALITY_BASELINE.md`).
+2. ~~**Shopping**~~ — **done.** New `toolkit/labs/tests/test_shopping_buy.py` (34 tests) plus
+   two additions to the existing `test_shopping.py` cover the previously-untested two-thirds:
+   `shopping_item_add`, `shopping_supplier_add`/`_delete`, the whole buyer workflow
+   (`shopping_buy`, `shopping_buy_supplier`, `shopping_buy_unsorted`, `shopping_item_enrich`,
+   `shopping_buy_add`, `shopping_out_of_stock`), and the `shopping_pledge` re-pledge branch —
+   which turned out to only fire when the existing pledge is already *fulfilled* (an
+   unfulfilled one of any status short-circuits with "someone already pledged" first), not what
+   the name suggested going in. `shopping.py`: 42% → **100%**.
 3. **Lost & found** (50% overall, ~0% outside the photo-upload paths already covered by
    `test_photo_uploads.py` — claim/dispose/browse/label flows untested).
 4. **Exchange** (55% — gap clusters around the on-loan/returned/all-gone/missing state

@@ -218,6 +218,13 @@ class ShoppingPledgeTests(LabsTestsMixin, TestCase):
             ProcurementPledge.objects.filter(pk=pledge.pk).exists()
         )
 
+    def test_pledge_cancel_with_no_pledge_redirects_without_error(self):
+        url = reverse(
+            "labs-shopping-pledge-cancel", kwargs={"flag_id": self.flag.pk}
+        )
+        response = self.client.post(url)
+        self.assertRedirects(response, reverse("labs-shopping"))
+
     def test_pledge_cancel_by_non_pledger_cancels(self):
         # Any logged-in volunteer can cancel anyone's pledge — avoids stale pledges
         # blocking others from signing up when the original pledger never follows through.
