@@ -756,8 +756,34 @@ own** — one template per commit, stop cleanly between them.
    browser click-through — the Chrome extension wasn't connected this session — so still worth
    a manual check that room/zone editing, photo upload, and the SVG map click-to-scroll still
    work before this one's trusted for a screen nobody's watching closely.
-2. `inductions/.../session_detail.html` — 649 lines. Next.
-3. `form_event.html` — 1,306 lines across four blocks.
+2. ~~`inductions/.../session_detail.html`~~ — **done 2026-09-08.** 649 lines, and unlike
+   `floorplan.html` this one had real server-side templating threaded through the JS: four
+   `{% if user.is_superuser %}` branches inline in the script (one wrapping the whole edit-modal
+   setup, one in the keydown handler, two inside a hand-built HTML string for a JS-inserted
+   walk-in row), and two URLs built by hand-concatenating `{{ session.slug }}` into a JS string
+   literal (`link-existing`, `remove-signup`) instead of using the `EDIT_URL_PATTERN`-style
+   `{% url ... signup_id=0 %}` + `.replace('/0/', ...)` convention already used for the other
+   four URLs on the page. Moved the `<style>` block to
+   `inductions/static/inductions/css/session_detail.css` and the `<script>` to
+   `inductions/static/inductions/js/session_detail.js`, exported as a `sessionDetail(opts)`
+   factory taking an options object (CSRF, the six URL patterns, `isSuperuser`) — an options
+   object rather than positional args because there were too many to keep straight positionally,
+   following `mailout.js`'s precedent for that. The four `{% if %}` branches became a JS-side
+   `if (opts.isSuperuser)`; the two hand-built URLs became `LINK_EXISTING_URL_PATTERN` /
+   `REMOVE_SIGNUP_URL_PATTERN`, matching the existing convention (and no longer trusting a slug
+   containing "/0/" to not collide, though that was already the existing pattern's assumption,
+   not a new one). Checked whether `isSuperuser` gating is actually reachable both ways: the
+   whole view is `@panopticon_required` (superusers only, `toolkit_auth/decorators.py`), so
+   `isSuperuser` is always `true` in practice — the template's `{% if user.is_superuser %}`
+   was already dead weight before this refactor, not something this chunk introduced. Two
+   throwaway Client-based smoke tests (not committed) confirmed: the page renders 200 with the
+   new static refs, `isSuperuser: true` present, and no leftover inline `<style>`; a non-panopticon
+   user gets a 403 before any of this code runs. `node --check` clean; the existing 52
+   `toolkit.inductions.tests` unchanged and passing. No live browser click-through this session
+   either (extension not connected) — same caveat as `floorplan.html`: worth a manual pass over
+   attendance checkboxes, walk-in registration, the edit modal, cap editing, and keyboard nav
+   before trusting this fully.
+3. `form_event.html` — 1,306 lines across four blocks. Next.
 4. `edit_rota.html` — last. Its 894-line `<style>` block and template-interpolated JS need the
    most care, and it's also where the "factory function + inline call" pattern this chunk now
    follows already lives — mostly a matter of confirming nothing there needs to change.
