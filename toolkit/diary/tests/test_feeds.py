@@ -17,6 +17,7 @@ class FeedTests(DiaryTestsMixin, TestCase):
         url = reverse("view-diary-rss")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
+        self.assertIn("rss", response["Content-Type"])
 
     def test_feed_loads_and_parses(self):
         url = reverse("view-diary-rss")

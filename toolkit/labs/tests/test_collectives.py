@@ -86,6 +86,7 @@ class CollectivesGateTests(LabsTestsMixin, TestCase):
         self.client.login(username="admin", password="T3stPassword!")
         response = self.client.get(reverse("labs-collectives"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/collectives.html")
 
 
 class CollectivesInternalTests(LabsTestsMixin, TestCase):

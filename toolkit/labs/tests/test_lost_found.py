@@ -40,6 +40,7 @@ class LostAndFoundGateTests(LabsTestsMixin, TestCase):
         cfg.save()
         response = self.client.get(reverse("labs-found-items"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/found_items.html")
 
 
 class FoundItemLogFormTests(LabsTestsMixin, TestCase):

@@ -33,6 +33,7 @@ class DonationsGateTests(LabsTestsMixin, TestCase):
         cfg.save()
         response = self.client.get(reverse("labs-donations"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/donations.html")
 
 
 class DonationListTests(LabsTestsMixin, TestCase):
@@ -41,6 +42,7 @@ class DonationListTests(LabsTestsMixin, TestCase):
     def test_page_loads_without_login(self):
         response = self.client.get(reverse("labs-donations"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/donations.html")
 
     def test_shows_active_items(self):
         response = self.client.get(reverse("labs-donations"))
@@ -150,5 +152,11 @@ class DonationManageTests(LabsTestsMixin, TestCase):
             "internal_notes": "",
             "contact": "",
         }
+        count_before = DonationItem.objects.count()
         response = self.client.post(reverse("labs-donations-manage"), data)
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/donations_manage.html")
+        self.assertFormError(
+            response.context["add_form"], "name", "This field is required."
+        )
+        self.assertEqual(DonationItem.objects.count(), count_before)

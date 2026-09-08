@@ -41,6 +41,7 @@ class ProgrammingQueueViewTests(DiaryTestsMixin, TestCase):
         # admin (superuser) is logged in via setUp — can always access the queue
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "programming_queue.html")
 
     def test_read_only_user_blocked(self):
         # read_only user has toolkit.read but NOT toolkit.write; under the

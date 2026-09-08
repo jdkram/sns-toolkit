@@ -1571,6 +1571,7 @@ class TestVolunteerPIIPermissionBoundary(MembersTestsMixin, TestCase):
         self.client.login(username="admin", password="T3stPassword!")
         resp = self._get("view-volunteer-list")
         self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, "volunteer_list.html")
 
 
 class TestVolunteerExportFilters(MembersTestsMixin, TestCase):

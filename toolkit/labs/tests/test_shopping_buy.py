@@ -27,6 +27,7 @@ class ShoppingItemAddTests(LabsTestsMixin, TestCase):
     def test_get_shows_form(self):
         response = self.client.get(reverse("labs-shopping-add"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/shopping_item_add.html")
 
     def test_post_creates_item(self):
         response = self.client.post(
@@ -194,6 +195,7 @@ class ShoppingBuyPickerTests(LabsTestsMixin, TestCase):
     def test_get_renders(self):
         response = self.client.get(reverse("labs-shopping-buy"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/shopping_buy.html")
 
     def test_needed_total_counts_open_flags_for_supplier(self):
         NeedFlag.objects.create(item=self.item, flagged_by=self.vol)

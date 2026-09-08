@@ -36,6 +36,7 @@ class ShoppingGateTests(LabsTestsMixin, TestCase):
         cfg.save()
         response = self.client.get(reverse("labs-shopping"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/shopping.html")
 
 
 class ShoppingListViewTests(LabsTestsMixin, TestCase):
@@ -51,6 +52,7 @@ class ShoppingListViewTests(LabsTestsMixin, TestCase):
     def test_list_accessible_to_logged_in_user(self):
         response = self.client.get(reverse("labs-shopping"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/shopping.html")
 
     def test_list_requires_login(self):
         self.client.logout()

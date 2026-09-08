@@ -139,11 +139,13 @@ class ToolkitAccessViewTests(MembersTestsMixin, TestCase):
         self.client.login(username="vol1", password="testpass")
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "toolkit_access.html")
 
     def test_panopticon_can_access(self):
         self.client.login(username="admin", password="T3stPassword!")
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "toolkit_access.html")
 
     def test_page_lists_panopticon_users(self):
         self.client.login(username="admin", password="T3stPassword!")

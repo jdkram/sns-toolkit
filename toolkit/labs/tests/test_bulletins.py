@@ -95,6 +95,7 @@ class BulletinAddTests(LabsTestsMixin, TestCase):
     def test_get_shows_form(self):
         response = self.client.get(reverse("labs-bulletin-add"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/bulletin_form.html")
 
     def test_post_creates_bulletin(self):
         data = {
@@ -117,10 +118,16 @@ class BulletinAddTests(LabsTestsMixin, TestCase):
         self.assertEqual(b.author, self.user_vol)
 
     def test_post_with_empty_title_returns_form(self):
+        count_before = Bulletin.objects.count()
         response = self.client.post(
             reverse("labs-bulletin-add"), {"title": "", "body": "x"}
         )
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/bulletin_form.html")
+        self.assertFormError(
+            response.context["form"], "title", "This field is required."
+        )
+        self.assertEqual(Bulletin.objects.count(), count_before)
 
     def test_bulletin_post_all_allows_any_logged_in_user(self):
         # Default site config: BULLETIN_POST_ALL — even no_perm users can post
@@ -131,6 +138,7 @@ class BulletinAddTests(LabsTestsMixin, TestCase):
         cfg.save()
         response = self.client.get(reverse("labs-bulletin-add"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/bulletin_form.html")
 
     def test_bulletin_post_programmer_blocks_basic_user(self):
         cfg = get_site_config()

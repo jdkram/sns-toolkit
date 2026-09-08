@@ -190,6 +190,7 @@ class ExchangeEditTests(ExchangeEnabledMixin, TestCase):
             )
         )
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/exchange_form.html")
 
     def test_other_user_cannot_edit(self):
         self.client.login(username="read_only", password="T3stPassword!1")
@@ -210,6 +211,7 @@ class ExchangeEditTests(ExchangeEnabledMixin, TestCase):
             )
         )
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/exchange_form.html")
 
 
 class ExchangeWithdrawTests(ExchangeEnabledMixin, TestCase):

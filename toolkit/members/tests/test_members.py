@@ -1259,3 +1259,4 @@ class TestMemberPIIPermissionBoundary(MembersTestsMixin, TestCase):
         self.client.login(username="admin", password="T3stPassword!")
         resp = self.client.get(reverse("search-members"))
         self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, "search_members.html")

@@ -315,8 +315,10 @@ class AnonymisedVolunteerTests(LabsTestsMixin, TestCase):
             reverse("labs-shopping-item", kwargs={"item_id": item.pk})
         )
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/shopping_item.html")
         list_page = self.client.get(reverse("labs-shopping"))
         self.assertEqual(list_page.status_code, 200)
+        self.assertTemplateUsed(list_page, "labs/shopping.html")
 
     def test_anonymise_clears_collective_memberships(self):
         self.anon_vol.collectives.add(self.col_open)

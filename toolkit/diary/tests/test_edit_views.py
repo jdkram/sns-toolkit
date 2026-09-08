@@ -359,6 +359,7 @@ class PastEventsSearchViewTests(DiaryTestsMixin, TestCase):
     def test_page_loads(self):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
+        self.assertIn("events", response.context)
 
     def test_only_past_events_shown(self):
         response = self.client.get(self.url)
@@ -388,6 +389,9 @@ class PastEventsSearchViewTests(DiaryTestsMixin, TestCase):
     def test_invalid_date_ignored_not_500(self):
         response = self.client.get(self.url, {"date_from": "not-a-date"})
         self.assertEqual(response.status_code, 200)
+        # An unparseable date_from is ignored rather than applied as a
+        # filter, so the past event is still in the (unfiltered) results.
+        self.assertIn(self.past_event, list(response.context["events"]))
 
     def test_result_links_to_edit_page(self):
         response = self.client.get(self.url, {"q": "Jazz"})

@@ -69,6 +69,7 @@ class BuildingMapGateTests(LabsTestsMixin, TestCase):
         cfg.save()
         response = self.client.get(reverse("labs-floorplan"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/floorplan.html")
 
 
 class FloorplanPageTests(LabsTestsMixin, TestCase):

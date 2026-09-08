@@ -17,9 +17,9 @@ status: "#ai-input"
 | | |
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
-| Chunks done | 0, 1, 2, 3, 4, 5, 6, 7 (keep all seven `labs` tools) |
-| Next chunk | **10 in progress**: `labs` portion done (all four coverage targets at 100%, toggleability follow-up, edge-case follow-up), destructive paths (`bulk_anonymise_volunteers`/`bulk_delete_never_onboarded`) now done too; still to go: `toolkit_auth/backends.py` + permission decorators, `volunteer_edit.py`'s gaps, status-code-only tests — then 8, 9, 11, 12 |
-| Tests | 1,317 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found, +25 exchange, +21 feature-flag-gate, +18 edge-case-user, +33 destructive-path tests) |
+| Chunks done | 0, 1, 2, 3, 4, 5, 6, 7, 10 (keep all seven `labs` tools) |
+| Next chunk | **11** — un-star `members/views/`, split `diary/forms.py` and `inductions/views.py`, finish the `member_views.py` split June left half-done |
+| Tests | 1,359 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found, +25 exchange, +21 feature-flag-gate, +18 edge-case-user, +33 destructive-path, +24 toolkit_auth, +18 volunteer_edit tests; the status-code-only strengthening pass added no new tests) |
 | Ruff | 0 findings |
 | Black | clean at 79 |
 | Coverage | 81.5% overall (21,788 statements) — see `docs/QUALITY_BASELINE.md`, not yet re-run since the security fixes |
@@ -681,7 +681,7 @@ template per commit, stop cleanly between them.
 
 Tests will not cover this. See the browser verification note below.
 
-### Chunk 10: Tests — IN PROGRESS, started 2026-09-08
+### Chunk 10: Tests — DONE 2026-09-08
 
 Reordered 2026-09-08 per the Chunk 7 outcome: since every `labs` tool is being kept, close its
 coverage gaps first, worst-covered to best, before the other named gaps below.
@@ -820,8 +820,35 @@ form's own comment), so that transition can only ever happen through
 `toggle_volunteer_suspension`, which carries its own equivalent messaging. 1,359 tests passing
 (was 1,341).
 
-Then the last item originally scoped for this chunk: strengthening the 102 status-code-only tests
-to assert on state rather than just HTTP 200.
+**Strengthening the status-code-only tests — done 2026-09-08. Chunk 10 complete.** Re-measured
+rather than trusting the original "102" figure (written before this session's new test files
+existed, and before checking what each one actually claims): a script-based sweep for tests whose
+*only* assertion checks `status_code` found the true number of genuinely weak ones is much smaller
+than 102 once permission/method-not-allowed/404 checks are excluded — those are not weak, `assert
+this specific status code` **is** the complete and correct claim for "logged out gets redirected",
+"non-superuser gets 403", "GET on a POST-only endpoint gets 405", "disabled feature 404s". Strength-
+ening those would just be padding. The real gap was narrower and sharper: 31 tests across 3 apps
+that checked `status_code == 200` (or an equivalent success path) and nothing else, for a view
+whose whole point is to render specific content, save something, or reject invalid input — exactly
+the failure mode the original finding named (`test_bulletins.py`'s empty-title POST asserting 200
+with no check that no `Bulletin` was created).
+
+Two were real validation gaps with the same shape: `test_bulletins.py::test_post_with_empty_title_returns_form`
+and `test_donations.py::test_add_action_with_missing_name_returns_form` both posted invalid data and
+only checked "still 200" — neither confirmed the form actually rejected it (`assertFormError`) or
+that no record was created. Both now check both. The other 29 were "page loads" smoke tests (`GET`
+a view, check `200`, nothing else) — a broken template, wrong template, or empty context would
+still pass. All 29 gained `assertTemplateUsed` (the cheapest test that actually distinguishes "this
+page" from "some page"), plus context/content checks were free wins existed (`test_edit_views.py`'s
+`test_invalid_date_ignored_not_500` now confirms the invalid date was *ignored* rather than just
+not crashing; `test_printedprogramme_views.py`'s edit-view-loads test now checks the formset is
+actually empty). No new tests added, no dead code found this time — every one of the 31 targets was
+a real, reachable, currently-passing-for-the-wrong-reasons test. 1,359 tests passing throughout
+(unchanged count — this was a strengthening pass, not an additions pass).
+
+**Chunk 10 is now fully done**: all four sub-items (`labs` coverage, destructive bulk actions,
+`toolkit_auth`, `volunteer_edit.py`, status-code-only tests) complete. Next: Chunk 11
+(un-star `members/views`, split the two remaining god-sized files).
 
 ### Chunk 11: Un-star members/views, split what's god-sized — NOT STARTED
 

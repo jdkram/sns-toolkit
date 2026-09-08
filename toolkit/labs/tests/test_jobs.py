@@ -32,6 +32,7 @@ class JobsGateTests(LabsTestsMixin, TestCase):
         cfg.save()
         response = self.client.get(reverse("labs-jobs"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/jobs.html")
 
 
 class JobListTests(LabsTestsMixin, TestCase):
@@ -71,6 +72,7 @@ class JobAddTests(LabsTestsMixin, TestCase):
     def test_get_shows_form(self):
         response = self.client.get(reverse("labs-job-add"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/job_form.html")
 
     def test_post_creates_job_and_redirects(self):
         data = {

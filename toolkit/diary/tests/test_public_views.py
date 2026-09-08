@@ -33,6 +33,7 @@ class PublicDiaryViews(DiaryTestsMixin, TestCase):
         # Hard code root URL to assert that it gets something:
         response = self.client.get("/programme/")
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "view_showing_index.html")
 
     def test_view_default_reversed(self):
         url = reverse("default-view")
@@ -250,8 +251,8 @@ class PublicDiaryViews(DiaryTestsMixin, TestCase):
             "single-event-view-legacyid", kwargs={"legacy_id": "100"}
         )
         response = self.client.get(url)
-        # TODO: test data!
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "view_event.html")
 
     def test_view_event_no_public_showings(self):
         # Event 1 has no publicly viewable showings:

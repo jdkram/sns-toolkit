@@ -4,6 +4,7 @@ import datetime
 from django.test import TestCase
 from django.urls import reverse
 
+from toolkit.operations import forms as operations_forms
 from toolkit.operations.models import MaintenanceRecord, MaintenanceTask
 
 from .common import OperationsTestsMixin
@@ -105,6 +106,12 @@ class TaskAddTests(OperationsTestsMixin, TestCase):
     def test_get_shows_form(self):
         response = self.client.get(reverse("operations-task-add"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(
+            response, "operations/maintenance_task_form.html"
+        )
+        self.assertIsInstance(
+            response.context["form"], operations_forms.MaintenanceTaskForm
+        )
 
     def test_post_creates_task(self):
         data = {

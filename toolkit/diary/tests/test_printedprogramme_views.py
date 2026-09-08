@@ -34,6 +34,7 @@ class AddPrintedProgrammeTests(DiaryTestsMixin, TestCase):
         url = reverse("add-printed-programme")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "form_printedprogramme_archive.html")
 
     def test_add_progamme_invalid_no_file(self):
         url = reverse("add-printed-programme")
@@ -229,6 +230,8 @@ class EditPrintedProgrammeTests(DiaryTestsMixin, TestCase):
         url = reverse("edit-printed-programmes")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "form_printedprogramme_archive.html")
+        self.assertEqual(len(response.context["formset"].forms), 0)
 
     def test_edit_view_loads_with_data(self):
         url = reverse("edit-printed-programmes")
