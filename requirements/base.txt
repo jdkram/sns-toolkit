@@ -1,7 +1,10 @@
 # Fix versions of django and directly related components:
 Django<5.3,>=5.2.3
-# HTML sanitization (strip script tags / event-handler attrs from user HTML):
-nh3
+# HTML sanitization (strip script tags / event-handler attrs from user HTML).
+# Pinned to match requirements/docker.lock -- unpinned here let CI resolve a
+# newer release than the Docker image runs, so the two environments could
+# sanitize identical input differently without either side noticing.
+nh3==0.3.5
 easy_thumbnails==2.10
 Pillow>=10.0
 # Renders PDF pages to images for the printed programme archive thumbnails.
