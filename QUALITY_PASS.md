@@ -732,19 +732,37 @@ each page keeping its own `td { vertical-align }` override since those genuinely
 two beyond ordinary page skeleton, so it's untouched — forcing an include there would have been
 inventing duplication to satisfy the plan rather than removing real duplication.
 
-### Chunk 9: Extract inline JS and CSS — NOT STARTED
+### Chunk 9: Extract inline JS and CSS — IN PROGRESS (started 2026-09-08)
 
-The largest single win, and the one no previous pass touched. Follow the existing
-`diary/static/diary/js/edit_event.js` precedent. **Likely two sessions on its own** — one
-template per commit, stop cleanly between them.
+The largest single win, and the one no previous pass touched. **Likely two sessions on its
+own** — one template per commit, stop cleanly between them.
 
-1. `labs/floorplan.html` — 721 lines, zero server-side templating. Pure lift-and-shift.
-2. `inductions/.../session_detail.html` — 649 lines.
+1. ~~`labs/floorplan.html`~~ — **done 2026-09-08.** 721 lines, essentially zero server-side
+   templating in the JS/CSS itself (three JSON blobs + a handful of URL/CSRF values at the
+   top of the old inline `<script>`). Moved the `<style>` block verbatim to
+   `labs/static/labs/css/floorplan.css` (linked via `{% block css %}`) and the `<script>` body
+   to `labs/static/labs/js/floorplan.js`. The precedent named in the original plan
+   (`diary/static/diary/js/edit_event.js`) turned out to be dead code itself — nothing
+   includes it or its `mailout.js` sibling anywhere. Used the pattern that's actually live
+   instead: `edit_rota.html`/`edit_rota.js`, where the external file exports a single factory
+   function (`edit_rota(jQuery, ...args)`) and a two-line inline `<script>` block calls it with
+   the template-rendered values as arguments. `floorplan.js` now exports `floorplan(notes,
+   loftItems, areaPhotos, CSRF, ...urlTemplates, svgUrl)` the same way — the only Django
+   template syntax left in `floorplan.html` is that one call. Verified: `node --check` on the
+   new JS file, `toolkit.labs.tests` (320 tests, all still pass — `test_floorplan.py`'s
+   XSS-safety assertions on `notes_json`/etc. cover the same rendered `<script>` block), and a
+   throwaway Client-based smoke test (not committed) confirming the page still renders 200 with
+   the new `<link>`/`<script src>` tags present and no leftover inline `<style>`. No live
+   browser click-through — the Chrome extension wasn't connected this session — so still worth
+   a manual check that room/zone editing, photo upload, and the SVG map click-to-scroll still
+   work before this one's trusted for a screen nobody's watching closely.
+2. `inductions/.../session_detail.html` — 649 lines. Next.
 3. `form_event.html` — 1,306 lines across four blocks.
 4. `edit_rota.html` — last. Its 894-line `<style>` block and template-interpolated JS need the
-   most care.
+   most care, and it's also where the "factory function + inline call" pattern this chunk now
+   follows already lives — mostly a matter of confirming nothing there needs to change.
 
-Tests will not cover this. See the browser verification note below.
+Tests will not cover the remaining three. See the browser verification note below.
 
 ### Chunk 10: Tests — DONE 2026-09-08
 
