@@ -680,12 +680,17 @@ docker compose exec toolkit /venv/bin/ruff check toolkit
 docker compose exec toolkit /venv/bin/black --line-length 79 --check toolkit
 ```
 
-Baseline to beat: **1,129 tests passing**. Tests run *only* inside the container — there is no
+Baseline to beat: **1,136 tests passing**. Tests run *only* inside the container — there is no
 local venv and the C extensions exist only in the image.
 
 Chunk 9 is the one part tests will not cover. It needs a browser pass over the rota editor,
 event form, floorplan and induction session detail, confirming the interactive behaviour still
-works.
+works. **Fold in a check of the 2026-09-08 session_detail.html XSS fix while there**: the
+account-creation flow (create accounts, duplicate-match, force-create, edit-signup, walk-in add)
+all now runs untrusted response fields through a client-side `escapeHtml()` before `.innerHTML`
+— confirm signup names/usernames still render correctly (no double-escaping, no literal `&amp;`
+where a plain `&` should show) and that the flow still works end-to-end, since this is a
+client-side JS sink with no Django-test-client coverage.
 
 ## Spend log
 
