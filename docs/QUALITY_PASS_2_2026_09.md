@@ -4,12 +4,28 @@ ai-contributors: ["Claude Sonnet 5"]
 status: "#ai-input"
 ---
 
-# Quality Pass 2: the pre-rewrite Cube code (planned, not yet run)
+# Quality Pass 2: the pre-rewrite Cube code
 
-**Status:** scoped 2026-09-08, not started. Written up after CI (added by the first quality
-pass) failed on its very first real run — not on new code, but on `mailout_views.py`, a file
-dating to Ben Motz's original Cube Microplex codebase that no review pass had ever opened. See
-"Why this exists" below.
+**Status:** scoped and run 2026-09-08, on branch `chore/quality-pass-2-2026-09`. The MiniMax
+M3 sweep (all 44 files, $0.6715, zero empty outputs) is done and synthesised into
+[QUALITY_RUBRIC.md](QUALITY_RUBRIC.md) (new rules R15–R16, a "not rubric material" addendum,
+and a ranked "Unfixed findings, Quality Pass 2" section). One finding — the GDPR email-scrub
+bug in `Volunteer.anonymise()`, same root-cause class as the already-documented
+`vols_admin_address` incident — was fixed immediately, out of band, with a regression test,
+rather than waiting for a triage cadence that doesn't exist yet for this pass. Raw reviews at
+`docs/QUALITY_PASS_RAW/chunk_qp2_reviews/` (gitignored), index at
+`docs/QUALITY_PASS_RAW/chunk_qp2_index.md`.
+
+**Not done, deliberately deferred:** the Tier-1 Kimi K2 Thinking second opinion this plan
+originally scoped. The MiniMax pass alone surfaced enough (11 real findings, 2 flagged for
+operational verification, 1 false positive caught and corrected before it was acted on) that
+running a second model wasn't the best use of the remaining session time tonight. Worth
+picking up separately if Tier-1 (auth/mailer) warrants a second look — see the rubric's
+existing note on Kimi's noisy severity ratings before treating it as urgent.
+
+Written up after CI (added by the first quality pass) failed on its very first real run — not
+on new code, but on `mailout_views.py`, a file dating to Ben Motz's original Cube Microplex
+codebase that no review pass had ever opened. See "Why this exists" below.
 
 ## Why this exists
 

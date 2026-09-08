@@ -3,7 +3,7 @@
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
 **Last updated:** 2026-09-08
-**Last major change:** 2026-09-08: quality pass complete and merged (ruff/black/CI gates, 230 new tests, 7 security fixes, god-module splits, inline JS extraction; see the Quality pass section below). Before that, Bug AT — batch of diary/calendar/rota UI fixes (month-heading clipping, room hide/show, rota filter panel restructure, Vacancies filter removed). 2026-09-01: Logging & email observability workstream complete repo-side: Bug AQ, 9.154, 9.156, 9.159 shipped; repo side of 9.155/9.157/9.158 done (see section 3c). Only the freyja server-side steps remain. 2026-07-15: email log trigger attribution + backend explainer (9.156b), plus a full security/robustness review of the email pipeline — 2 small fixes landed, throttling spec 9.161 added.
+**Last major change:** 2026-09-08: Quality Pass 2 run (44 pre-rewrite Cube-era files, MiniMax M3, $0.67) — see the Quality pass section below. Before that, the first quality pass complete and merged (ruff/black/CI gates, 230 new tests, 7 security fixes, god-module splits, inline JS extraction). Before that, Bug AT — batch of diary/calendar/rota UI fixes (month-heading clipping, room hide/show, rota filter panel restructure, Vacancies filter removed). 2026-09-01: Logging & email observability workstream complete repo-side: Bug AQ, 9.154, 9.156, 9.159 shipped; repo side of 9.155/9.157/9.158 done (see section 3c). Only the freyja server-side steps remain. 2026-07-15: email log trigger attribution + backend explainer (9.156b), plus a full security/robustness review of the email pipeline — 2 small fixes landed, throttling spec 9.161 added.
 **Current phase:** Phase 4 ongoing
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs) · [REWRITE_STRATEGY.md](docs/REWRITE_STRATEGY.md) (tech notes and migration guide)
 
@@ -107,8 +107,13 @@ brittle test in `mailout_views.py`, pre-rewrite Ben-era code that no chunk's sco
 (fixed same day, see git log). That's a symptom, not the disease — the MiniMax/Kimi sweeps above
 were scoped to what this rewrite actually reworked, not the whole repo, so large parts of the
 original Cube codebase never got a judgement-level review, only ruff/black. Scoped as a
-follow-up: [docs/QUALITY_PASS_2_2026_09.md](docs/QUALITY_PASS_2_2026_09.md) — 45 files, ~9,600
-lines, ~$1.00–$1.40, not yet run.
+follow-up, run the same day: [docs/QUALITY_PASS_2_2026_09.md](docs/QUALITY_PASS_2_2026_09.md) —
+44 files, ~9,600 lines, MiniMax M3 only ($0.67, the Kimi second opinion deferred), synthesised
+into [QUALITY_RUBRIC.md](docs/QUALITY_RUBRIC.md) (rules R15-R16 plus a ranked "Unfixed findings,
+Quality Pass 2" list). One finding fixed immediately, out of band: `Volunteer.anonymise()`'s
+GDPR email-scrub was replacing a whole `SentEmailLog.recipients` row instead of just the
+matching address, the same comma-joined-field footgun as the documented
+`vols_admin_address` incident — regression test added.
 
 ---
 

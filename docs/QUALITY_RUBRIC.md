@@ -37,6 +37,29 @@ from three sources:
   re-run, and the R14 authorization-check pattern (below) got five different
   severity ratings across five structurally identical instances in the same sweep.
   Treat its findings list as reliable, its priority ordering as not.
+- **Quality Pass 2** (2026-09-08, see [QUALITY_PASS_2_2026_09.md](QUALITY_PASS_2_2026_09.md)) —
+  a second MiniMax M3 sweep, 44 files, covering the pre-rewrite Cube-era code that
+  Pass 1's chunk scoping never touched (`toolkit_auth/`, `members/forms.py` +
+  `models.py`, `mailer/`, `diary/mailout_views.py` and several sibling `diary/`
+  modules, `index/`, `util/`, management commands, templatetags). $0.67 total, zero
+  empty outputs across all 44. Raw reviews at
+  `docs/QUALITY_PASS_RAW/chunk_qp2_reviews/`, index at
+  `docs/QUALITY_PASS_RAW/chunk_qp2_index.md`. Adds R15–R16 below and a second
+  "Unfixed findings" section for this pass specifically.
+
+  **One MiniMax finding turned out to be a false positive on verification** —
+  worth recording as a specific caution alongside the general "triage before
+  trusting" rule above, because this one *looked* airtight. It read
+  `toolkit_auth/decorators.py:172`'s `logger.warning(f"login failed for:
+  {credentials} from {ip}")` as logging a raw password on every failed login.
+  Checked against Django's actual `contrib.auth.authenticate()` source
+  (`_clean_credentials`, `django/contrib/auth/__init__.py`): Django itself
+  redacts any credential key matching `/api|token|key|secret|password|signature/i`
+  to `"********"` before firing the `user_login_failed` signal this code
+  subscribes to — the `password` field is never live by the time this line sees
+  it. A finding citing Django signal/framework behaviour as the mechanism is
+  exactly the kind of claim to verify against the actual framework source before
+  treating as confirmed, not just against this codebase's own call sites.
 
 **How to use this:** check new and touched code against the rules below rather than
 re-paying for external review per file. When a rule and the code disagree, fix the
@@ -240,6 +263,44 @@ In that narrower case, write down in a one-line comment why this one departs fro
 default. Don't add an ownership check "just in case" on a shared resource; that's the
 thing this decision rules out.
 
+### R15 — An external side-effect and its own completion-state write are one unit; don't let them diverge
+
+Added 2026-09-08 from Quality Pass 2's MiniMax sweep, which found the same shape
+independently in three files: `mailer/sender.py:184,224` (a cancelled send loop
+`break`s but still falls through to `do_complete(sent=sent)` — an admin who cancels
+a 10,000-recipient send after 200 sees the job marked "Complete", not "Cancelled");
+`util/email_backend.py` (~82-104, the success-path audit write is outside the
+exception handler that protects the failure path, so a successful send followed by
+a failed audit-log write leaves no record it went out — an operator restoring from
+the audit trail could legitimately re-send already-delivered mail); and
+`util/management/commands/send_volunteer_digest.py` (~215-220, `msg.send()`
+succeeds but the following `volunteer.save(update_fields=["last_digest_sent_at"])`
+raising means next week's run re-sends the identical digest).
+
+**Check:** grep for `\.send(` or another external-effect call followed, in the same
+function, by a separate persistence call (`.save()`, an audit-log write, a
+state-transition method like `do_complete`/`do_fail`). Trace what state the system
+is left in if the persistence call raises, or if a `break`/early-return skips the
+state transition the effect actually implies — "sent but not recorded" and "not
+sent but recorded as sent" are both real bugs, not edge cases to wave away.
+
+### R16 — A falsy-but-legitimate value (`0`, `""`, explicit `False`) is not "not provided"
+
+Added 2026-09-08 from Quality Pass 2's MiniMax sweep, found in 3+ files:
+`diary/poster.py:206-207` (`cfg.thumbnail_crop_width or 600` — `0` is a valid crop
+width, indistinguishable here from "unset"), `util/templatetags/thumbnail_l.py:83,88`
+(`bar_colour or ""`, a size tuple defaulted the same way), `mailer/models.py:55-56`
+(a blank `body_html` string doubles as the tri-state "don't send HTML" flag, with no
+way to tell "unset" from "explicitly cleared"). `diary/daterange.py:92`'s
+`if user_days_ahead:` dropping `?days=0` from a query string is the same shape but
+**unverified** — check whether `user_days_ahead` is the string `"0"` (truthy) or an
+already-cast `int(0)` (falsy) before treating it as a fourth instance.
+
+**Check:** grep for `\bor\s+\d`, `\bor\s+""`, or a bare `if value:` immediately after
+a `request.GET.get(...)`/model-field read, wherever `0`, `""`, or `False` is a real
+value distinct from "the caller didn't set this" — not everywhere `or`/truthy-checks
+appear, only where the falsy value is meaningful.
+
 ---
 
 ## Explicitly not rubric material
@@ -266,6 +327,31 @@ context. Don't let a future pass re-flag them:
   (`audit/urls.py`, `inductions/admin.py`, `labs/admin.py`, `operations/admin.py`,
   `operations/models.py`, `operations/urls.py`, `send_consent_renewal_reminders.py`)
   came back with nothing to flag. The sweep wasn't finding-inflated.
+- **(Quality Pass 2) Defensive branches guarding against a third-party API's
+  undocumented, unversioned behaviour.** `diary/omdb.py`'s guards against an
+  invalid-key response arriving with HTTP 200, or a normally-always-present `Type`
+  field being absent, look like paranoia about states that "can't happen" — but
+  OMDb is a service this project doesn't control and can't pin a contract against.
+  Unlike defending against this codebase's own impossible states, insurance against
+  an external API silently changing shape is legitimate. Leave it.
+- **(Quality Pass 2) Code-smell findings in dev-only seed/fixture tooling**
+  (`seed_dev_data.py`, `seed_data/fetch_trailers.py` — magic numbers, string-matched
+  roles, fragile TOML writes). Real, but this is Docker-dev-only tooling with a
+  single maintainer and zero production blast radius. Fix opportunistically if the
+  file is next touched for another reason; don't spend Tier-1-grade review time here.
+- **(Quality Pass 2) Docstring/comment examples that are wrong but purely
+  descriptive** (`poster.py`'s stated character-count threshold not matching the
+  code, `days_to_human.py` and `showing_date_format.py`'s wrong worked examples).
+  Zero behavioural risk — these mislead a reader, not the program. Batch into one
+  low-effort docs-fix pass rather than treating each as a separate finding.
+- **(Quality Pass 2) `QuerySet.update()` bypassing `save()`/signals.** Found in
+  `diary/signals.py` (an `Event.objects.filter(...).update(...)` caller never
+  triggers the audit-trail signal) and `auto_dormancy.py` (bulk `.update()` skips
+  any future "you've gone dormant" notification hook). Real and worth knowing, but
+  only two instances and the existing R5 (silent failure on POST) already covers
+  the same underlying "don't let a write silently skip its consequences" territory
+  closely enough that a third full rule isn't earning its keep yet — note it here so
+  a third instance prompts promoting it, rather than re-discovering the first two.
 
 ---
 
@@ -385,6 +471,113 @@ as new.
     coverage**, confirmed by grep — four JSON endpoints (create/update/
     photo-upload/photo-delete) entirely unverified. Sharpens the general
     labs-undertested finding in `docs/ARCHIVE/QUALITY_BASELINE_2026_09.md` to the specific gap.
+
+---
+
+## Unfixed findings, ranked (Quality Pass 2, 2026-09-08)
+
+From the 44-file MiniMax M3 sweep over the pre-rewrite Cube-era code (see the
+"Quality Pass 2" entry above). Same convention as the Pass 1 list: fixed items are
+struck through and kept for the record so a future pass doesn't re-flag the same
+shape as new.
+
+### Fixed 2026-09-08, out of band (same incident class as an existing fixed bug)
+
+1. ~~**`Volunteer.anonymise()`'s GDPR email-scrub wiped the whole audit row, not
+   just the matching address** (`members/models.py`, `anonymise()`)~~ — **fixed.**
+   `SentEmailLog.recipients` is comma-joined and a single row can name several
+   addresses (a direct email cc'ing more than one person; mailout batches are
+   summarised separately and don't hit this path). The original code matched rows
+   with `recipients__icontains=original_email` and then `.update()`d the *entire*
+   field to a placeholder — anonymising one volunteer destroyed every other
+   recipient's address on any row they happened to share. Same root cause as the
+   documented `vols_admin_address` comma-join incident (see
+   `feedback_vols_admin_footgun_incident`, R14's neighbour in spirit): a
+   comma-joined field treated as if substring-matching it were safe. Fixed by
+   iterating matching rows and replacing only the one address that equals
+   `original_email` (case-insensitive, exact match on the split/stripped
+   address), leaving every other recipient on the row untouched. Regression test:
+   `members/tests/test_volunteers.py::TestAnonymiseVolunteer::test_anonymise_scrubs_only_own_address_from_shared_log_row`.
+
+### Needs operational verification before treating as urgent
+
+2. **`mailer/mailerd.py:53-57` (`poll_for_pending`) claims no more than one
+   `mailerd` process ever runs, but nothing enforces it** — no
+   `select_for_update()` or atomic claim on the pending-job row. Two instances
+   running concurrently (a manual debug run during a deploy, a supervisor
+   misconfiguration) would both pick up the same job and both send the full
+   recipient list — a mass duplicate-send, not a cosmetic bug. **Before treating
+   as urgent:** confirm the deployment topology genuinely guarantees single-
+   instance (check `containerconfig/tk_run.sh` and the process supervisor config
+   for anything that could start a second `mailerd`). If that guarantee holds
+   operationally, this drops to defence-in-depth — worth an atomic claim next
+   time the file is touched, not an interrupt-everything fix.
+3. **`diary/templatetags/repeat.py`'s `{% capture %}`/`{% retrieve %}` tags store
+   per-render state on the compiled template Node instance** (`CaptureNode.render`,
+   lines 9/11; `CaptureRetrieverNode`, line 47) rather than on the per-request
+   `Context`. Django compiles a template's Node tree once and reuses the same
+   instances across every render, so under a threaded WSGI worker two concurrent
+   requests hitting the same compiled template could interleave — one user's
+   captured content leaking into another's response. **Before treating as a live
+   bug:** (a) grep templates for `{% capture` / `{% retrieve` — if nothing calls
+   these tags, there's no bug to fix, just dead code to consider removing; (b)
+   check whether gunicorn actually runs multi-threaded (`GUNICORN_RELOAD=1` in
+   `docker-compose.yml` doesn't establish this either way).
+
+### Real bugs, worth a fix when the relevant file is next touched
+
+4. **`toolkit_auth/decorators.py:24,39` — `write_required`/`read_required`
+   redirect an authenticated-but-unauthorised user back to the login page**, which
+   they can already reach. Logging back in doesn't grant the missing permission,
+   so the user loops: login → still lacking the permission → redirected to login
+   again. The `_strict` sibling decorators correctly `raise PermissionDenied`
+   (403) instead. Confirmed by reading both decorator pairs side by side.
+5. **`members/models.py`'s `Member.save()`/`_generate_membership_number()`
+   has a two-save collision-avoidance loop with no unique constraint backing
+   it** (~lines 155-189) — a new `Member` briefly exists with `number="?"`, then
+   the loop counts existing rows to pick a free number. Concurrent creates can
+   race past the count check and produce duplicate membership numbers. Needs a
+   quick check of the actual DB schema/migration to confirm `number` really has
+   no `unique=True`/unique index before scheduling a fix.
+6. **`toolkit_auth/management/commands/configure_toolkit_users.py:74` — the
+   `read` permission is created with the `write` permission's name**
+   (copy-paste from the block two lines above). Because `Permission`'s real
+   uniqueness is `(content_type, codename)`, not `name`, `get_or_create` never
+   self-heals this — every environment ever seeded from this command shows the
+   wrong label in Django admin permanently. Cosmetic but permanent; one-line fix
+   whenever this file is next opened.
+7. **`toolkit_auth/password_emails.py` (~46-51) — the reset email always rounds
+   the timeout down to whole days, in both directions.**
+   `PASSWORD_RESET_TIMEOUT // 86400` floors a 12-hour timeout to "0 days"
+   (displayed as "1 day" by a subsequent `max(1, ...)`) and a 25-hour timeout
+   also floors to "1 day" — both wrong, and both in the direction of overstating
+   how long the link stays valid. Minor, but worth fixing alongside any other
+   change to that email.
+8. **`util/management/commands/purge_stale_volunteers.py` (~125-131) — no
+   `transaction.atomic()` around a destructive, irreversible bulk-anonymisation
+   loop.** A mid-loop failure leaves some volunteers anonymised and others not,
+   with only a partial-success count reported. Wrap it before this command's next
+   scheduled run is relied on for a real purge.
+9. **`diary/validators.py` (`_get_extra_allowed_domains`, ~26-34) — built-in
+   allowed domains are lowercased, admin-entered ones via `SiteConfiguration`
+   aren't.** An admin who types `MyCloud.org` gets silently rejected by the
+   validator meant to accept it. Confirmed by comparing the two code paths.
+10. **`members/forms.py` (`GroupTrainingForm.clean()`, ~347-353) doesn't return
+    `cleaned_data`.** Calls `super().clean()`, discards the result instead of
+    `return self.cleaned_data`. Tolerated by modern Django's `if cleaned_data is
+    not None` guards, but wrong by convention and will break the moment anything
+    reads this form's `clean()` return value directly.
+
+### Needs caller verification (do not act on without checking first)
+
+- **`members/forms.py`'s `NewMemberForm` exposes `is_member` as an editable
+  field** — a real privilege-escalation shape *only if* an unauthenticated
+  signup flow instantiates this form. Check `members/views/` for who actually
+  uses `NewMemberForm` before treating this as live.
+- **`diary/public_views.py`'s `view_event`** falls through to "the first event
+  with `legacy_id=None`" when both `event_id` and `legacy_id` are falsy — a real
+  bug only if the URLconf can ever route here without supplying one of the two.
+  Check the URLconf before scheduling a fix.
 
 ---
 
