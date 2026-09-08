@@ -39,17 +39,18 @@ filter mismatched to its actual sink, now rubric rule R13) and a CSV formula-inj
 findings" section for all six, in ranked order. None fixed yet; flagged to Jonny directly the
 sessions they were found, separate from this file, in case it isn't read again for a while.
 
-**⚠️ One open decision, not yet made, needed before touching the affected files:** rubric rule
-R14 (`docs/QUALITY_RUBRIC.md`) names five views — `labs/views/collectives.py`'s
-`collective_edit`, `area_photos.py`'s upload/delete, `loft.py`'s item/photo delete,
-`exchange.py`'s `mark_on_loan`/`mark_returned`, `jobs.py`'s `job_resolve` — where any
-logged-in volunteer can modify or delete a shared object with no ownership/role check. This is
-explicitly **not** a "just fix it" item: S+S's volunteer model is deliberately non-hierarchical,
-so some or all of these may be intended. Needs Jonny's call, file by file, on which of these
-should stay open to any volunteer versus get a check added — and whichever way each one goes,
-record it as a one-line comment at the site, per R14's own check. Natural moment to raise it is
-Chunk 7 (same "what should a volunteer be allowed to do" territory), but it doesn't have to wait
-for that conversation specifically.
+**Resolved, no longer open:** the R14 decision (five views with no ownership check on shared
+objects — `collectives.py`, `area_photos.py`, `loft.py`, `exchange.py`, `jobs.py`) was decided
+by Jonny 2026-09-08: intentional, not a bug, for all five. Reasoning and the rule are in
+`docs/QUALITY_RUBRIC.md`'s R14. No code changed as a result — the decision was "leave as is,"
+not "add a check." Noted here only so a future pass doesn't re-flag it as new.
+
+**Model choice for future sweeps:** default to MiniMax M3 for this project's opencode-based
+review passes, not Kimi. Jonny's call after seeing both: MiniMax's per-file cost was lower and
+its output more consistently reliable (no severity-rating volatility, no agentic-tool-budget
+failures) than Kimi K2 Thinking's. Kimi found real things a general-quality pass wouldn't have
+(see the Chunk 6 follow-up entry below), so a security-focused second opinion from a different
+model is still worth considering occasionally — just not as the default.
 
 Commits so far, newest first:
 

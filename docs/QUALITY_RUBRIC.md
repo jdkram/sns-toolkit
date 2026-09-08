@@ -207,29 +207,36 @@ string literal, or DOM property assignment are three different contexts with thr
 different rules, and picking the wrong one because "it's near a `&lt;script&gt;` tag"
 is how R13's own source findings happened.
 
-### R14 — A shared-object modify/delete view needs an ownership or role check, not just `@login_required`
+### R14 — Shared-object modify/delete views are intentionally open to any volunteer; write down when they're not
 
 Added 2026-09-08 from the Kimi sweep, which found the same shape independently in
 five files: `labs/views/collectives.py` (`collective_edit`), `area_photos.py`
 (upload/delete), `loft.py` (item/photo delete), `exchange.py`
 (`mark_on_loan`/`mark_returned`), `jobs.py` (`job_resolve`) — `@login_required` alone,
 with no check that the acting user has any relationship to the specific object being
-changed.
+changed. Kimi's own severity ratings on this identical shape swung from "clean, fine
+for this trust model" to "critical, do not deploy" depending on which file it
+happened to be looking at, which is what forced this to be an explicit written
+decision rather than something a future pass re-litigates per file.
 
-**This one needs a judgement call before it's enforced, not blind fixing** — Star and
-Shadow's volunteer model is deliberately non-hierarchical (see this repo's own
-culture notes), so "any logged-in volunteer can resolve any job" may be intended, not
-a bug. What Kimi's sweep actually demonstrated is that the *same* shape got rated
-anywhere from "clean, fine for this trust model" to "critical, do not deploy"
-depending on which file it happened to be looking at — inconsistent severity
-judgement on structurally identical code, which is the part worth fixing even before
-the underlying question ("should this be locked down?") is answered.
+**Decided 2026-09-08 (Jonny):** intentional, not a bug, for all five. Explicit
+reasoning: "for shared resources like the spaces, it's important that one person
+can't block others [from] replacing the image" — for a shared physical resource
+(a room's photo, a loft item, a collective's listing), the realistic failure mode
+isn't malicious editing by another volunteer, it's one person's absence or oversight
+blocking everyone else from a routine update. Locking these down would trade a rare,
+low-cost risk (a volunteer edits something they maybe shouldn't) for a common,
+annoying one (nobody can fix a stale photo because the one person who "owns" it isn't
+around). Consistent with S+S's deliberately non-hierarchical volunteer model — see
+this repo's own culture notes.
 
-**Check:** before adding a new modify/delete view on a shared resource, decide and
-write down (in a comment, one line) which of these it is: (a) intentionally open to
-any volunteer, matching the non-hierarchical model, or (b) needs an ownership/role
-check. Don't leave it implicit — that's what let five instances of the same pattern
-go unnoticed as a pattern.
+**Check:** before adding a *new* modify/delete view on a shared resource, this
+default now applies — open to any logged-in volunteer, no ownership check needed —
+**unless** the object represents something where a wrong edit is costly or hard to
+reverse (financial records, permission grants, another volunteer's personal data).
+In that narrower case, write down in a one-line comment why this one departs from the
+default. Don't add an ownership check "just in case" on a shared resource; that's the
+thing this decision rules out.
 
 ---
 
@@ -343,16 +350,11 @@ for the normal chunk cadence.
     and `labs/views/_common.py:55` — already tracked in QUALITY_PASS.md's
     "Duplication no linter will catch" and Chunk 8's scope. MiniMax found the same
     pair independently; no new file, just confirmation it's worth doing.
-14. **A pattern, not a single bug — missing ownership/role checks on shared-object
-    modify/delete views**, found independently in `labs/views/collectives.py`
-    (`collective_edit`), `area_photos.py` (upload/delete), `loft.py` (item/photo
-    delete), `exchange.py` (`mark_on_loan`/`mark_returned`), `jobs.py`
-    (`job_resolve`) — `@login_required` alone, no check that the acting user has any
-    relationship to the specific object being changed. **Needs a decision, not a
-    reflexive fix** — S+S's volunteer model is deliberately non-hierarchical, so
-    this may be intended for some or all of these five. See rubric rule R14. Raise
-    with Jonny alongside Chunk 7 (feature scope), since it's the same "what should
-    this app actually let a volunteer do" question.
+14. ~~A pattern, not a single bug — missing ownership/role checks on shared-object
+    modify/delete views~~ — **resolved, not a bug.** Decided 2026-09-08: intentional
+    for all five files (`collectives.py`, `area_photos.py`, `loft.py`, `exchange.py`,
+    `jobs.py`). See rubric rule R14 for the full reasoning. Left in this list, struck
+    through, so a future pass doesn't re-discover and re-flag it as new.
 15. **`area_photos.py:45`'s `# noqa: ARG001` is factually wrong** — the suppressed
     argument (`area_id`) is used in the function body one line below the decorator.
     Harmless (the noqa just does nothing), but a suppressed lint that never needed
