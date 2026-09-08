@@ -1,14 +1,23 @@
 ---
 human-contributors: ["Jonny Kram"]
-ai-contributors: ["Claude Opus 5"]
+ai-contributors: ["Claude Opus 5", "Claude Sonnet 5"]
 status: "#ai-input"
 ---
 
-# Quality baseline — 2026-09-08
+# Quality baseline — 2026-09-08 (before), re-measured 2026-09-08 (after)
 
-The before-picture for the quality pass tracked in [QUALITY_PASS.md](../QUALITY_PASS.md).
-Re-measured at Chunk 12 once the uplift (Chunks 8–11) has landed, so every number here is
-dated and should be read as "as of commit `19e65fc3`", not as a living document.
+The before-picture for the quality pass tracked in [QUALITY_PASS.md](../QUALITY_PASS.md), and
+the after-picture from Chunk 12. Both are dated and should be read as snapshots, not as living
+documents — the "before" table is as of commit `19e65fc3`, the "after" table as of `4691d28c`.
+
+**What actually landed between the two measurements: Chunks 10 and 11, not 8–11.** Chunk 8
+(deduplicate) and Chunk 9 (extract inline JS/CSS) were never started — the "next chunk: 12"
+decision in QUALITY_PASS.md's status table skipped them. So this before/after measures the
+effect of "give untested apps their own tests" (10) and "split god-sized files into packages"
+(11) only. That matters for reading the complexity row below: package-splitting doesn't reduce
+any individual function's cyclomatic complexity, so a flat "worst complexity" number that barely
+moves is not a failed uplift — it's confirmation that the complexity-reducing work (8–9) is
+still queued, exactly as predicted when Chunk 12 was scoped.
 
 **How to reproduce these numbers**, in order:
 
@@ -28,7 +37,7 @@ but isn't installed anywhere in this project and wasn't worth adding for a one-o
 
 ---
 
-## Per-app summary
+## Per-app summary — before (2026-09-08, `19e65fc3`)
 
 LOC excludes migrations (auto-generated, not maintained by hand). Coverage is statement
 coverage from the full test-suite run, not branch coverage.
@@ -66,6 +75,103 @@ noticing, since no test asserts on that logic directly. This is the gap Chunk 10
 
 Ruff: **0 findings**. Black: **clean** at line-length 79. Both confirmed together with the
 coverage run above, same commit.
+
+## Per-app summary — after (2026-09-08, `4691d28c`, Chunks 10–11 landed)
+
+| App | Python LOC | Template LOC | Test coverage | Worst complexity |
+|---|---:|---:|---:|---|
+| `diary` | 21,555 | 11,877 | 91.1% | 19 (`edit_diary_list`, unchanged) |
+| `members` | 10,507 | 4,889 | 94.0% | 20 (`edit_volunteer`, unchanged) |
+| `labs` | 8,654 | 5,030 | 92.6% | 9 (`donation_manage`, unchanged) |
+| `util` | 4,654 | 0 | 17.6% | 101 (`handle`, `seed_dev_data.py`, unchanged — dev-only) |
+| `inductions` | 3,708 | 2,675 | 74.2% | 10 (`handle`, unchanged) |
+| `index` | 1,381 | 1,360 | 93.2% | 19 (`get_context_data`, unchanged) |
+| `mailer` | 1,286 | 80 | 94.8% | 11 (`send_mailout_to`, unchanged) |
+| `audit` | 769 | 177 | 97.0% | 4 (`email_log`, `models.py` — was `handle`, still 4) |
+| `operations` | 771 | 176 | 91.4% | 4 (`stale_commitment` — was `status`, still 4) |
+| `toolkit_auth` | 885 | 170 | 80.7% | 5 (`_create_or_update_user` — was `feature_required`, still 5) |
+| `content` | 202 | 231 | 91.8% | — (unchanged) |
+| **Repo total** | **55,521** | **27,795** | **85.5%** (23,631 statements) | worst overall: 101 |
+
+**Coverage: 81.5% → 85.5% (+4 points).** Driven almost entirely by Chunk 10's new tests, not by
+the Chunk 11 splits (which are pure import-plumbing and added zero new tests). The two biggest
+movers are exactly the two apps Chunk 10 targeted: `toolkit_auth` 61.6% → 80.7% (it went from
+zero dedicated test files to its own suite) and `members`/`labs` climbing on the back of the
+shopping/exchange/lost-and-found/edge-case/destructive-path test batches. `inductions` moved
+least (73.3% → 74.2%) because Chunk 10 didn't scope tests there — it's still the largest
+remaining coverage gap among user-facing apps.
+
+**Worst complexity: essentially unchanged, as expected.** Every app's worst-function number is
+either identical or names a different function at the same complexity — moving code between
+files doesn't change any function's branch count. This is the confirmation Chunk 12 was scoped
+to get: the Chunk 10–11 uplift improved test coverage and file-level navigability, but the
+actual complexity reduction work (Chunk 8's deduplication, Chunk 9's inline-JS/CSS extraction,
+both still not started) has not happened yet. Read the flat complexity row as "on track,
+nothing to fix here" rather than "the uplift didn't work."
+
+**LOC grew by +3,783 Python / +23 template lines, and that's expected, not scope creep.** The
+three biggest jumps line up exactly with Chunk 10's test additions: `labs` +2,183 lines (the
+shopping/exchange/lost-and-found/donations test batches), `members` +949 (volunteer_edit +
+destructive-path + edge-case-user tests), `toolkit_auth` +265 (its first dedicated test file).
+`diary` (+225) and `inductions` (+154) are almost entirely the `__init__.py` re-export
+boilerplate from their Chunk 11 package splits, not new logic.
+
+Ruff: **0 findings**. Black: **clean** at line-length 79. Tests: **1,359 passing** (was 1,136 at
+the baseline measurement, 1,129 at session start — see QUALITY_PASS.md's spend/session log for
+the per-test-batch breakdown).
+
+---
+
+## Chunk 12 spot-check: did the split help, or just make the code Claude-shaped differently?
+
+A second MiniMax M3 pass, 5 files, $0.1099 total, over the modules Chunk 11 changed the most:
+`members/views/_common.py`, `members/views/__init__.py`, `members/views/member_views.py`,
+`diary/forms/events.py`, `inductions/views/export.py`. Prompted specifically to judge the
+split's own quality, not just do a generic review. Full output in
+`docs/QUALITY_PASS_RAW/chunk12_reviews/` (gitignored).
+
+**The verdict on the splits themselves is mixed, and worth taking seriously rather than filing
+under "known trade-off":**
+
+- **`members/views/__init__.py` and `diary/forms/__init__.py`-style re-export layers got called
+  out independently, on both files, as indirection with a single consumer (`urls.py`) that adds
+  a "triple-edit hazard" (submodule, `__init__.py`, `urls.py` all need touching to add a view)
+  without adding a real public API. This is the same shape as the `_common.py` wildcard-hub
+  anti-pattern Chunk 11 explicitly set out to remove, just with the wildcard swapped for an
+  explicit list — an improvement in traceability, not in indirection.
+- **`inductions/views/export.py` split was flagged as premature** for a ~30-line, one-view file:
+  "defensible only because it's the only download-shaped view in the package... tag as
+  'justify by next view', not a permanent layout."
+- **`members/views/member_views.py`'s relocation was judged cosmetic, not de-bloating**: nothing
+  was extracted, nothing recoupled, the file is byte-for-byte the same content in a new
+  location. Reasonable per QUALITY_PASS.md's own reasoning (no internal split was warranted),
+  but confirms the fold-in didn't reduce complexity — only fixed the structural asymmetry it set
+  out to fix.
+- **`members/views/_common.py`'s post-un-starring state got a clean bill**: "no dead code beyond
+  [one already-noted item]", the two remaining shared helpers "are both genuinely shared... the
+  indirection earns its keep." This is the one file where the review confirms the split
+  unambiguously helped.
+
+**One real, verified, pre-existing bug surfaced, not introduced by this pass**: in
+`toolkit/members/views/member_views.py`, both `unsubscribe_member_right_now` (line 366) and
+`opt_in` (line 393) fall back to `panopticon_required(unsubscribe_member)(request, member_id)`
+on the access-denied branch — wrapping and calling the *wrong* function (`unsubscribe_member`
+instead of themselves). A panopticon-level staff member hitting either of those two views
+without a valid magic key gets routed into the unsubscribe flow instead of theirs. Verified by
+reading the code directly (not just trusting the model): confirmed present, and confirmed via
+`git log -S` to predate this branch entirely — introduced in `512618d2` (feature 9.74,
+2026-ish, restricting member PII to Panopticon), untouched by Chunk 11's relocation. Not fixed
+here — out of Chunk 12's scope — but worth a follow-up ticket. (A second claimed bug, a
+`reverse("search-members", query=...)` call, was checked and does not exist in the current
+code — the model's claim there does not survive verification; not included above.)
+
+**Read together with the metrics above**, this spot-check's real finding is that Chunk 11
+delivered real value (per-file navigability, one clean removal of the wildcard-hub pattern) at
+a real cost (three new `__init__.py` re-export layers, two of which are flagged as
+under-justified) — not a wash, but not a pure win either. If a further pass ever revisits
+`members/views/`, the two candidates the review agrees on are: drop the `__init__.py` re-export
+layer in favour of `urls.py` importing submodules directly, and reconsider
+`volunteer_pool_admin.py`'s split-by-size-not-cohesion grouping.
 
 ---
 

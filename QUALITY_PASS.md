@@ -17,12 +17,12 @@ status: "#ai-input"
 | | |
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
-| Chunks done | 0, 1, 2, 3, 4, 5, 6, 7, 10, 11 (keep all seven `labs` tools) |
-| Next chunk | **12** — re-measure the baseline, confirm the uplift landed |
+| Chunks done | 0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12 |
+| Next chunk | **8** — deduplicate (or 9, extract inline JS/CSS — either is fair game; both were skipped, not descoped) |
 | Tests | 1,359 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found, +25 exchange, +21 feature-flag-gate, +18 edge-case-user, +33 destructive-path, +24 toolkit_auth, +18 volunteer_edit tests; the status-code-only strengthening pass and Chunk 11's package splits added no new tests) |
 | Ruff | 0 findings |
 | Black | clean at 79 |
-| Coverage | 81.5% overall (21,788 statements) — see `docs/QUALITY_BASELINE.md`, not yet re-run since the security fixes |
+| Coverage | 85.5% overall (23,631 statements), up from 81.5% baseline — see `docs/QUALITY_BASELINE.md` for the full before/after |
 | CI | `.github/workflows/ci.yml` + `.pre-commit-config.yaml` in place, not yet exercised by a real PR |
 
 **All six previously-unfixed security findings are now fixed** (out of band from the
@@ -931,11 +931,41 @@ ruff 0 findings repo-wide, black clean at 79 (312 files unchanged).
 priority — dev-only. Keep pushing its data into the TOML fixtures rather than restructuring the
 Python.
 
-### Chunk 12: Confirm the uplift landed — NOT STARTED
+### Chunk 12: Confirm the uplift landed — DONE 2026-09-08
 
-Re-run the Chunk 4 measurements. Then a small second MiniMax pass (~5 files, ~$0.10) over the
-most heavily changed modules, checking the uplift helped rather than just making the code
-Claude-shaped in a new way. Update `docs/QUALITY_BASELINE.md` with before/after.
+Re-ran the Chunk 4 measurements (coverage, ruff, black, per-app complexity) at commit
+`4691d28c`, then a second MiniMax M3 pass ($0.1099, 5 files) over the modules Chunk 11 changed
+most, prompted specifically to judge whether the package splits themselves helped or just
+reshuffled the code. Full before/after table and the spot-check write-up are in
+`docs/QUALITY_BASELINE.md` — not duplicated here. Headline numbers:
+
+- **Coverage 81.5% → 85.5%**, driven by Chunk 10's new tests, not Chunk 11's splits (which added
+  zero tests — pure import plumbing).
+- **Worst per-app complexity essentially unchanged** — expected and correct, since moving code
+  between files doesn't reduce any function's branch count. Confirms Chunks 8 and 9 (still not
+  started) are where the actual complexity reduction has to happen, not a sign the uplift
+  underperformed.
+- **1,359 tests, ruff 0, black clean.**
+- **The MiniMax spot-check's verdict on Chunk 11's own splits was mixed, not a clean pass**: the
+  `_common.py` un-starring got a clean bill, but three new `__init__.py` re-export layers
+  (`members/views/`, `diary/forms/`, and by implication `inductions/views/`) were independently
+  flagged as adding indirection for a single consumer (`urls.py`) without a real public API —
+  the same shape as the wildcard-hub pattern Chunk 11 set out to remove, just less traceable
+  about it than before, not more. `inductions/views/export.py`'s split was flagged as premature
+  for a ~30-line one-view file. Recorded as a candidate for a future pass, not acted on here.
+- **One real, pre-existing bug surfaced and verified** (not introduced by this pass, not fixed
+  here — out of scope for a re-measurement chunk): `member_views.py`'s
+  `unsubscribe_member_right_now` and `opt_in` both call
+  `panopticon_required(unsubscribe_member)(...)` on their access-denied branch instead of
+  wrapping themselves — a panopticon-level staff member without a magic key gets routed into the
+  wrong flow. Predates this branch entirely (`git log -S` traces it to `512618d2`, feature
+  9.74). Worth a follow-up ticket. A second claimed bug from the same pass (a
+  `reverse(..., query=...)` call) was checked directly and does not exist in the current code —
+  a reminder that MiniMax findings need verification before being trusted, same as Chunk 5/6's
+  findings did.
+
+**Next real chunk is 8 or 9**, not a renumbered continuation — both were skipped rather than
+descoped, and Chunk 12's own measurement confirms they're still where the complexity payoff is.
 
 ---
 
@@ -967,4 +997,5 @@ client-side JS sink with no Django-test-client coverage.
 |---|---|---|---|---|
 | 2026-09-08 | 5 | `openrouter/minimax/minimax-m3` | 68 (+1 throwaway re-run, see Chunk 5 gotcha) | $1.2999 |
 | 2026-09-08 | 6 follow-up | `openrouter/moonshotai/kimi-k2-thinking` | 23 (+2 retries, see gotcha) | $0.2772 |
-| | | **Total** | | **$1.5771** |
+| 2026-09-08 | 12 | `openrouter/minimax/minimax-m3` | 5 | $0.1099 |
+| | | **Total** | | **$1.6870** |
