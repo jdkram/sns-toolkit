@@ -148,7 +148,7 @@ def bulk_anonymise_volunteers(request):
                 {
                     "candidates": candidates,
                     "count": len(candidates),
-                    "expected_phrase": f"anonymise {len(candidates)} volunteers",
+                    "expected_phrase": f"anonymise {len(candidates)} volunteer{'s' if len(candidates) != 1 else ''}",
                 },
             )
 
@@ -167,7 +167,7 @@ def bulk_anonymise_volunteers(request):
                 .filter(pk__in=selected_ids)
                 .select_related("member", "user")
             )
-            expected_phrase = f"anonymise {len(candidates)} volunteers"
+            expected_phrase = f"anonymise {len(candidates)} volunteer{'s' if len(candidates) != 1 else ''}"
             confirm_text = request.POST.get("confirm_phrase", "").strip()
 
             if confirm_text != expected_phrase:
@@ -273,7 +273,7 @@ def bulk_delete_never_onboarded(request):
                     "to_anonymise": to_anonymise,
                     "delete_count": len(to_delete),
                     "anonymise_count": len(to_anonymise),
-                    "expected_phrase": f"delete {len(to_delete)} volunteers",
+                    "expected_phrase": f"delete {len(to_delete)} volunteer{'s' if len(to_delete) != 1 else ''}",
                 },
             )
 
@@ -305,7 +305,7 @@ def bulk_delete_never_onboarded(request):
                 v for v in candidates if v.rota_count > 0 or v.gasp_count > 0
             ]
 
-            expected_phrase = f"delete {len(to_delete)} volunteers"
+            expected_phrase = f"delete {len(to_delete)} volunteer{'s' if len(to_delete) != 1 else ''}"
             confirm_text = request.POST.get("confirm_phrase", "").strip()
 
             if confirm_text != expected_phrase:

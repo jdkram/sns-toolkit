@@ -755,7 +755,32 @@ guards on both. Picked up a few cheap adjacent gaps in the same file while there
 `auto_dormancy_apply`'s "no thresholds configured" branch. `volunteer_pool_admin.py`: 54% → **99%**
 (one line, 727, is dead code — the `action` variable is always normalised to `"compose"` or
 `"send"` before that fallback `return` could ever run, so left uncovered rather than contorting a
-test to hit unreachable code). 1,317 tests passing (was 1,284).
+test to hit unreachable code).
+
+**A $0.027 MiniMax M3 spot-review of that new test file caught a real one-line bug it introduced
+coverage for, not just test-quality nits**: `bulk_anonymise_volunteers` and
+`bulk_delete_never_onboarded` both build their typed-confirmation phrase as
+`f"... {n} volunteers"` unconditionally, so a single-volunteer selection asks the Panopticon to
+type "anonymise 1 volunteers" — and the new tests, having been written by reading the view, had
+baked the wrong string in as the expected value rather than catching it. Fixed both f-strings to
+pluralise correctly, updated the four tests that asserted the literal phrase. Also fixed, same
+review: `test_send_step_sends_and_logs`/`test_send_step_skips_volunteers_in_cooldown` only checked
+`LastGaspEmailLog` row counts (a broken `send_mail` with the log-create surviving would still
+pass) — now assert on `mail.outbox` too; the portrait-delete test only checked the `Volunteer` row
+was gone, never that the file itself was removed — rewritten with a real uploaded file in a
+temporary `MEDIA_ROOT` and an `os.path.exists()` check before/after; both "wrong confirmation
+phrase" tests only checked the happy path didn't fire, never the error message itself — added
+`assertContains(resp, "did not match")`. Tried a free-tier model first (`nemotron-3-ultra:free` via
+OpenRouter) for this same review — it read both files (20k input tokens) then stopped after 96
+output tokens with no written report, tool-call budget or free-tier throttling presumably cutting
+it short before any text generation. `minimax-m3:free` errored outright with a server
+`UnknownError`, unchanged from the Chunk 5 gotcha even after lifting the account's zero-data-
+retention filter — so ZDR was never the actual blocker on that one. Conclusion: free OpenRouter
+models aren't reliable enough for this workflow yet; keep using paid MiniMax M3 as the default,
+per the existing model-choice note above — a two-file spot-review like this one costs about 3
+cents and reliably returns a written report.
+
+1,317 tests passing (was 1,284).
 
 Then the items originally scoped for this chunk, in the original order — not yet started:
 `toolkit_auth/backends.py` and the permission decorators (still untested beyond the one signal

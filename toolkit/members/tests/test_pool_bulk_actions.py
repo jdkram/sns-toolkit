@@ -5,9 +5,13 @@ gated behind a typed confirmation phrase; these tests cover both steps, the
 phrase mismatch guard, and the delete/anonymise split in the delete flow."""
 
 import datetime
+import os
+import tempfile
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -98,7 +102,7 @@ class TestBulkAnonymiseVolunteers(BulkActionsBase):
         self.assertTemplateUsed(resp, "bulk_anonymise_confirm.html")
         self.assertEqual(resp.context["count"], 1)
         self.assertEqual(
-            resp.context["expected_phrase"], "anonymise 1 volunteers"
+            resp.context["expected_phrase"], "anonymise 1 volunteer"
         )
         self.assertContains(resp, "BA cand")
 
@@ -114,8 +118,13 @@ class TestBulkAnonymiseVolunteers(BulkActionsBase):
         )
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, "bulk_anonymise_confirm.html")
+        self.assertContains(resp, "did not match")
+        self.assertEqual(
+            resp.context["expected_phrase"], "anonymise 1 volunteer"
+        )
         vol.refresh_from_db()
         self.assertEqual(vol.status, Volunteer.STATUS_DORMANT)
+        self.assertEqual(AnonymisationLog.objects.count(), 0)
 
     def test_confirm_with_invalid_ids_errors(self):
         resp = self.client.post(
@@ -145,7 +154,7 @@ class TestBulkAnonymiseVolunteers(BulkActionsBase):
             {
                 "action": "confirm",
                 "volunteer_ids": [str(vol.pk)],
-                "confirm_phrase": "anonymise 1 volunteers",
+                "confirm_phrase": "anonymise 1 volunteer",
             },
         )
         self.assertRedirects(resp, reverse("view-volunteer-pool-health"))
@@ -264,6 +273,7 @@ class TestBulkDeleteNeverOnboarded(BulkActionsBase):
         self.assertTemplateUsed(
             resp, "bulk_delete_never_onboarded_confirm.html"
         )
+        self.assertContains(resp, "did not match")
         self.assertTrue(Volunteer.objects.filter(pk=vol.pk).exists())
 
     def test_confirm_with_invalid_ids_errors(self):
@@ -282,7 +292,7 @@ class TestBulkDeleteNeverOnboarded(BulkActionsBase):
             {
                 "action": "confirm",
                 "volunteer_ids": [str(vol.pk)],
-                "confirm_phrase": "delete 1 volunteers",
+                "confirm_phrase": "delete 1 volunteer",
             },
         )
         self.assertRedirects(resp, reverse("view-volunteer-pool-health"))
@@ -290,20 +300,31 @@ class TestBulkDeleteNeverOnboarded(BulkActionsBase):
         self.assertFalse(Member.objects.filter(pk=member_pk).exists())
         self.assertFalse(User.objects.filter(pk=user_pk).exists())
 
-    def test_confirm_hard_delete_also_removes_portrait(self):
+    def test_confirm_hard_delete_also_removes_portrait_file(self):
         vol = self._make_never_onboarded("harddelportrait")
-        vol.portrait = "path/to/portrait.jpg"
-        vol.save()
-        resp = self.client.post(
-            reverse("bulk-delete-never-onboarded"),
-            {
-                "action": "confirm",
-                "volunteer_ids": [str(vol.pk)],
-                "confirm_phrase": "delete 1 volunteers",
-            },
-        )
-        self.assertRedirects(resp, reverse("view-volunteer-pool-health"))
-        self.assertFalse(Volunteer.objects.filter(pk=vol.pk).exists())
+        with tempfile.TemporaryDirectory() as tmp_media:
+            with override_settings(MEDIA_ROOT=tmp_media):
+                vol.portrait.save(
+                    "portrait.jpg",
+                    SimpleUploadedFile("portrait.jpg", b"fake-image-bytes"),
+                    save=True,
+                )
+                portrait_path = vol.portrait.path
+                self.assertTrue(os.path.exists(portrait_path))
+
+                resp = self.client.post(
+                    reverse("bulk-delete-never-onboarded"),
+                    {
+                        "action": "confirm",
+                        "volunteer_ids": [str(vol.pk)],
+                        "confirm_phrase": "delete 1 volunteer",
+                    },
+                )
+                self.assertRedirects(
+                    resp, reverse("view-volunteer-pool-health")
+                )
+                self.assertFalse(Volunteer.objects.filter(pk=vol.pk).exists())
+                self.assertFalse(os.path.exists(portrait_path))
 
     def test_confirm_falls_back_to_anonymise_when_rota_history_exists(self):
         vol = self._make_never_onboarded("fallback")
@@ -477,6 +498,9 @@ class TestBulkLastGaspEmail(BulkActionsBase):
         self.assertEqual(
             LastGaspEmailLog.objects.filter(volunteer=vol).count(), 1
         )
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, [vol.member.email])
+        self.assertIn("BA sendok", mail.outbox[0].subject)
 
     def test_send_step_skips_volunteers_in_cooldown(self):
         vol = self._make_vol("sendcd", last_login=_days_ago(1200))
@@ -494,7 +518,8 @@ class TestBulkLastGaspEmail(BulkActionsBase):
                 },
             )
         self.assertRedirects(resp, reverse("view-volunteer-pool-health"))
-        # Still just the one log entry from setUp's create() above.
+        # Still just the one log entry created above, before the POST.
         self.assertEqual(
             LastGaspEmailLog.objects.filter(volunteer=vol).count(), 1
         )
+        self.assertEqual(len(mail.outbox), 0)
