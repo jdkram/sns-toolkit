@@ -1,7 +1,7 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Sonnet 5"]; status: "#ai-input"
 """Shared CSV-download response builder.
 
-QUALITY_PASS.md Chunk 8: three views (members/views/volunteer_export.py,
+Until September 2026, three views (members/views/volunteer_export.py,
 inductions/views/export.py, diary/edit_views/reports.py) each hand-rolled
 an HttpResponse + csv.writer pair. Only the inductions one guarded against
 formula injection (a leading =, +, - or @ being interpreted as a formula
@@ -14,16 +14,28 @@ import csv
 
 from django.http import HttpResponse
 
+_FORMULA_LEADERS = ("=", "+", "-", "@", "\t", "\r")
+
+# Digits and the punctuation a phone number or plain figure can contain.
+# "+44 7700 900123" or "-12.5" is data, not a formula, and must export
+# verbatim: the volunteer export carries phone numbers, and prefixing them
+# with a tab breaks mail-merge and de-duplication downstream.
+_PLAIN_NUMBER_CHARS = frozenset("0123456789 .,()-/")
+
 
 def csv_formula_guard(value):
-    """Prefix a leading `=`/`+`/`-`/`@` with a tab so spreadsheet apps treat
-    the cell as text rather than executing it as a formula on open.
+    """Prefix a leading `=`, `+`, `-` or `@` with a tab so spreadsheet apps
+    treat the cell as text rather than executing it as a formula on open.
 
-    Non-string values (None, numbers) pass through unchanged.
+    A leading `+` or `-` followed only by digits and number punctuation is
+    left alone (phone numbers, negative figures). Non-string values (None,
+    numbers) pass through unchanged.
     """
-    if isinstance(value, str) and value[:1] in ("=", "+", "-", "@"):
-        return "\t" + value
-    return value
+    if not isinstance(value, str) or value[:1] not in _FORMULA_LEADERS:
+        return value
+    if value[:1] in ("+", "-") and set(value[1:]) <= _PLAIN_NUMBER_CHARS:
+        return value
+    return "\t" + value
 
 
 def csv_response(filename, header, rows):

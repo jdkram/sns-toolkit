@@ -134,6 +134,27 @@ class TestVolunteerEditViews(MembersTestsMixin, TestCase):
         self._post_status(v, Volunteer.STATUS_ACTIVE)
         self.assertEqual(len(mail.outbox), 0)
 
+    def test_misconfigured_vols_admin_address_skips_email_not_save(self):
+        # Regression guard for a real production incident: two addresses
+        # comma-joined inside one list element. send_mail would have
+        # addressed a garbled recipient; the guard must log, skip the
+        # email, and still let the status change save. Nothing else tests
+        # this branch, and it is the sort of "defensive" check a tidy-up
+        # pass could remove without noticing.
+        v = Volunteer.objects.get(id=1)
+        mail.outbox = []
+        bad_venue = dict(settings.VENUE)
+        bad_venue["vols_admin_address"] = ["a@example.com, b@example.com"]
+        with self.settings(VENUE=bad_venue):
+            with self.assertLogs(
+                "toolkit.members.views._common", level="ERROR"
+            ) as cm:
+                self._post_status(v, Volunteer.STATUS_RETIRED)
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertIn("misconfigured", cm.output[0])
+        v.refresh_from_db()
+        self.assertEqual(v.status, Volunteer.STATUS_RETIRED)
+
 
 class TestVolunteerSuspension(MembersTestsMixin, TestCase):
     """Suspension is a safeguarding action. It must, at the model layer,
@@ -1637,6 +1658,24 @@ class TestVolunteerExportFilters(MembersTestsMixin, TestCase):
         body = resp.content.decode()
         self.assertIn("Volunteer One", body)
         self.assertIn("Volunteer Two", body)
+
+    def test_export_guards_formulas_but_not_phone_numbers(self):
+        # The shared CSV helper neutralises formula-shaped cells. It must not
+        # touch international phone numbers, which also start with "+".
+        self.vol_1.member.phone = "+44 7700 900123"
+        self.vol_1.member.name = "=HYPERLINK(evil)"
+        self.vol_1.member.save()
+        resp = self.client.post(
+            reverse("view-volunteer-export"),
+            {
+                "group_basic": "on",
+                "group_contact": "on",
+                "filter_type": ExportAuditLog.FILTER_ALL,
+            },
+        )
+        body = resp.content.decode()
+        self.assertIn(",+44 7700 900123,", body)
+        self.assertIn("\t=HYPERLINK(evil)", body)
 
     def test_upcoming_filter_excludes_volunteer_with_only_past_shift(self):
         resp = self._post(ExportAuditLog.FILTER_UPCOMING)

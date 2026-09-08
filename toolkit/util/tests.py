@@ -103,3 +103,27 @@ class LoggingEmailBackendTests(TestCase):
             )
         self.assertEqual(sent, 0)
         self.assertIn("EMAIL NOT SENT", logs.output[0])
+
+
+class CsvFormulaGuardTests(TestCase):
+    """csv_formula_guard must neutralise formula-shaped cells without
+    mangling phone numbers and negative figures, which also start with
+    `+`/`-` and are exported verbatim by the volunteer export."""
+
+    def test_formula_leaders_are_prefixed(self):
+        from toolkit.util.csv_export import csv_formula_guard
+
+        for cell in ("=1+1", "@SUM(A1)", "+cmd|' /C calc'!A0", "-2+3*x"):
+            self.assertEqual(csv_formula_guard(cell), "\t" + cell, cell)
+
+    def test_phone_numbers_and_plain_figures_pass_through(self):
+        from toolkit.util.csv_export import csv_formula_guard
+
+        for cell in ("+44 7700 900123", "+44(0)191-123-4567", "-12.5", "-"):
+            self.assertEqual(csv_formula_guard(cell), cell, cell)
+
+    def test_non_strings_and_ordinary_text_pass_through(self):
+        from toolkit.util.csv_export import csv_formula_guard
+
+        for cell in (None, 42, "Volunteer One", "", "a=b"):
+            self.assertEqual(csv_formula_guard(cell), cell)

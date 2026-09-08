@@ -45,7 +45,7 @@ def area_photo_upload(request, area_id):
 @login_required
 @_feature_enabled_or_404("building_map_enabled")
 @require_POST
-def area_photo_delete(request, area_id):  # noqa: ARG001 -- view signature
+def area_photo_delete(request, area_id):  # noqa: ARG001 -- `request` unused
     photo = get_object_or_404(AreaPhoto, area_id=area_id)
     photo.image.delete(save=False)
     photo.delete()
