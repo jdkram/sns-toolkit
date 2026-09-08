@@ -17,8 +17,8 @@ status: "#ai-input"
 | | |
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
-| Chunks done | 0, 1, 2, 3, 4, 5, 6, 7, 10 (keep all seven `labs` tools) |
-| Next chunk | **11** — un-star `members/views/`, split `diary/forms.py` and `inductions/views.py`, finish the `member_views.py` split June left half-done |
+| Chunks done | 0, 1, 2, 3, 4, 5, 6, 7, 10 (keep all seven `labs` tools); 11 part 1 (un-star `members/views/`) |
+| Next chunk | **11 part 2** — split `diary/forms.py` and `inductions/views.py`, finish the `member_views.py` split June left half-done |
 | Tests | 1,359 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found, +25 exchange, +21 feature-flag-gate, +18 edge-case-user, +33 destructive-path, +24 toolkit_auth, +18 volunteer_edit tests; the status-code-only strengthening pass added no new tests) |
 | Ruff | 0 findings |
 | Black | clean at 79 |
@@ -850,16 +850,32 @@ a real, reachable, currently-passing-for-the-wrong-reasons test. 1,359 tests pas
 `toolkit_auth`, `volunteer_edit.py`, status-code-only tests) complete. Next: Chunk 11
 (un-star `members/views`, split the two remaining god-sized files).
 
-### Chunk 11: Un-star members/views, split what's god-sized — NOT STARTED
+### Chunk 11: Un-star members/views, split what's god-sized — IN PROGRESS (part 1 done 2026-09-08)
 
-Replace `from ._common import *` across the eight `members/views/` modules with explicit
-per-module imports, then delete the quarantine block from `pyproject.toml`. Ruff cannot autofix
-this, but its `F405` output names every symbol per module, so the import lists can be generated
-mechanically and verified by re-running ruff.
+**Part 1 — done.** Replaced `from ._common import *` across all eight `members/views/` modules
+with explicit per-module imports, then deleted the quarantine block from `pyproject.toml`.
+Mechanical method, close to what this section originally proposed but via `F821` rather than
+`F405`: for each module, temporarily swap the star import for a comment, run
+`ruff check --select F821` over the whole package, and read off exactly which names ruff reports
+undefined — that's the module's real dependency list, mechanically derived rather than
+eyeballed. Mapped each name back to its true source (django.*, toolkit.diary.models,
+toolkit.members.forms, toolkit.members.models, toolkit.toolkit_auth) using `_common.py`'s own
+import block as the source-of-truth map; the three names that genuinely originate in
+`_common.py` (`logger`, `_render_admin_email`, `_notify_vols_admin_status_change`) are now
+imported explicitly (`from ._common import logger, ...`) instead of via wildcard.
 
-Then `diary/forms.py` (1,656 lines, 34 form classes) and `inductions/views.py` (845 lines, 33
-functions) — the two that never got the package treatment. Finish the `member_views.py` split
-June left half-done.
+`_common.py` itself shrank from 194 to ~80 lines — its `__all__` re-export list (58 entries) and
+the docstring describing the old wildcard pattern are both gone, since nothing does
+`from ._common import *` any more. `members/views/__init__.py`'s own explicit re-exports (for
+`urls.py`) were untouched — different, legitimate pattern, not this quarantine.
+
+Verification: ruff 0 findings package-wide, black clean at 79, 1359 tests passing (unchanged
+from before the change — this was a pure import-plumbing refactor, no behaviour change).
+Commit `d619a090`.
+
+**Part 2 — still not started.** `diary/forms.py` (1,656 lines, 34 form classes) and
+`inductions/views.py` (845 lines, 33 functions) — the two that never got the package treatment.
+Finish the `member_views.py` split June left half-done.
 
 **Apply the lesson:** split by moving imports, then let ruff prove what each module actually
 needs. Do not copy a shared header, and do not reach for a star-import hub. Those are precisely
