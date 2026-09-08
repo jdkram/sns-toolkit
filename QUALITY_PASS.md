@@ -18,8 +18,8 @@ status: "#ai-input"
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
 | Chunks done | 0, 1, 2, 3, 4, 5, 6, 7 (keep all seven `labs` tools) |
-| Next chunk | **10, reordered** — building map and shopping done; lost & found, exchange still to go |
-| Tests | 1,199 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map tests, +34 shopping tests) |
+| Next chunk | **10, reordered** — building map, shopping, and lost & found done; exchange still to go |
+| Tests | 1,218 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found tests) |
 | Ruff | 0 findings |
 | Black | clean at 79 |
 | Coverage | 81.5% overall (21,788 statements) — see `docs/QUALITY_BASELINE.md`, not yet re-run since the security fixes |
@@ -653,8 +653,11 @@ coverage gaps first, worst-covered to best, before the other named gaps below.
    which turned out to only fire when the existing pledge is already *fulfilled* (an
    unfulfilled one of any status short-circuits with "someone already pledged" first), not what
    the name suggested going in. `shopping.py`: 42% → **100%**.
-3. **Lost & found** (50% overall, ~0% outside the photo-upload paths already covered by
-   `test_photo_uploads.py` — claim/dispose/browse/label flows untested).
+3. ~~**Lost & found**~~ — **done.** New `toolkit/labs/tests/test_lost_found.py` (19 tests)
+   covers the browse tabs, detail view, claim/dispose flows (including the "already
+   claimed/disposed → 404" and "invalid form data → no-op" branches), the label page, and the
+   `FoundItem` model's `label_id`/`status_display`/`is_overdue` logic. `lost_found.py`: 50% →
+   **100%**.
 4. **Exchange** (55% — gap clusters around the on-loan/returned/all-gone/missing state
    transitions).
 
