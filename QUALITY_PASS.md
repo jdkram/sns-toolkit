@@ -1,6 +1,6 @@
 ---
 human-contributors: ["Jonny Kram"]
-ai-contributors: ["Claude Opus 5"]
+ai-contributors: ["Claude Opus 5", "Claude Sonnet 5"]
 status: "#ai-input"
 ---
 
@@ -17,23 +17,45 @@ status: "#ai-input"
 | | |
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
-| Chunks done | 0, 1, 2, 3, 4, 5 |
-| Next chunk | **6 (rubric synthesis)** |
+| Chunks done | 0, 1, 2, 3, 4, 5, 6 |
+| Next chunk | **7 (feature scope, needs Jonny)** |
 | Tests | 1,129 passing |
 | Ruff | 0 findings |
 | Black | clean at 79 |
 | Coverage | 81.5% overall (21,788 statements) — see `docs/QUALITY_BASELINE.md` |
 | CI | `.github/workflows/ci.yml` + `.pre-commit-config.yaml` in place, not yet exercised by a real PR |
 
-**⚠️ Unfixed finding from Chunk 5, needs attention independent of the Chunk 6/8-11 cadence:**
-a real stored-XSS vector in `toolkit/inductions/templates/inductions/manage/session_detail.html`
-— see that chunk's entry below. Not yet fixed; flagged to Jonny directly the night it was found
-(2026-09-08), separate from this file, in case this file isn't read again for a while.
+**⚠️ Six unfixed security findings, need attention independent of the Chunk 7-11 cadence:**
+a stored-XSS vector in `toolkit/inductions/templates/inductions/manage/session_detail.html`
+(Chunk 5); an open redirect via unvalidated `HTTP_REFERER` in
+`toolkit/labs/views/bulletins.py:199,213` (Chunk 6) — same vulnerability class as the one
+`REVIEW_2026_OVERHAUL.md` already found and fixed elsewhere, missed there because it's in `labs`
+not `diary`; and, from a follow-up Kimi K2 Thinking security sweep the same day, three more
+confirmed XSS variants (`diary/templates/form_showing.html:20`,
+`members/templates/volunteer_bulk_record.html:198`,
+`diary/templates/edit_event_template_detail.html:522` — all the same root cause, an escape
+filter mismatched to its actual sink, now rubric rule R13) and a CSV formula-injection gap in
+`inductions/views.py:488` (`manage_export_csv`). See `docs/QUALITY_RUBRIC.md`'s "Unfixed
+findings" section for all six, in ranked order. None fixed yet; flagged to Jonny directly the
+sessions they were found, separate from this file, in case it isn't read again for a while.
+
+**⚠️ One open decision, not yet made, needed before touching the affected files:** rubric rule
+R14 (`docs/QUALITY_RUBRIC.md`) names five views — `labs/views/collectives.py`'s
+`collective_edit`, `area_photos.py`'s upload/delete, `loft.py`'s item/photo delete,
+`exchange.py`'s `mark_on_loan`/`mark_returned`, `jobs.py`'s `job_resolve` — where any
+logged-in volunteer can modify or delete a shared object with no ownership/role check. This is
+explicitly **not** a "just fix it" item: S+S's volunteer model is deliberately non-hierarchical,
+so some or all of these may be intended. Needs Jonny's call, file by file, on which of these
+should stay open to any volunteer versus get a check added — and whichever way each one goes,
+record it as a one-line comment at the site, per R14's own check. Natural moment to raise it is
+Chunk 7 (same "what should a volunteer be allowed to do" territory), but it doesn't have to wait
+for that conversation specifically.
 
 Commits so far, newest first:
 
 ```
-(this commit)  docs(quality): record the Chunk 5 MiniMax sweep and an XSS finding
+(this commit)  docs(quality): add the Kimi security sweep and R13/R14 to the rubric
+08a87fb8  docs(quality): record the Chunk 5 MiniMax sweep and an XSS finding
 bd202cd6  docs(quality): write the Chunk 4 coverage/complexity baseline
 19e65fc3  docs(quality): fix dead paths and document the tooling (Chunk 3)
 2ff7f79d  docs(quality): record Chunk 2 results in the pass tracker
@@ -141,7 +163,7 @@ it: re-export shims (`members/views/__init__.py`, guarded in `pyproject.toml`) a
 imports (`audit/apps.py:11`, which registers signal handlers). Check before running `--fix`
 across new territory, not after.
 
-**A user hook rewrites the phrase "load-bearing" to "critical" on Write/Edit.** It fires on
+**A user hook rewrites the phrase "critical" to "critical" on Write/Edit.** It fires on
 those tools but not on `sed` or a heredoc via Bash. It exists to strip a tell of AI authorship,
 which is fine for text the agent writes, but it will also silently rewrite *Jonny's* existing
 prose in any file those tools touch. When making a surgical change to an existing doc, prefer
@@ -481,15 +503,95 @@ and not worth an out-of-band fix the way the induction one is.
 **Not doing:** the OpenCode Go subscription. Confirmed unnecessary — the 68-file run at $1.30
 total is nowhere near where a flat monthly fee would pay for itself.
 
-### Chunk 6: Synthesise a rubric — NOT STARTED
+### Chunk 6: Synthesise a rubric — DONE 2026-09-08
 
-Deduplicate MiniMax's findings against the still-open items in `docs/REVIEW_2026_OVERHAUL.md`
-(its three security findings are already fixed — verified 2026-09-07; its maintainability
-findings are not). Turn recurring patterns into `docs/QUALITY_RUBRIC.md`: a written, checkable
-standard for this codebase.
+Wrote [`docs/QUALITY_RUBRIC.md`](docs/QUALITY_RUBRIC.md) from all 68 MiniMax Chunk 5 reviews,
+deduplicated against `docs/REVIEW_2026_OVERHAUL.md`'s still-open maintainability findings
+(permission-table drift, `SiteConfiguration` triple-bookkeeping).
+
+**11 checkable rules** (R1–R11), each with a grep-able check, not vague guidance: no
+module-level `logger.setLevel`, catch specific exceptions not `Exception`, comments say why not
+what, one source of truth for a vocabulary touched from 3+ places (the single largest recurring
+theme, ~15 files), error messages instead of silent redirects on a failed POST, lazy `%s`
+logging (and a PII check), `escape()` only in HTML context, name the JSON contract between a
+view and its consuming template's JS, named constants for business-rule numbers, no wildcard
+imports (confirms Chunk 11's scope, no new information), local imports need a stated reason. A
+"not rubric material" section records what MiniMax raised and then correctly self-corrected on
+(verbose admin-facing help text, defensive JSON parsing on endpoints reachable outside the
+trusted client, single-caller helpers, cosmetic urls.py inconsistencies) so a future pass doesn't
+re-litigate it.
+
+**A second unfixed finding, same severity class as Chunk 5's XSS, needs the same out-of-band
+treatment:** `labs/views/bulletins.py:199,213` feeds `request.META.get("HTTP_REFERER")` straight
+into `redirect()` with no `url_has_allowed_host_and_scheme` check — the same open-redirect
+vulnerability class as `diary/edit_views.py:2609`, which `REVIEW_2026_OVERHAUL.md` flagged and
+which is already fixed. This second instance was missed by that review because it's in `labs`,
+not `diary`. Low severity (authenticated volunteers only, same as the fixed one), but it's the
+same one-line fix and doesn't need to wait for Chunk 8. Flagged to Jonny directly
+(2026-09-08, same session as this chunk). Two independent instances of the same root cause,
+found in separate reviews months apart, is a class rather than a one-off — added as rubric
+rule R12: no `redirect()` call may take a value traced back to `request.POST`, `request.GET` or
+`request.META` without `url_has_allowed_host_and_scheme`.
+
+Also recorded in the rubric, ranked but not fixed here (synthesis only): two `Model.delete()`
+contract violations (`EventTag`, `Role` — don't return Django's `(count, dict)` shape), a
+silently-returned-unformatted email template on a `KeyError` in `inductions/views.py:866-872`, a
+policy-version bump that commits before its notification email sends
+(`inductions/views.py:787-807`), a privilege-escalation-shaped fallback in `site_config.py`'s
+`_passes_level` (unrecognised permission string falls through to `is_superuser`), sentinel-string
+URL construction in `floorplan.py`/`loft.py` with no test coverage on the JS side, and the one
+genuinely critical defensive check the whole sweep found
+(`members/views/_common.py:86-93`, guarding the real April-2026 `vols_admin_address` incident)
+having no regression test. All feed Chunks 8, 10 or 11's existing scope rather than opening new
+work.
 
 This is the step that makes the money worth spending. The rubric is what lets Chunks 8–11 run
 without re-paying for external review per file, and it is the artefact that outlives the pass.
+
+### Chunk 6 follow-up: Kimi K2 Thinking security sweep — DONE 2026-09-08
+
+A second sweep, run the same session, out of curiosity about how a different model/provider
+compares to MiniMax and to get a security-focused (not just general-quality) second opinion on
+the surface most likely to hide real vulnerabilities. **Not part of the original chunk plan** —
+recorded here rather than renumbering everything.
+
+**Scope:** 23 files, hand-picked (not a blind full-repo sweep) from four categories: views
+calling `redirect()` with request-derived input (the R12 class), views handling
+`request.FILES` uploads, templates using raw `innerHTML`, and unauthenticated/token-based entry
+points. Model: `openrouter/moonshotai/kimi-k2-thinking` via `opencode run`. Cost: **$0.2772**
+across all 23 (plus two retries at negligible extra cost — see the gotcha below), each ~$0.005–
+$0.04 depending on file size.
+
+**A new gotcha, same family as Chunk 5's:** 2 of 23 runs (`labs/views/lost_found.py`,
+`members/views/volunteer_edit.py`) went agentic — used `bash`/`read`/`grep` to explore beyond
+the pasted file content — and silently ended with no final report after exhausting their
+tool-call budget. No error, just empty/truncated JSON output. Fixed both by re-running with an
+explicit "you must conclude with a written report before ending the turn" instruction. Recorded
+in `docs/QUALITY_RUBRIC.md` so a future Kimi-thinking sweep adds that instruction pre-emptively
+rather than discovering the failure per-file.
+
+**Findings:** four new confirmed vulnerabilities (three XSS variants sharing one root cause —
+an escape filter mismatched to its actual sink, now rubric rule R13 — and one CSV
+formula-injection gap), one systemic pattern needing Jonny's judgement rather than a blind fix
+(missing ownership checks on shared-object modify/delete views, five files, rubric rule R14),
+and one already-known finding re-confirmed with no new information. Full detail, all ranked, in
+`docs/QUALITY_RUBRIC.md`'s "Unfixed findings" section (items 3–6 and 14) — not repeated here.
+
+**Comparing Kimi to MiniMax, since that was the other half of the point of running this:**
+Kimi followed the requested report format (exploit scenario + severity + fix, and an explicit
+"clean" verdict where warranted) more consistently than an unstructured review would, and its
+noise discipline matched MiniMax's — genuinely clean files were reported as clean, not padded
+with nitpicks. Its weak point is severity calibration: identical findings got different ratings
+on different runs (one open-redirect finding rated HIGH once and CRITICAL on an identical
+re-run), and the R14 pattern got five different severity judgements across five structurally
+identical instances in the same sweep — so its findings list is reliable, its priority
+*ordering* is not, and needs a human pass before being acted on. It also produced one confident
+but wrong remediation suggestion (recommending `|escapejs` in a spot where `|escape` was
+already correct) — a reminder that "state the exploit scenario" doesn't guarantee the fix
+suggested alongside it is right. Cross-file tracing was opportunistic (only on the 2 files that
+went agentic) rather than the systematic file-to-file cross-referencing MiniMax did on nearly
+every review — MiniMax's general-quality prompt structure inherently forces that; Kimi's
+narrower security brief didn't ask for it explicitly, and mostly didn't do it unprompted.
 
 ### Chunk 7: Feature scope — NOT STARTED, NEEDS JONNY
 
@@ -585,4 +687,5 @@ works.
 | Date | Chunk | Model | Files | Cost |
 |---|---|---|---|---|
 | 2026-09-08 | 5 | `openrouter/minimax/minimax-m3` | 68 (+1 throwaway re-run, see Chunk 5 gotcha) | $1.2999 |
-| | | **Total** | | **$1.2999** |
+| 2026-09-08 | 6 follow-up | `openrouter/moonshotai/kimi-k2-thinking` | 23 (+2 retries, see gotcha) | $0.2772 |
+| | | **Total** | | **$1.5771** |
