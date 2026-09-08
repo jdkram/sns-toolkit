@@ -17,8 +17,8 @@ status: "#ai-input"
 | | |
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
-| Chunks done | 0, 1, 2, 3, 4, 5, 6 |
-| Next chunk | **7 (feature scope, needs Jonny)** |
+| Chunks done | 0, 1, 2, 3, 4, 5, 6; 7's decision doc written, decision itself still pending |
+| Next chunk | **the Chunk 7 conversation with Jonny** (`docs/QUALITY_LABS_SCOPE.md`), then 8 |
 | Tests | 1,136 passing (was 1,129 — +7 from the security-fix regression tests below) |
 | Ruff | 0 findings |
 | Black | clean at 79 |
@@ -598,7 +598,7 @@ went agentic) rather than the systematic file-to-file cross-referencing MiniMax 
 every review — MiniMax's general-quality prompt structure inherently forces that; Kimi's
 narrower security brief didn't ask for it explicitly, and mostly didn't do it unprompted.
 
-### Chunk 7: Feature scope — NOT STARTED, NEEDS JONNY
+### Chunk 7: Feature scope — DECISION DOCUMENT WRITTEN 2026-09-08, AWAITING THE CONVERSATION
 
 Nothing is deployed with live users, so there is no usage signal to audit. This is a values
 question, not a data question.
@@ -608,10 +608,20 @@ jobs, shopping, donations, loft, lost-and-found, exchange, floorplan). Each carr
 maintenance cost and adds to what a new volunteer navigates past to find the thing they came
 for.
 
-Produce a **decision document, not a deletion**: per tool, its size, test coverage,
-dependencies, what removing it would cost and what keeping it commits to. Then work through it
-with Jonny. No code removed without his call. Do this before Chunk 10 so coverage is not
-invested in something he would rather cut.
+[`docs/QUALITY_LABS_SCOPE.md`](docs/QUALITY_LABS_SCOPE.md) is the decision document: per tool
+(seven mini-tools — bulletins excluded, see the doc's rationale), its size, test coverage,
+dependencies, what removing it would cost and what keeping it commits to. No recommendation in
+it and no code removed — that's the conversation still to have with Jonny, not something to
+pre-empt. Do that conversation before Chunk 10 so coverage effort isn't sunk into something he'd
+rather cut.
+
+Headline numbers from the doc: coverage splits cleanly into a well-tested group (Collectives
+99%, Jobs 100%, Donations 90%) and a poorly-tested group (Shopping 42%, the building map
+34-37%, Lost & Found ~0% outside photo upload, Exchange 55%) that doesn't track tool size in
+either direction. Only Collectives, Jobs, and the building map have anything written down about
+their future in `docs/tasks/`; the building map is architecturally critical for a *proposed*
+Jobs↔map room-linkage feature even though the two don't share code today. Nothing is
+feature-flagged — any cut is a real deletion, not a flag flip.
 
 ### Chunk 8: Deduplicate — NOT STARTED
 
