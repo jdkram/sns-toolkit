@@ -603,12 +603,27 @@ class Volunteer(models.Model):
             TrainingRecord.objects.filter(volunteer=self).delete()
 
             # GDPR: scrub the email audit trail of this person's address too.
+            # recipients is comma-joined and can hold several addresses (a
+            # mailout batch is one row) -- replacing the whole field, as a
+            # bulk .update() would, wipes every other recipient's address
+            # off that row too. Scrub only the matching address per row.
             if original_email:
                 from toolkit.audit.models import SentEmailLog
 
-                SentEmailLog.objects.filter(
+                for log in SentEmailLog.objects.filter(
                     recipients__icontains=original_email
-                ).update(recipients=f"(anonymised volunteer {self.pk})")
+                ):
+                    addresses = [
+                        (
+                            f"(anonymised volunteer {self.pk})"
+                            if address.strip().lower()
+                            == original_email.lower()
+                            else address.strip()
+                        )
+                        for address in log.recipients.split(",")
+                    ]
+                    log.recipients = ", ".join(addresses)
+                    log.save(update_fields=["recipients"])
 
             AnonymisationLog.objects.create(
                 volunteer_pk=self.pk,

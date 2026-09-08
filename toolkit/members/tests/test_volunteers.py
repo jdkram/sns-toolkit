@@ -1417,6 +1417,28 @@ class TestAnonymiseVolunteer(MembersTestsMixin, TestCase):
         self.assertEqual(log.volunteer_pk, self.vol_1.pk)
         self.assertIsNotNone(log.performed_by)
 
+    def test_anonymise_scrubs_only_own_address_from_shared_log_row(self):
+        # A SentEmailLog row can name more than one address (a direct email
+        # cc'ing several people). Anonymising vol_1 must scrub only their
+        # address, not wipe the other recipient's off the same row -- the
+        # comma-joined-field footgun that broke vols_admin_address once
+        # already (see CLAUDE.md's "known and unfixed" / feedback memory).
+        from toolkit.audit.models import SentEmailLog
+
+        shared_log = SentEmailLog.objects.create(
+            recipients="volon@cube.test, two@example.com",
+            subject="Shared notice",
+            success=True,
+            backend="test",
+        )
+        self._post_confirm()
+        shared_log.refresh_from_db()
+        self.assertIn("two@example.com", shared_log.recipients)
+        self.assertNotIn("volon@cube.test", shared_log.recipients)
+        self.assertIn(
+            f"anonymised volunteer {self.vol_1.pk}", shared_log.recipients
+        )
+
 
 class TestVolunteerDirectory(MembersTestsMixin, TestCase):
     def setUp(self):
