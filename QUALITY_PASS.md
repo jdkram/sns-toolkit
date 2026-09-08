@@ -54,7 +54,7 @@ for that conversation specifically.
 Commits so far, newest first:
 
 ```
-(this commit)  docs(quality): add the Kimi security sweep and R13/R14 to the rubric
+4fe4c50a  docs(quality): synthesise Chunk 6 rubric, run Kimi security sweep, flag 4 new XSS/CSVi findings
 08a87fb8  docs(quality): record the Chunk 5 MiniMax sweep and an XSS finding
 bd202cd6  docs(quality): write the Chunk 4 coverage/complexity baseline
 19e65fc3  docs(quality): fix dead paths and document the tooling (Chunk 3)
