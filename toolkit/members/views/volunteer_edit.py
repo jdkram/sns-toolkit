@@ -4,7 +4,45 @@ maintainability pass — see MAINTAINABILITY_PASS.md). Verbatim move; no
 behaviour change. Group: edit.
 """
 
-from ._common import *
+from django.http import (
+    HttpResponse,
+    HttpResponseRedirect,
+    JsonResponse,
+)
+from django.shortcuts import (
+    get_object_or_404,
+    render,
+)
+from django.views.decorators.http import require_POST
+from toolkit.diary.models import get_site_config
+from toolkit.members.forms import (
+    MemberFormWithoutNotes,
+    TrainingRecordForm,
+    UserForm,
+    VolunteerForm,
+)
+from toolkit.members.models import (
+    Member,
+    TrainingRecord,
+    Volunteer,
+)
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import SetPasswordForm
+from django.contrib.auth.models import User
+from django.core.exceptions import PermissionDenied
+from django.core.mail import send_mail
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.text import slugify
+from toolkit.toolkit_auth import password_emails
+from toolkit.toolkit_auth.decorators import panopticon_required
+from ._common import (
+    _notify_vols_admin_status_change,
+    _render_admin_email,
+    logger,
+)
 
 
 @login_required

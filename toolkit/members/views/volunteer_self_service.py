@@ -4,7 +4,22 @@ maintainability pass — see MAINTAINABILITY_PASS.md). Verbatim move; no
 behaviour change. Group: self_service.
 """
 
-from ._common import *
+from django.http import HttpResponseRedirect
+from django.shortcuts import (
+    get_object_or_404,
+    render,
+)
+from django.views.decorators.http import (
+    require_POST,
+    require_safe,
+)
+from toolkit.members.models import Volunteer
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.signing import BadSignature, Signer
+from django.urls import reverse
+from django.utils import timezone
+from ._common import _notify_vols_admin_status_change, logger
 
 
 @require_POST

@@ -67,14 +67,3 @@ max-complexity = 101
 # Django's BaseCommand.handle(self, *args, **options) API dictates that
 # signature, whether or not a given command reads `args`/`options`.
 "*/management/commands/*.py" = ["ARG002"]
-
-# QUARANTINED, not blessed. The June 2026 split gave members/views/ a
-# `_common.py` re-export hub that all eight modules pull in via
-# `from ._common import *`, so 542 symbol references have no traceable
-# origin -- you cannot tell what `Volunteer` or `timezone` is without
-# opening another file. This is the same class of problem as the
-# copy-pasted import headers in diary/edit_views/, just a different
-# shortcut. It needs explicit per-module imports, which ruff cannot
-# autofix. Ignored here so the CI gate can go up now rather than waiting
-# on it; scheduled in QUALITY_PASS.md. Delete this block when that lands.
-"toolkit/members/views/*.py" = ["F403", "F405"]

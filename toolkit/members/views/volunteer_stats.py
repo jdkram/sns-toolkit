@@ -4,7 +4,27 @@ maintainability pass — see MAINTAINABILITY_PASS.md). Verbatim move; no
 behaviour change. Group: stats.
 """
 
-from ._common import *
+from datetime import timedelta
+from django.db.models import (
+    Count,
+    F,
+    Value,
+)
+from django.db.models.functions import (
+    Coalesce,
+    NullIf,
+)
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
+from django.views.decorators.http import require_safe
+from toolkit.diary.models import (
+    RotaEntry,
+    get_site_config,
+)
+from toolkit.members.models import Volunteer
+from django.contrib.auth.decorators import login_required
+from django.urls import reverse
+from django.utils import timezone
 
 
 @login_required

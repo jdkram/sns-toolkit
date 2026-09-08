@@ -4,7 +4,28 @@ maintainability pass — see MAINTAINABILITY_PASS.md). Verbatim move; no
 behaviour change. Group: reports.
 """
 
-from ._common import *
+from datetime import timedelta
+from django.db.models import (
+    Exists,
+    OuterRef,
+    Prefetch,
+)
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
+from django.views.decorators.http import require_safe
+from toolkit.diary.models import (
+    Role,
+    get_site_config,
+)
+from toolkit.members.models import (
+    TrainingRecord,
+    Volunteer,
+)
+from django.conf import settings
+from django.contrib.auth.decorators import login_required
+from django.urls import reverse
+from django.utils import timezone
+from toolkit.toolkit_auth.decorators import panopticon_required
 
 
 @panopticon_required

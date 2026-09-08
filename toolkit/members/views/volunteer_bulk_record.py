@@ -4,7 +4,18 @@ maintainability pass — see MAINTAINABILITY_PASS.md). Verbatim move; no
 behaviour change. Group: bulk_record.
 """
 
-from ._common import *
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
+from toolkit.members.forms import GroupTrainingForm
+from toolkit.members.models import (
+    Member,
+    TrainingRecord,
+    Volunteer,
+)
+from django.contrib import messages
+from django.urls import reverse
+from toolkit.toolkit_auth.decorators import panopticon_required
+from ._common import logger
 
 
 @panopticon_required
