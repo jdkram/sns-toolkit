@@ -867,6 +867,54 @@ own** — one template per commit, stop cleanly between them.
 
 All four templates in this chunk are now done. **Chunk 9 status: DONE 2026-09-08.**
 
+**Follow-up browser verification, 2026-09-08 (same day, Chrome extension became available):** did the
+manual pass all four templates' write-ups above asked for. `floorplan.html`, `edit_rota.html` and
+`form_event.html` all checked out clean — tab switching, room-note editing, the filter panel and
+badge checkboxes, the break-even calculator, the cost-type field/placeholder swap, and the field-tip
+tooltips all work exactly as before, no console errors.
+
+`session_detail.html` surfaced a real bug, found and fixed here:
+
+- **Genuine regression, fixed:** the original inline `<script>` declared `saveCap`/`adjustRoom` as
+  bare top-level `function`s, which JS hoists to global scope unconditionally — so the template's
+  inline `onclick="saveCap()"`/`onclick="adjustRoom(-1)"` handlers kept working even if something
+  *later* in that same script threw. Wrapping everything in the `sessionDetail(opts)` factory lost
+  that: the `window.saveCap = saveCap` exports only ran if execution reached that point, so an
+  earlier throw meant the Save/±  buttons broke. Fixed by moving both `window.*` exports to the top
+  of the factory, right after hoisting makes the functions available, before anything that could
+  throw.
+- **Pre-existing bug, confirmed not caused by this chunk, contained rather than fixed:**
+  `new bootstrap.Modal(_editModalEl)` throws `TypeError: Cannot read properties of undefined
+  (reading 'backdrop')` on every load of this page. Verified this is not a regression by swapping
+  the pre-Chunk-9 template back in and reloading: identical crash, identical stack shape, at the
+  same point in the same unchanged code. Root cause not investigated (out of scope for an
+  extraction chunk) — likely a Bootstrap version/build mismatch specific to this dev environment.
+  Consequence, though, *was* made worse by wrapping the surrounding code in one function: because
+  `base_admin.html` legitimately renders `{% block script %}` twice (documented Django behaviour —
+  the same block name used twice in one base template renders its content at both locations), this
+  crash previously killed *everything textually after it* in whichever of the two script-block
+  copies actually had a populated DOM (cap editor's Enter-key shortcut, room counter, `initialise
+  counts`, keyboard nav, walk-in registration, "over the shoulder" mode, table sorting,
+  remove-signup) — on every load, for every user, always, since `isSuperuser` is always `true` here
+  (`@panopticon_required`gates the whole view). Wrapped the modal-init block in `try { ... } catch
+  (err) { console.error(...) }` so this one broken, pre-existing feature (the inline edit modal)
+  stops taking the rest of the page's interactivity down with it. Verified via a live walk-in
+  registration (fetch round-trip, DOM row insertion, count increment) succeeding end-to-end
+  post-fix. Confirmed via `node --check`, the existing 52 `toolkit.inductions.tests` (unchanged,
+  still pass), and the live page. The modal itself remains broken and is not fixed here — worth its
+  own ticket.
+- The double-block-script-rendering (`base_admin.html`) is itself a separate, much bigger,
+  out-of-scope architectural question — noted here only so a future pass doesn't mistake the
+  "`sessionDetail` referenced twice at two line numbers" console noise for something Chunk 9 caused.
+
+Also found while testing: the dev container's `runserver` process caches which apps have a
+`static/` subdirectory *at process startup* (Django's `AppDirectoriesFinder`). Since `inductions`
+had no `static/` directory at all before this chunk, the newly-added
+`inductions/static/inductions/{css,js}/` files 404'd until the container was restarted — collect­
+static and the files being present on disk were both irrelevant; only a process restart picks up a
+brand-new app-level static directory. Not a code bug, but worth remembering for any future chunk
+that gives a previously-static-free app its first static file: restart the dev container after.
+
 ### Chunk 10: Tests — DONE 2026-09-08
 
 Reordered 2026-09-08 per the Chunk 7 outcome: since every `labs` tool is being kept, close its

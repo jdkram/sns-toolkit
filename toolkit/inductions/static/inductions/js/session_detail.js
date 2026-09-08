@@ -19,6 +19,19 @@ function sessionDetail(opts) {
   var REMOVE_SIGNUP_URL_PATTERN = opts.removeSignupUrlPattern;
   var isSuperuser = opts.isSuperuser;
 
+  // Exposed here, before anything below can throw: the original inline <script>
+  // declared these as bare top-level `function`s, which JS hoists to global scope
+  // unconditionally, so the inline onclick="saveCap()"/"adjustRoom(-1)" handlers in
+  // the template kept working even if something later in that same script threw.
+  // Wrapping everything in this factory function loses that hoisting-to-global
+  // behaviour, so the window.* export has to happen up front instead of at the
+  // point (much further down) where these were originally defined.
+  // (safe to reference before their textual definition below: `function` declarations
+  // are hoisted to the top of this function's scope, same as they'd hoist to global
+  // scope in a plain top-level script.)
+  window.saveCap = saveCap;
+  window.adjustRoom = adjustRoom;
+
   function markAttendanceUrl(signupId) { return MARK_ATTENDANCE_URL_PATTERN.replace('/0/', '/' + signupId + '/'); }
   function linkExistingUrl(signupId) { return LINK_EXISTING_URL_PATTERN.replace('/0/', '/' + signupId + '/'); }
   function removeSignupUrl(signupId) { return REMOVE_SIGNUP_URL_PATTERN.replace('/0/', '/' + signupId + '/'); }
@@ -280,7 +293,11 @@ function sessionDetail(opts) {
   });
 
   /* ── Inline edit (panopticon) ── */
-  if (isSuperuser) {
+  // Wrapped in try/catch: a broken bootstrap.Modal() here (pre-existing, see
+  // QUALITY_PASS.md Chunk 9's session_detail.html write-up) must not take out
+  // everything textually below it -- cap editor, room counter, keyboard nav,
+  // walk-in registration, table sorting, remove-signup all still need to work.
+  if (isSuperuser) { try {
     var _editModalEl = document.getElementById('edit-modal');
     var editModal = bootstrap.Modal.getInstance(_editModalEl) || new bootstrap.Modal(_editModalEl);
 
@@ -363,7 +380,9 @@ function sessionDetail(opts) {
         errEl.style.display = '';
       });
     });
-  }
+  } catch (err) {
+    console.error('session_detail: edit-modal setup failed', err);
+  } }
 
   /* ── Cap editor ── */
   function saveCap() {
@@ -387,7 +406,6 @@ function sessionDetail(opts) {
     })
     .catch(function() { btn.disabled = false; alert('Network error. Please try again.'); });
   }
-  window.saveCap = saveCap; // called from an inline onclick= in the template
   document.getElementById('cap-input').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') { e.preventDefault(); saveCap(); }
   });
@@ -399,7 +417,6 @@ function sessionDetail(opts) {
     document.getElementById('room-count').textContent = roomCount;
     updateMismatch();
   }
-  window.adjustRoom = adjustRoom; // called from inline onclick= in the template
   function updateMismatch() {
     var ci = parseInt(document.getElementById('checkedin-count').textContent, 10);
     var mismatch = document.getElementById('room-mismatch');
