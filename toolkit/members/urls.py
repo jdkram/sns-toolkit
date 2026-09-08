@@ -35,9 +35,6 @@ from toolkit.members.views import (
     auto_dormancy_apply,
     last_gasp_email,
     bulk_last_gasp_email,
-)
-
-from toolkit.members.member_views import (
     add_member,
     search,
     view,

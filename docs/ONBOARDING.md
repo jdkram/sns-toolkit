@@ -296,8 +296,7 @@ Manages people who are members or volunteers. Key concepts:
 
 Key files:
 - [toolkit/members/models.py](toolkit/members/models.py) — Member, Volunteer, TrainingRecord models
-- [toolkit/members/member_views.py](toolkit/members/member_views.py) — search, view, edit members
-- [toolkit/members/views/](toolkit/members/views/) — volunteer rota interface, split by feature area
+- [toolkit/members/views/](toolkit/members/views/) — search, view, edit members (`member_views.py`) plus the volunteer rota interface, split by feature area
 
 URL prefixes: `/members/`, `/volunteers/`
 

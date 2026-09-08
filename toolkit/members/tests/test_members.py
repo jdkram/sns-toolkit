@@ -12,7 +12,7 @@ from django.test.utils import override_settings
 import django.contrib.auth.models as auth_models
 
 from toolkit.members.models import Member, Volunteer
-import toolkit.members.member_views as member_views
+import toolkit.members.views.member_views as member_views
 
 from .common import MembersTestsMixin
 
@@ -328,7 +328,7 @@ class TestSearchMemberView(MembersTestsMixin, TestCase):
     def tearDown(self):
         self.client.logout()
 
-    @patch("toolkit.members.member_views.Member")
+    @patch("toolkit.members.views.member_views.Member")
     def test_no_query(self, member_patch):
         url = reverse("search-members")
         response = self.client.get(url)

@@ -57,3 +57,19 @@ from .volunteer_self_service import (
 from .volunteer_stats import (
     volunteer_stats,
 )
+
+from .member_views import (
+    add_member,
+    search,
+    view,
+    edit_member,
+    delete_member,
+    member_statistics,
+    member_expired,
+    member_duplicates,
+    member_homepages,
+    unsubscribe_member,
+    unsubscribe_member_right_now,
+    opt_in,
+    member_deleted,
+)
