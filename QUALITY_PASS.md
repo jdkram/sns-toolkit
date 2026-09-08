@@ -17,9 +17,9 @@ status: "#ai-input"
 | | |
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
-| Chunks done | 0, 1, 2, 3, 4, 5, 6, 7, 10 (keep all seven `labs` tools); 11 part 1 (un-star `members/views/`) |
-| Next chunk | **11 part 2** — split `diary/forms.py` and `inductions/views.py`, finish the `member_views.py` split June left half-done |
-| Tests | 1,359 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found, +25 exchange, +21 feature-flag-gate, +18 edge-case-user, +33 destructive-path, +24 toolkit_auth, +18 volunteer_edit tests; the status-code-only strengthening pass added no new tests) |
+| Chunks done | 0, 1, 2, 3, 4, 5, 6, 7, 10, 11 (keep all seven `labs` tools) |
+| Next chunk | **12** — re-measure the baseline, confirm the uplift landed |
+| Tests | 1,359 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found, +25 exchange, +21 feature-flag-gate, +18 edge-case-user, +33 destructive-path, +24 toolkit_auth, +18 volunteer_edit tests; the status-code-only strengthening pass and Chunk 11's package splits added no new tests) |
 | Ruff | 0 findings |
 | Black | clean at 79 |
 | Coverage | 81.5% overall (21,788 statements) — see `docs/QUALITY_BASELINE.md`, not yet re-run since the security fixes |
@@ -85,6 +85,18 @@ model is still worth considering occasionally — just not as the default.
 Commits so far, newest first:
 
 ```
+c084aede  refactor(quality): split inductions/views.py into a package (Chunk 11)
+3c80f3ed  refactor(quality): split diary/forms.py into a package (Chunk 11)
+652d386c  refactor(quality): remove old member_views.py path (Chunk 11 follow-up)
+51588940  refactor(quality): fold member_views.py into members/views/ package (Chunk 11)
+cf40624c  docs(quality): record Chunk 11 part 1 completion
+d619a090  refactor(quality): un-star members/views imports (Chunk 11, part 1)
+a970e9dc  docs(quality): sync CURRENT_WORK.md with Chunk 6/7/10 completion
+cb4d6a3c  test(quality): strengthen status-code-only assertions, close Chunk 10
+e7a38220  test(quality): close volunteer_edit.py's coverage gaps (Chunk 10)
+9b4afbd8  test(quality): give toolkit_auth its own tests (Chunk 10)
+495508a2  fix(members): pluralise bulk-confirm phrases, strengthen weak test assertions
+3b004c97  test(quality): cover the destructive bulk volunteer-pool actions (Chunk 10)
 8bf26460  test(labs): add "strange user" edge-case coverage, fix a real login-signal crash
 16f7527b  feat(labs): make every labs mini-tool toggleable via SiteConfiguration
 7eca2501  test(quality): close the exchange.py coverage gap, all four labs targets done
@@ -850,7 +862,7 @@ a real, reachable, currently-passing-for-the-wrong-reasons test. 1,359 tests pas
 `toolkit_auth`, `volunteer_edit.py`, status-code-only tests) complete. Next: Chunk 11
 (un-star `members/views`, split the two remaining god-sized files).
 
-### Chunk 11: Un-star members/views, split what's god-sized — IN PROGRESS (part 1 done 2026-09-08)
+### Chunk 11: Un-star members/views, split what's god-sized — DONE 2026-09-08
 
 **Part 1 — done.** Replaced `from ._common import *` across all eight `members/views/` modules
 with explicit per-module imports, then deleted the quarantine block from `pyproject.toml`.
@@ -873,13 +885,47 @@ Verification: ruff 0 findings package-wide, black clean at 79, 1359 tests passin
 from before the change — this was a pure import-plumbing refactor, no behaviour change).
 Commit `d619a090`.
 
-**Part 2 — still not started.** `diary/forms.py` (1,656 lines, 34 form classes) and
-`inductions/views.py` (845 lines, 33 functions) — the two that never got the package treatment.
-Finish the `member_views.py` split June left half-done.
+**Part 2 — done, three sub-tasks run in parallel as forks sharing one working tree.**
 
-**Apply the lesson:** split by moving imports, then let ruff prove what each module actually
-needs. Do not copy a shared header, and do not reach for a star-import hub. Those are precisely
-the two shortcuts that produced this chunk.
+- `diary/forms.py` (1,661 lines, ~34 form classes) → `toolkit/diary/forms/` package: seven
+  topic submodules (`events`, `showings`, `templates`, `tags_roles_rooms`,
+  `printed_programme`, `misc`, `site_config`), naming aligned with `diary/edit_views/` where a
+  topic overlaps. `__init__.py` explicitly re-exports every public class/formset so both
+  `from toolkit.diary.forms import X` and `import toolkit.diary.forms as diary_forms` call
+  sites kept working unchanged. Verified 1:1 symbol parity old↔new via an AST diff (nothing
+  lost or invented) and full `__all__` coverage. Same F821-driven import-derivation method as
+  Part 1 — no copied header, no `_common.py` hub. Commit `3c80f3ed`.
+- `inductions/views.py` (grown to 1,047 lines since this chunk was scoped; the original
+  845-line/33-function estimate was stale) → `toolkit/inductions/views/` package: six topic
+  submodules (`public`, `sessions`, `signups`, `export`, `access_needs`,
+  `manage_settings`). Handled with extra care since this file carries two recent security
+  fixes (the CSV formula-injection guard in `manage_export_csv`, and the client-side
+  `escapeHtml()` XSS fix in `session_detail.html`, which the split didn't touch since it's a
+  template) — both explicitly re-verified intact post-split, not just assumed. Function-name-set
+  diff old↔new was empty. Commit `c084aede`.
+- `member_views.py` (566 lines, 13 functions) — investigated what "half-done split" meant
+  rather than assuming: the file itself was already coherent (one topic, Member CRUD/search,
+  comparable size to the `volunteer_*.py` siblings), so the actual gap was structural
+  asymmetry — one flat Member module sitting next to a packaged set of Volunteer modules, not
+  internal bloat needing further fragmentation. Resolved by folding it in as-is:
+  `toolkit/members/views/member_views.py`, alongside its volunteer siblings. `urls.py`,
+  `views/__init__.py`'s re-export list, `test_members.py`'s import/`@patch()` target, and
+  `ONBOARDING.md` all updated to match. No further sub-splitting — forcing one would have been
+  exactly the "design for hypothetical future requirements" this pass argues against elsewhere.
+  Commits `51588940`, `652d386c`.
+
+**A git-history wrinkle, worth knowing if anyone bisects this range:** the three forks shared
+one working tree and container (no isolation was requested), so `3c80f3ed` accidentally rode
+along with a rename-in-progress from the concurrent `inductions/views.py` fork
+(`inductions/views.py → inductions/views_old.py`, zero content diff — git tracked it as a
+clean rename). `c084aede` then deleted `views_old.py` while adding the real package. Net effect
+across the two commits is correct and the working tree was never broken at any commit boundary
+that landed, but `3c80f3ed`'s diff alone contains a file that isn't otherwise explained by its
+own message. Confirmed harmless: no orphaned files, no duplicate content, working tree clean.
+
+**Final verification, run after all four sub-tasks landed:** 1,359 tests passing (unchanged
+throughout — every sub-task was pure import/module-structure refactoring, no behaviour change),
+ruff 0 findings repo-wide, black clean at 79 (312 files unchanged).
 
 `seed_dev_data.handle()` (complexity 101, ~1,090 lines before the first helper) is lowest
 priority — dev-only. Keep pushing its data into the TOML fixtures rather than restructuring the
