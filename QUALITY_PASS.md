@@ -783,12 +783,51 @@ own** — one template per commit, stop cleanly between them.
    either (extension not connected) — same caveat as `floorplan.html`: worth a manual pass over
    attendance checkboxes, walk-in registration, the edit modal, cap editing, and keyboard nav
    before trusting this fully.
-3. `form_event.html` — 1,306 lines across four blocks. Next.
+3. ~~`form_event.html`~~ — **done 2026-09-08.** The biggest of the four (1,832 lines total by
+   the time this ran — grown since the plan's 1,306 estimate), two separate inline `<script>`
+   tags (one for the copy-summary counter, break-even calculator, field tips, cost-terms
+   field-swap, poster generation and the crop/letterbox-bars tool; a second, self-contained, for
+   OMDb film search/link), plus one `<style>` block. Moved the CSS to
+   `diary/static/diary/css/form_event.css` verbatim and merged both scripts into one
+   `diary/static/diary/js/form_event.js`, exported as a single `formEvent(opts)` factory — each
+   original script kept its own internal IIFE wrapper, so the two blocks' variable scoping is
+   unchanged (no risk of the crop-tool code and the film-search code colliding on a name).
+   Four `{% if %}`-gated IIFEs (`structured_cost_terms_enabled`, `ticket_link_guidance_html`,
+   `tag_descriptions_json`, `top_5_tag_pks_json`) became `if (opts.xxx)` guards; the two JSON
+   blobs (`tag_descriptions_json`/`top_5_tag_pks_json`) needed the options-object property
+   itself wrapped in `{% if %}...{% else %}null{% endif %}` rather than just the JS-side guard,
+   because those two context keys are **absent entirely** on the "form re-rendered after a POST
+   validation error" path (only the GET path computes them — confirmed by reading
+   `edit_views/events.py`), and Django renders a missing variable as an empty string, which
+   would otherwise break the options-object literal's syntax (`tagDescriptionsJson: ,`). Found
+   one pre-existing latent bug while doing this and deliberately did **not** fix it, to keep
+   this a pure extraction: `DEFAULT_TERMS_PLACEHOLDER = '{{ DEFAULT_TERMS_TEXT|escapejs }}'`
+   references a template variable that is never in this view's context (no context processor or
+   view sets `DEFAULT_TERMS_TEXT`), so it has always silently rendered as an empty string — the
+   structured-cost-terms placeholder fallback has likely never actually shown the intended
+   default text. Preserved verbatim, out of scope for a Chunk 9 extraction; worth a follow-up
+   ticket. Verified: `node --check` on the new JS; the full `toolkit.diary.tests` suite passed
+   516/516 both before and after; one existing test (`test_edit_event.py`'s
+   `test_get_edit_event_form_no_media_no_legacy_copy`) asserted `assertContains(response,
+   "word-counter")`, which was only ever true because that string appeared literally in the old
+   inline `<style>`/`<script>` — updated it to assert on the new `diary/js/form_event.js`
+   `<script src>` reference instead, same intent (confirms the word-counter feature's JS is
+   wired up), now testing the actual current signal rather than an implementation-detail string
+   match. Four throwaway Client-based smoke tests (not committed) additionally confirmed: the
+   new static refs render with no leftover inline `<style>`/`<script>` content; the
+   `structuredCostTermsEnabled` flag reflects both `true` and `false` correctly from
+   `SiteConfiguration`; `tagDescriptionsJson` renders as JSON (not `null`) on the GET path; and
+   both `tagDescriptionsJson: null` / `top5TagPks: null` render correctly on the POST
+   validation-error path. No live browser click-through this session (extension not connected)
+   — this template has the most genuinely interactive surface of the four, so a manual pass is
+   worth prioritising: the break-even calculator, the crop tool and letterbox-bars colour
+   picker/swatches, the OMDb film search-and-link flow, the poster generator, the cost-type
+   field-swapping, and the tag-pill tooltips.
 4. `edit_rota.html` — last. Its 894-line `<style>` block and template-interpolated JS need the
    most care, and it's also where the "factory function + inline call" pattern this chunk now
    follows already lives — mostly a matter of confirming nothing there needs to change.
 
-Tests will not cover the remaining three. See the browser verification note below.
+Tests will not cover `edit_rota.html`. See the browser verification note below.
 
 ### Chunk 10: Tests — DONE 2026-09-08
 

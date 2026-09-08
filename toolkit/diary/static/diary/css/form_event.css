@@ -1,0 +1,44 @@
+/* human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Sonnet 5"]; status: "#ai-input" */
+/* Extracted verbatim from form_event.html's inline <style> (QUALITY_PASS.md Chunk 9). */
+
+#remaining_chars { font-weight: bold; }
+.field-tip {
+    cursor: help;
+    color: #6c757d;
+    font-size: 0.8em;
+    margin-left: 0.2em;
+    vertical-align: middle;
+    font-weight: normal;
+}
+#word-counter {
+    font-size: 0.85em;
+    margin-top: 0.25rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    display: inline-block;
+}
+#word-counter.wc-composing { color: #6c757d; }
+#word-counter.wc-close     { color: #856404; background: #fff3cd; }
+#word-counter.wc-perfect   { color: #155724; background: #d4edda; font-weight: bold; }
+#word-counter.wc-over      { color: #721c24; background: #f8d7da; }
+
+.section-arrow { display: inline-block; transition: transform .15s; margin-right: .3em; font-size: 0.8em; }
+[aria-expanded="true"] .section-arrow { transform: rotate(90deg); }
+.card-header:hover { background: #e9ecef; }
+
+#be-toggle { cursor: pointer; user-select: none; }
+#be-toggle:hover { background: #e9ecef; }
+.be-arrow { display: inline-block; transition: transform .15s; margin-right: 5px; font-size: 0.8em; }
+#be-inputs .mb-3 { margin-bottom: 0.5rem !important; }
+#be-inputs label { font-weight: normal; }
+#be-inputs .be-section-heading { font-weight: bold; margin-top: 0.75rem; margin-bottom: 0.25rem; color: #495057; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.03em; }
+#be-inputs input[type=number] { max-width: 120px; }
+
+#crop-tool-row .crop-tool-container {
+    max-height: 65vh;
+    overflow: hidden;
+}
+#crop-tool-row .crop-tool-container img {
+    display: block;
+    max-width: 100%;
+}

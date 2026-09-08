@@ -369,8 +369,11 @@ class EditEventView(DiaryTestsMixin, TestCase):
             'name="private" type="checkbox" />',
             html=True,
         )
-        # Word counter block is present:
-        self.assertContains(response, "word-counter")
+        # Word counter feature's JS is wired up (the "word-counter" div itself
+        # is created client-side by form_event.js, not server-rendered --
+        # QUALITY_PASS.md Chunk 9 moved the inline <script> that used to make
+        # this string assertable out to a static file).
+        self.assertContains(response, "diary/js/form_event.js")
         # Blah. It's probably fine. Ahem.
 
     def test_get_edit_event_form_no_media_legacy_copy(self):
