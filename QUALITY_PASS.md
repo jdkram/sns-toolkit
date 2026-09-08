@@ -17,18 +17,24 @@ status: "#ai-input"
 | | |
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
-| Chunks done | 0, 1, 2, 3, 4 |
-| Next chunk | **5 (MiniMax M3 broad sweep)** |
+| Chunks done | 0, 1, 2, 3, 4, 5 |
+| Next chunk | **6 (rubric synthesis)** |
 | Tests | 1,129 passing |
 | Ruff | 0 findings |
 | Black | clean at 79 |
 | Coverage | 81.5% overall (21,788 statements) — see `docs/QUALITY_BASELINE.md` |
 | CI | `.github/workflows/ci.yml` + `.pre-commit-config.yaml` in place, not yet exercised by a real PR |
 
+**⚠️ Unfixed finding from Chunk 5, needs attention independent of the Chunk 6/8-11 cadence:**
+a real stored-XSS vector in `toolkit/inductions/templates/inductions/manage/session_detail.html`
+— see that chunk's entry below. Not yet fixed; flagged to Jonny directly the night it was found
+(2026-09-08), separate from this file, in case this file isn't read again for a while.
+
 Commits so far, newest first:
 
 ```
-(this commit)  docs(quality): write the Chunk 4 coverage/complexity baseline
+(this commit)  docs(quality): record the Chunk 5 MiniMax sweep and an XSS finding
+bd202cd6  docs(quality): write the Chunk 4 coverage/complexity baseline
 19e65fc3  docs(quality): fix dead paths and document the tooling (Chunk 3)
 2ff7f79d  docs(quality): record Chunk 2 results in the pass tracker
 f46c977d  ci(quality): add pre-commit and GitHub Actions gates
@@ -410,36 +416,70 @@ gap — it's dominated by `seed_dev_data.py` (0% covered, complexity 101, dev-on
 other operator-tool management commands nothing in the test suite ever calls. Don't read that
 percentage as "the utilities are untested"; most of the app's real coverage is fine.
 
-### Chunk 5: MiniMax M3 broad sweep (~40 files, ~$0.70) — NOT STARTED
+### Chunk 5: MiniMax M3 broad sweep — DONE 2026-09-08
 
-Every non-test module in `labs/`, `inductions/`, `audit/`, `operations/`, plus
-`diary/edit_views/`, `diary/forms.py`, `diary/models/`, `members/views/`, and the four worst
-templates reviewed as templates.
+Scope came out to **68 files**, not the ~40 estimated when this chunk was scoped — the
+apps/dirs named (`labs/`, `inductions/`, `audit/`, `operations/`, `diary/edit_views/`,
+`diary/forms.py`, `diary/models/`, `members/views/`) plus four templates simply contain more
+non-test modules than the earlier estimate assumed. Excluded from the 68: `apps.py` files (5,
+all 7-11 lines of pure framework boilerplate with no logic to find verbosity or premature
+abstraction in) and `toolkit/audit/tests.py` (a genuine test file despite the name, out of
+scope per "non-test module").
 
-Mechanics per the `hand-off-agents` skill: run **from the repo root** (`opencode run`
-auto-rejects reads outside its working directory, and prints the rejection to stderr only —
-stdout shows an empty response with no error). Use `--format json` and model
-`openrouter/minimax/minimax-m3`. Cost and tokens are nested under `.part`, not top-level:
+**Mechanics, as actually run:**
 
-```bash
-jq -r 'select(.type=="step_finish") | .part.cost'
-```
+- Ran from the repo root, one `opencode run --model openrouter/minimax/minimax-m3 --format json`
+  invocation per file, via a driver script (not committed — lived in the session scratchpad).
+- **A real gotcha, not in this file before now:** `opencode run` reads stdin. A first attempt
+  looped with `while IFS= read -r path; do ... opencode run ...; done < "$FILES"` — `opencode`
+  consumed the *loop's own* remaining input from the shared file descriptor, so the loop
+  silently ended after the first file with no error. Fixed by loading paths into a bash array
+  with `mapfile` first and iterating that instead (and redirecting `opencode`'s own stdin from
+  `/dev/null` as a second line of defence). Cost one throwaway run of `labs/admin.py`
+  ($0.0109) — recorded in the spend log below, harmless, and the fix is generic enough to be
+  worth remembering for any future scripted-loop-over-opencode work, not just this pass.
+- The `:free` MiniMax variant errored (`UnknownError`) on every attempt — plausibly because
+  Jonny's OpenRouter account is configured for zero-data-retention providers only, and the
+  free tier commonly trades retention for cost. Not investigated further; the paid model worked
+  immediately and the cost difference was immaterial ($1.30 total across all 68 files).
+- Total: **$1.2999**, avg $0.0191/file — under half the 2026-09-07 bake-off's $0.0487 average
+  and well under the ~$0.65-for-40-files original estimate (68 files at the actual scope would
+  have been ~$3.31 at the bake-off rate; came in at well under half that). Zero errors, zero
+  empty outputs, across all 68.
+- Raw output (one `.md` per file, extracted from the `--format json` event stream, plus an
+  index with per-file cost) lives at `docs/QUALITY_PASS_RAW/chunk5_reviews/` —
+  **gitignored, not committed**, but persisted on disk (not the session scratchpad, which is
+  session-scoped and would not have survived to a Chunk 6 session). See
+  `docs/QUALITY_PASS_RAW/chunk5_index.md` for the full path→cost table.
 
-Prompt aimed at Claude's specific weaknesses rather than "review this":
+**A finding surfaced immediately rather than held for Chunk 6's synthesis:**
+`toolkit/inductions/templates/inductions/manage/session_detail.html` renders several
+signup-derived fields (`name`, `username`, `existing_email`, `existing_username`) into the DOM
+via raw string-concatenated `.innerHTML` (lines ~433, 438, 480-490, 508) with no escaping.
+Traced the data path: those fields originate from `InductionSignup.name`/`.email`, populated
+from `SignupForm` (`toolkit/inductions/forms.py:13-14,95`) — plain `CharField`s with no
+HTML-stripping, submitted via `toolkit/inductions/views.py:signup()`, a **public, unauthenticated
+view** (anyone who can reach an open induction session's signup page). A signup submitted with
+`name = <script>...</script>` (or an `onerror` payload) would execute in the browser of whoever
+next opens the session's manage page to review signups/duplicates — a Panopticon or
+Programmer-tier user, per the app's permission model. **Confirmed real, not fixed.** Flagged to
+Jonny directly in the session that found it (2026-09-08); not urgent enough to rush a fix
+immediately before a machine shutdown (this branch has no live users yet — see
+`QUALITY_PASS.md`'s Chunk 7 note on `labs`, same "nothing deployed" status applies here), but
+should not wait for the natural Chunk 6→8-11 cadence either. Whoever picks up the branch next
+should treat this as its own small fix (escape on render, or switch to `textContent`/DOM
+construction instead of string-built `innerHTML`), not batch it in with Chunk 9's inline-JS
+extraction just because it's in the same file.
 
-> Review `<path>` for what a Claude-authored review tends to miss: unnecessary verbosity,
-> defensive error handling for scenarios that cannot happen, premature abstraction, and
-> configuration knobs nothing sets. Then answer separately: what in this file would a competent
-> Django developer with no AI assistance struggle to modify safely, and why? Cite line numbers.
+**One finding checked and downgraded:** the same sweep flagged `edit_rota.html:1145`
+(`var myVolPk = "{{ current_volunteer_pk }}";`, no `|escapejs`) as an XSS surface. Traced it:
+`current_volunteer_pk` is `str(volunteer.pk)` (`diary/edit_views/rota.py:160`) — always a
+plain integer string, never attacker-controlled free text. Worth adding `|escapejs` anyway as
+cheap defence-in-depth if that view is touched for another reason, but not a real vulnerability
+and not worth an out-of-band fix the way the induction one is.
 
-Raw output to the session scratchpad, **not** into the repo. Log each run's actual cost in the
-table at the foot of this file.
-
-**Guard rail:** set a spend cap in the OpenRouter dashboard before starting. This is a
-40-invocation loop, and unchecked agentic spending is a recurring complaint about the platform.
-
-**Not doing:** the OpenCode Go subscription. The 2026-09-07 bake-off puts three file reviews at
-$0.0487, so forty is ~$0.65. A $5–10/month subscription buys nothing this workload needs.
+**Not doing:** the OpenCode Go subscription. Confirmed unnecessary — the 68-file run at $1.30
+total is nowhere near where a flat monthly fee would pay for itself.
 
 ### Chunk 6: Synthesise a rubric — NOT STARTED
 
@@ -544,5 +584,5 @@ works.
 
 | Date | Chunk | Model | Files | Cost |
 |---|---|---|---|---|
-| | | | | |
-| | | **Total** | | **$0.00** |
+| 2026-09-08 | 5 | `openrouter/minimax/minimax-m3` | 68 (+1 throwaway re-run, see Chunk 5 gotcha) | $1.2999 |
+| | | **Total** | | **$1.2999** |
