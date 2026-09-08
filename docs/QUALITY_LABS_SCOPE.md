@@ -21,6 +21,13 @@ column — that's the conversation this document is for, not something to pre-em
 means deleting views/templates/models/migrations and the one nav link in
 `fragment_navmenu.html`, not toggling a flag.
 
+**Decided 2026-09-08 (Jonny): keep all seven.** This development fork is deliberately
+"everything plus the kitchen sink" — features are expected to be cherry-picked into `master`
+individually later, on their own merits, rather than curated down now. Since every tool stays,
+the coverage gaps identified below stop being a scoping question and become the direct input to
+Chunk 10: close them, worst first (Building map → Shopping → Lost & Found → Exchange), so
+nothing here is a candidate for cherry-picking into `master` while still mostly unverified.
+
 ---
 
 ## At a glance

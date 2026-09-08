@@ -17,9 +17,9 @@ status: "#ai-input"
 | | |
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
-| Chunks done | 0, 1, 2, 3, 4, 5, 6; 7's decision doc written, decision itself still pending |
-| Next chunk | **the Chunk 7 conversation with Jonny** (`docs/QUALITY_LABS_SCOPE.md`), then 8 |
-| Tests | 1,136 passing (was 1,129 — +7 from the security-fix regression tests below) |
+| Chunks done | 0, 1, 2, 3, 4, 5, 6, 7 (keep all seven `labs` tools) |
+| Next chunk | **10, reordered** — building map done; shopping, lost & found, exchange still to go |
+| Tests | 1,165 passing (was 1,129 at session start — +7 security-fix regressions, +29 new building-map tests) |
 | Ruff | 0 findings |
 | Black | clean at 79 |
 | Coverage | 81.5% overall (21,788 statements) — see `docs/QUALITY_BASELINE.md`, not yet re-run since the security fixes |
@@ -598,30 +598,19 @@ went agentic) rather than the systematic file-to-file cross-referencing MiniMax 
 every review — MiniMax's general-quality prompt structure inherently forces that; Kimi's
 narrower security brief didn't ask for it explicitly, and mostly didn't do it unprompted.
 
-### Chunk 7: Feature scope — DECISION DOCUMENT WRITTEN 2026-09-08, AWAITING THE CONVERSATION
-
-Nothing is deployed with live users, so there is no usage signal to audit. This is a values
-question, not a data question.
-
-`labs` is 4,281 lines, 60 URL patterns and 23 templates across eight mini-tools (collectives,
-jobs, shopping, donations, loft, lost-and-found, exchange, floorplan). Each carries permanent
-maintenance cost and adds to what a new volunteer navigates past to find the thing they came
-for.
+### Chunk 7: Feature scope — DONE 2026-09-08
 
 [`docs/QUALITY_LABS_SCOPE.md`](docs/QUALITY_LABS_SCOPE.md) is the decision document: per tool
 (seven mini-tools — bulletins excluded, see the doc's rationale), its size, test coverage,
-dependencies, what removing it would cost and what keeping it commits to. No recommendation in
-it and no code removed — that's the conversation still to have with Jonny, not something to
-pre-empt. Do that conversation before Chunk 10 so coverage effort isn't sunk into something he'd
-rather cut.
+dependencies, what removing it would cost and what keeping it commits to.
 
-Headline numbers from the doc: coverage splits cleanly into a well-tested group (Collectives
-99%, Jobs 100%, Donations 90%) and a poorly-tested group (Shopping 42%, the building map
-34-37%, Lost & Found ~0% outside photo upload, Exchange 55%) that doesn't track tool size in
-either direction. Only Collectives, Jobs, and the building map have anything written down about
-their future in `docs/tasks/`; the building map is architecturally critical for a *proposed*
-Jobs↔map room-linkage feature even though the two don't share code today. Nothing is
-feature-flagged — any cut is a real deletion, not a flag flip.
+**Decided (Jonny): keep all seven.** This fork is deliberately "everything plus the kitchen
+sink" — features get cherry-picked into `master` individually later, on their own merits,
+rather than curated down now. That reframes the coverage gaps the doc found from a scoping
+question into Chunk 10's priority order directly: worst-covered first, so nothing here reaches
+a cherry-pick decision while still mostly unverified. Worst to best: the building map
+(34-37%), Shopping (42%), Lost & Found (~0% outside photo upload), Exchange (55%) — see Chunk
+10 below.
 
 ### Chunk 8: Deduplicate — NOT STARTED
 
@@ -643,15 +632,29 @@ template per commit, stop cleanly between them.
 
 Tests will not cover this. See the browser verification note below.
 
-### Chunk 10: Tests — NOT STARTED
+### Chunk 10: Tests — IN PROGRESS, started 2026-09-08
 
-Destructive paths first: `bulk_anonymise_volunteers`, `bulk_delete_never_onboarded`. Then
-`toolkit_auth/` (the backend and decorators every app depends on, currently zero tests). Then
-the `labs/shopping.py` and `volunteer_edit.py` gaps. Extend the `labs/tests/test_security.py`
-pattern, which the June review correctly praised.
+Reordered 2026-09-08 per the Chunk 7 outcome: since every `labs` tool is being kept, close its
+coverage gaps first, worst-covered to best, before the other named gaps below.
 
-Then strengthen the 102 status-code-only tests — assert on state, not just HTTP 200. Natural
-session boundary between the two halves.
+1. ~~**Building map**~~ — **done.** New `toolkit/labs/tests/test_floorplan.py` (29 tests)
+   takes `floorplan.py`/`loft.py`/`area_photos.py` from 34-37% to **100%** each. Also found and
+   fixed a live stored-XSS bug while writing it (not previously flagged): `floorplan()` was
+   embedding `notes_json`/`area_photos_json`/`loft_items_json` via raw `json.dumps()` + `|safe`,
+   same root cause as rubric rule R13 (room notes and loft item names/descriptions are
+   free-text, volunteer-editable). Switched to `daterange.safe_json()`, same fix as the earlier
+   `_rooms_json()` finding. Regression tests: `test_notes_json_is_script_safe`,
+   `test_loft_items_json_is_script_safe`.
+2. **Shopping** (`shopping.py` 42%, "3 of 13 endpoints tested" per `docs/QUALITY_BASELINE.md`).
+3. **Lost & found** (50% overall, ~0% outside the photo-upload paths already covered by
+   `test_photo_uploads.py` — claim/dispose/browse/label flows untested).
+4. **Exchange** (55% — gap clusters around the on-loan/returned/all-gone/missing state
+   transitions).
+
+Then the items originally scoped for this chunk, in the original order: destructive paths
+(`bulk_anonymise_volunteers`, `bulk_delete_never_onboarded`), `toolkit_auth/` (currently zero
+tests), `volunteer_edit.py`'s gaps, then strengthening the 102 status-code-only tests to assert
+on state rather than just HTTP 200.
 
 ### Chunk 11: Un-star members/views, split what's god-sized — NOT STARTED
 

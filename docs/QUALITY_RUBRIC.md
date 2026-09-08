@@ -317,6 +317,15 @@ as new.
    hand-rolled CSV exports (`members/views/volunteer_export.py`,
    `diary/edit_views/reports.py`) still need the same guard — left for Chunk 8's
    `csv_response()` unification as originally scoped, not fixed here.
+7. ~~**Stored XSS, `labs/views/floorplan.py`'s `floorplan()` view**~~ — **fixed.**
+   Found 2026-09-08 while writing Chunk 10 coverage for the building map, not by
+   either review sweep. Same root cause as R13/item 3: `notes_json`,
+   `area_photos_json`, and `loft_items_json` were built with raw `json.dumps()`
+   and rendered via `{{ ...|safe }}` into `floorplan.html`'s inline `<script>`
+   block. `RoomNote.body` and `LoftItem.name`/`.description` are free text any
+   logged-in volunteer can set. Switched all three to `daterange.safe_json()`.
+   Regression tests: `labs/tests/test_floorplan.py::FloorplanPageTests::test_notes_json_is_script_safe`
+   and `::test_loft_items_json_is_script_safe`.
 
 ### Real bugs, worth a fix when the relevant file is next touched (Chunk 8 or 11, not urgent enough to interrupt)
 

@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
+from toolkit.diary.daterange import safe_json
 
 from ..models import (
     AreaPhoto,
@@ -116,10 +117,10 @@ def floorplan(request):
         request,
         "labs/floorplan.html",
         {
-            "notes_json": json.dumps(notes),
-            "area_photos_json": json.dumps(area_photos),
+            "notes_json": safe_json(notes),
+            "area_photos_json": safe_json(area_photos),
             "room_sections": room_sections,
-            "loft_items_json": json.dumps(_serialize_loft_items()),
+            "loft_items_json": safe_json(_serialize_loft_items()),
             "loft_zone_sections": loft_zone_sections,
         },
     )
