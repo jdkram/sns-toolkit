@@ -1,48 +1,22 @@
-import json
 import datetime
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from toolkit.toolkit_auth.decorators import (
-    feature_required,
-    write_required,
-    write_required_strict,
-)
-from django.db import models
-from django.db.models import Case, When, Value, IntegerField
-from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
-from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.http import require_POST
 
-from django.http import HttpResponse, HttpResponseForbidden
-from django.utils import timezone
-from django.db.models import Exists, OuterRef
 
 from ..models import (
-    AreaPhoto,
-    Bulletin,
-    BulletinRead,
-    Collective,
-    ConsumableItem,
-    ExchangeItem,
     FoundItem,
-    NeedFlag,
-    ProcurementPledge,
-    Supplier,
-    SupplierRecord,
-    RoomNote,
-    DonationItem,
-    Job,
-    LoftItem,
-    LoftItemPhoto,
 )
-from toolkit.diary.models import SiteConfiguration, get_site_config
 from .. import forms as lab_forms
+from ._common import _feature_enabled_or_404
 
 # ── Lost & found ──────────────────────────────────────────────────────────────
 
 
 @login_required
+@_feature_enabled_or_404("lost_and_found_enabled")
 def found_item_log(request):
     initial = {}
     name = request.user.get_full_name() or request.user.username
@@ -65,6 +39,7 @@ def found_item_log(request):
 
 
 @login_required
+@_feature_enabled_or_404("lost_and_found_enabled")
 def found_item_list(request):
     tab = request.GET.get("tab", "unclaimed")
     if tab not in ("unclaimed", "claimed", "disposed"):
@@ -86,6 +61,7 @@ def found_item_list(request):
 
 
 @login_required
+@_feature_enabled_or_404("lost_and_found_enabled")
 def found_item_detail(request, item_id):
     item = get_object_or_404(FoundItem, pk=item_id)
     claim_form = lab_forms.FoundItemClaimForm()
@@ -103,6 +79,7 @@ def found_item_detail(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("lost_and_found_enabled")
 @require_POST
 def found_item_claim(request, item_id):
     item = get_object_or_404(
@@ -121,6 +98,7 @@ def found_item_claim(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("lost_and_found_enabled")
 @require_POST
 def found_item_dispose(request, item_id):
     item = get_object_or_404(
@@ -140,6 +118,7 @@ def found_item_dispose(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("lost_and_found_enabled")
 def found_item_label(request, item_id):
     item = get_object_or_404(FoundItem, pk=item_id)
     return render(request, "labs/found_item_label.html", {"item": item})

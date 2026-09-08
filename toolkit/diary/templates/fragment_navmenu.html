@@ -32,8 +32,10 @@
     <li><a href="{% pageurl top_level_child %}">{{ top_level_child.seo_title|default:top_level_child.title }}</a>
       {% endif %}
     {% endfor %}
+    {% if site_config.collectives_enabled %}
     <li><a href="{% url "labs-collectives-public" %}" data-nav-key="l">Collectives</a></li>
-    {% if site_config.show_donations_in_public_nav %}
+    {% endif %}
+    {% if site_config.donations_enabled and site_config.show_donations_in_public_nav %}
     <li><a href="{% url "labs-donations" %}" data-nav-key="d">Donations wishlist</a></li>
     {% endif %}
     {% if user.is_authenticated %}
@@ -50,17 +52,27 @@
     <li><a href="#" aria-haspopup="true" data-nav-key="n">Noticeboard <i class="fa fa-caret-down" aria-hidden="true"></i></a>
         <ul class="sub-menu">
             <li><a href="{% url "labs-bulletins" %}"><span>Bulletins</span></a></li>
+            {% if site_config.collectives_enabled %}
             <li><a href="{% url "labs-collectives" %}"><span>Collectives</span></a></li>
+            {% endif %}
             <li><a href="{% url "volunteer-directory" %}"><span>Volunteer directory</span></a></li>
+            {% if site_config.jobs_board_enabled %}
             <li><a href="{% url "labs-jobs" %}"><span>Jobs board</span></a></li>
+            {% endif %}
             <li><a href="{% url "operations-schedule" %}"><span>Maintenance schedule</span></a></li>
             {% if site_config.community_exchange_enabled %}
             <li><a href="{% url "labs-exchange" %}"><span>Community exchange</span></a></li>
             {% endif %}
+            {% if site_config.building_map_enabled %}
             <li><a href="{% url "labs-floorplan" %}"><span>Building Map</span></a></li>
+            {% endif %}
+            {% if site_config.shopping_list_enabled %}
             <li><a href="{% url "labs-shopping" %}"><span>Shopping list</span></a></li>
+            {% endif %}
+            {% if site_config.lost_and_found_enabled %}
             <li><a href="{% url "labs-found-item-log" %}"><span>Log found item</span></a></li>
             <li><a href="{% url "labs-found-items" %}"><span>Lost &amp; found</span></a></li>
+            {% endif %}
         </ul>
     </li>
     {% if user.is_superuser %}

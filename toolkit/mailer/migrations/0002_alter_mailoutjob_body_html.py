@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mailer', '0001_initial'),
+        ("mailer", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='mailoutjob',
-            name='body_html',
+            model_name="mailoutjob",
+            name="body_html",
             field=models.TextField(blank=True),
         ),
     ]

@@ -11,17 +11,15 @@ import io
 import os
 import random
 import re
-import tempfile
 import urllib.request
 from collections import defaultdict
 
-from django.conf import settings
 from django.contrib.auth.models import Group, User
 from django.core.management.base import BaseCommand
 from django.core.files.base import ContentFile
 from django.utils import timezone
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
 from toolkit.diary.models import (
     Event,
@@ -39,7 +37,12 @@ from toolkit.diary.models import (
     VolunteerEventMark,
 )
 from toolkit.index.models import IndexCategory, IndexLink
-from toolkit.members.models import Member, Volunteer, Qualification, VolunteerQualification
+from toolkit.members.models import (
+    Member,
+    Volunteer,
+    Qualification,
+    VolunteerQualification,
+)
 
 from toolkit.util.management.commands.seed_data import (
     ROLES,
@@ -62,9 +65,12 @@ from toolkit.util.management.commands.seed_data import (
 )
 
 try:
-    from wagtail.models import Page, Site
+    from wagtail.models import Page, Site  # noqa: F401 -- availability probe
 
-    from toolkit.content.models import BasicArticlePage, SectionRootWithLinks
+    from toolkit.content.models import (  # noqa: F401 -- availability probe
+        BasicArticlePage,
+        SectionRootWithLinks,
+    )
 
     WAGTAIL_AVAILABLE = True
 except ImportError:
@@ -218,11 +224,17 @@ class Command(BaseCommand):
                     mi.media_file.delete(save=False)
                 mi.delete()
             EventLink.objects.all().delete()
-            from toolkit.inductions.models import InductionSession, InductionSignup, InductionRequest
+            from toolkit.inductions.models import (
+                InductionSession,
+                InductionSignup,
+                InductionRequest,
+            )
+
             InductionSignup.objects.all().delete()
             InductionRequest.objects.all().delete()
             InductionSession.objects.all().delete()
             from toolkit.diary.models import Film
+
             Film.objects.all().delete()
             Volunteer.objects.all().delete()
             Member.objects.all().delete()
@@ -276,9 +288,13 @@ class Command(BaseCommand):
             if created:
                 counts["roles"] += 1
             role.beginner_friendly = role_data.get("beginner_friendly", False)
-            role.wheelchair_accessible = role_data.get("wheelchair_accessible", False)
+            role.wheelchair_accessible = role_data.get(
+                "wheelchair_accessible", False
+            )
             role.keyholder_only = role_data.get("keyholder_only", False)
-            role.programmer_contact = role_data.get("programmer_contact", False)
+            role.programmer_contact = role_data.get(
+                "programmer_contact", False
+            )
             role.description = role_data.get("description", "")
             role.stats_label = role_data.get("stats_label", "")
             role.save(
@@ -333,7 +349,8 @@ class Command(BaseCommand):
             if created:
                 counts["event_templates"] += 1
                 role_slots = tmpl_data.get("role_slots") or [
-                    {"role": name, "count": 1} for name in tmpl_data.get("roles", [])
+                    {"role": name, "count": 1}
+                    for name in tmpl_data.get("roles", [])
                 ]
                 for slot in role_slots:
                     try:
@@ -356,8 +373,12 @@ class Command(BaseCommand):
                             room=Room.objects.get(name=room_data["room"]),
                             date_offset=0,
                             defaults={
-                                "start_delta_minutes": room_data.get("start_delta_minutes", 0),
-                                "end_delta_minutes": room_data.get("end_delta_minutes"),
+                                "start_delta_minutes": room_data.get(
+                                    "start_delta_minutes", 0
+                                ),
+                                "end_delta_minutes": room_data.get(
+                                    "end_delta_minutes"
+                                ),
                             },
                         )
                     except Room.DoesNotExist:
@@ -428,22 +449,41 @@ class Command(BaseCommand):
                 vol_data = dict(vol_data)
                 vol_data["dir_share_listed"] = legacy_name != "none"
                 vol_data["dir_share_name_style"] = (
-                    Volunteer.NAME_STYLE_INITIAL if legacy_name == "initial"
+                    Volunteer.NAME_STYLE_INITIAL
+                    if legacy_name == "initial"
                     else Volunteer.NAME_STYLE_FULL
                 )
 
-            _bool_fields = {"dir_share_listed", "dir_share_pronouns", "dir_share_email", "dir_share_phone", "dir_share_access_rider", "dir_share_collectives"}
+            _bool_fields = {
+                "dir_share_listed",
+                "dir_share_pronouns",
+                "dir_share_email",
+                "dir_share_phone",
+                "dir_share_access_rider",
+                "dir_share_collectives",
+            }
             _str_defaults = {"dir_share_name_style": Volunteer.NAME_STYLE_FULL}
             vol_dirty = False
             for field in (
-                "access_intro", "access_needs", "access_links",
-                "emergency_contact_name", "emergency_contact_relationship",
+                "access_intro",
+                "access_needs",
+                "access_links",
+                "emergency_contact_name",
+                "emergency_contact_relationship",
                 "emergency_contact_phone",
-                "dir_share_listed", "dir_share_name_style",
-                "dir_share_pronouns", "dir_share_email",
-                "dir_share_phone", "dir_share_access_rider", "dir_share_collectives",
+                "dir_share_listed",
+                "dir_share_name_style",
+                "dir_share_pronouns",
+                "dir_share_email",
+                "dir_share_phone",
+                "dir_share_access_rider",
+                "dir_share_collectives",
             ):
-                default = False if field in _bool_fields else _str_defaults.get(field, "")
+                default = (
+                    False
+                    if field in _bool_fields
+                    else _str_defaults.get(field, "")
+                )
                 val = vol_data.get(field, default)
                 if getattr(volunteer, field) != val:
                     setattr(volunteer, field, val)
@@ -458,9 +498,15 @@ class Command(BaseCommand):
             wanted_slugs = vol_data.get("collectives")
             if wanted_slugs is None:
                 n = random.choices([0, 1, 2], weights=[15, 55, 30])[0]
-                wanted_slugs = random.sample(all_collective_slugs, min(n, len(all_collective_slugs)))
-            wanted_collectives = list(Collective.objects.filter(slug__in=wanted_slugs))
-            if set(volunteer.collectives.values_list("slug", flat=True)) != set(wanted_slugs):
+                wanted_slugs = random.sample(
+                    all_collective_slugs, min(n, len(all_collective_slugs))
+                )
+            wanted_collectives = list(
+                Collective.objects.filter(slug__in=wanted_slugs)
+            )
+            if set(
+                volunteer.collectives.values_list("slug", flat=True)
+            ) != set(wanted_slugs):
                 volunteer.collectives.set(wanted_collectives)
 
             # Pool-health test fields — only applied when explicitly present in TOML.
@@ -478,11 +524,13 @@ class Command(BaseCommand):
             # triggering the suspension logic that Volunteer.save() applies.
             if "last_login_days_ago" in vol_data:
                 User.objects.filter(pk=user.pk).update(
-                    last_login=_ph_now - datetime.timedelta(days=vol_data["last_login_days_ago"])
+                    last_login=_ph_now
+                    - datetime.timedelta(days=vol_data["last_login_days_ago"])
                 )
             if "date_joined_days_ago" in vol_data:
                 User.objects.filter(pk=user.pk).update(
-                    date_joined=_ph_now - datetime.timedelta(days=vol_data["date_joined_days_ago"])
+                    date_joined=_ph_now
+                    - datetime.timedelta(days=vol_data["date_joined_days_ago"])
                 )
             # Backdate Volunteer.created_at to match the earliest of the two user
             # dates, so that purge_candidates() (which uses Greatest(created_at, ...))
@@ -493,11 +541,17 @@ class Command(BaseCommand):
             )
             if _backdate_days:
                 Volunteer.objects.filter(pk=volunteer.pk).update(
-                    created_at=_ph_now - datetime.timedelta(days=_backdate_days)
+                    created_at=_ph_now
+                    - datetime.timedelta(days=_backdate_days)
                 )
 
             if "membership_expires_days_from_now" in vol_data:
-                expires = (_ph_now + datetime.timedelta(days=vol_data["membership_expires_days_from_now"])).date()
+                expires = (
+                    _ph_now
+                    + datetime.timedelta(
+                        days=vol_data["membership_expires_days_from_now"]
+                    )
+                ).date()
                 if member.membership_expires != expires:
                     member.membership_expires = expires
                     member.save(update_fields=["membership_expires"])
@@ -541,18 +595,42 @@ class Command(BaseCommand):
 
         # Qualifications — seed named credentials and award them to relevant volunteers
         _QUALIFICATIONS = [
-            ("Bar", [
-                "Rex Hollis", "Nell Arundel", "Beef", "Nadia Kurosawa", "Zara Moon",
-                # many volunteers get bar trained over time; a realistic spread:
-                "Sasha Pryce", "Jules Travers", "Remy Okafor", "Cleo Marchetti",
-                "Lena Barrow", "Ivan Solis", "Cheddar",
-            ]),
-            ("Projectionist level 1", [
-                "Elia Silveira", "Tomás Ferreira", "Sparks", "Lila Estraven",
-            ]),
-            ("Cafe", [
-                "Sasha Pryce", "Reuben Ashford", "Phoebe Lund", "Fig",
-            ]),
+            (
+                "Bar",
+                [
+                    "Rex Hollis",
+                    "Nell Arundel",
+                    "Beef",
+                    "Nadia Kurosawa",
+                    "Zara Moon",
+                    # many volunteers get bar trained over time; a realistic spread:
+                    "Sasha Pryce",
+                    "Jules Travers",
+                    "Remy Okafor",
+                    "Cleo Marchetti",
+                    "Lena Barrow",
+                    "Ivan Solis",
+                    "Cheddar",
+                ],
+            ),
+            (
+                "Projectionist level 1",
+                [
+                    "Elia Silveira",
+                    "Tomás Ferreira",
+                    "Sparks",
+                    "Lila Estraven",
+                ],
+            ),
+            (
+                "Cafe",
+                [
+                    "Sasha Pryce",
+                    "Reuben Ashford",
+                    "Phoebe Lund",
+                    "Fig",
+                ],
+            ),
         ]
         for qual_name, vol_names in _QUALIFICATIONS:
             qual, created = Qualification.objects.get_or_create(name=qual_name)
@@ -573,7 +651,11 @@ class Command(BaseCommand):
         # Set required_qualification on bar roles now that qualifications exist
         _bar_qual = Qualification.objects.filter(name="Bar").first()
         if _bar_qual:
-            for _role_name in ("Bar Staff - Shift 1", "Bar Staff - Shift 2", "Bar Shadow"):
+            for _role_name in (
+                "Bar Staff - Shift 1",
+                "Bar Staff - Shift 2",
+                "Bar Shadow",
+            ):
                 Role.objects.filter(name=_role_name).update(
                     required_qualification=_bar_qual,
                     qualification_gate=Role.GATE_ADVISORY,
@@ -612,7 +694,9 @@ class Command(BaseCommand):
                 if fi_match:
                     dur_minutes = int(fi_match.group(1))
                 else:
-                    dur_minutes = int(max(30, min(240, round(random.gauss(90, 20)))))
+                    dur_minutes = int(
+                        max(30, min(240, round(random.gauss(90, 20))))
+                    )
             dur_time = datetime.time(dur_minutes // 60, dur_minutes % 60)
 
             terms_text = event_data.get("terms") or event_data.get("copy", "")
@@ -651,7 +735,9 @@ class Command(BaseCommand):
                 + datetime.timedelta(days=event_data["day_offset"])
                 - datetime.timedelta(days=14)
             )
-            showing_start = self._find_free_slot(event_room, showing_start, dur_minutes)
+            showing_start = self._find_free_slot(
+                event_room, showing_start, dur_minutes
+            )
 
             showing, s_created = Showing.objects.get_or_create(
                 event=event,
@@ -661,7 +747,9 @@ class Command(BaseCommand):
                     "confirmed": event_data.get("confirmed", True),
                     "cancelled": event_data.get("cancelled", False),
                     "discounted": event_data.get("discounted", False),
-                    "hide_in_programme": event_data.get("hide_in_programme", False),
+                    "hide_in_programme": event_data.get(
+                        "hide_in_programme", False
+                    ),
                     "rota_notes": event_data.get("rota_notes", ""),
                 },
             )
@@ -673,7 +761,8 @@ class Command(BaseCommand):
                         room=event_room,
                         defaults={
                             "start": showing_start,
-                            "end": showing_start + datetime.timedelta(minutes=dur_minutes),
+                            "end": showing_start
+                            + datetime.timedelta(minutes=dur_minutes),
                         },
                     )
                 self._book_slot(event_room, showing_start, dur_minutes)
@@ -735,7 +824,14 @@ class Command(BaseCommand):
             if not event.media.exists():
                 primary_tag = (event_data.get("tags") or ["default"])[0]
                 colour = TAG_COLOURS.get(primary_tag, TAG_COLOURS["default"])
-                if self._make_event_image(event, colour, event_data["name"], image_url=event_data.get("image_url"), image_path=event_data.get("image_path"), auto_crop=event_data.get("auto_crop")):
+                if self._make_event_image(
+                    event,
+                    colour,
+                    event_data["name"],
+                    image_url=event_data.get("image_url"),
+                    image_path=event_data.get("image_path"),
+                    auto_crop=event_data.get("auto_crop"),
+                ):
                     counts["images"] += 1
 
             # Event resource links — deterministic distribution
@@ -823,7 +919,10 @@ class Command(BaseCommand):
             ("Sesame Snaps (Chocolate)", ConsumableItem.CATEGORY_SNACKS),
             ("Dino Gummies", ConsumableItem.CATEGORY_SNACKS),
             ("Crisps (Lightly Salted)", ConsumableItem.CATEGORY_SNACKS),
-            ("Crisps (Sea Salt & Malt Vinegar)", ConsumableItem.CATEGORY_SNACKS),
+            (
+                "Crisps (Sea Salt & Malt Vinegar)",
+                ConsumableItem.CATEGORY_SNACKS,
+            ),
             ("Crisps (Rosemary & Sea Salt)", ConsumableItem.CATEGORY_SNACKS),
             ("Pens", ConsumableItem.CATEGORY_STATIONERY),
             ("Lamination sheets (A4)", ConsumableItem.CATEGORY_STATIONERY),
@@ -848,9 +947,24 @@ class Command(BaseCommand):
                 "ordering_url": "",
                 "ordering_notes": "Wholesale wholefoods cooperative. Ethical/environmental preference for cleaning supplies, not just a cost choice. Place orders online.",
                 "link_items": [
-                    {"name": "Washing detergent", "code": "ECO001", "unit": "5L", "price": "3.50"},
-                    {"name": "Dishwasher detergent", "code": "ECO002", "unit": "5L", "price": "3.80"},
-                    {"name": "Hand soap", "code": "ECO003", "unit": "5L", "price": "4.20"},
+                    {
+                        "name": "Washing detergent",
+                        "code": "ECO001",
+                        "unit": "5L",
+                        "price": "3.50",
+                    },
+                    {
+                        "name": "Dishwasher detergent",
+                        "code": "ECO002",
+                        "unit": "5L",
+                        "price": "3.80",
+                    },
+                    {
+                        "name": "Hand soap",
+                        "code": "ECO003",
+                        "unit": "5L",
+                        "price": "4.20",
+                    },
                 ],
             },
             {
@@ -859,17 +973,72 @@ class Command(BaseCommand):
                 "ordering_url": "",
                 "ordering_notes": "Cash & carry, in person only. Cheaper than Nisbets. Check stock on arrival.",
                 "link_items": [
-                    {"name": "Bin bags", "code": "BB001", "unit": "200-pack", "price": "8.99"},
-                    {"name": "Cling film", "code": "KT001", "unit": "6-pack", "price": "5.50"},
-                    {"name": "Washing up sponges", "code": "", "unit": "10-pack", "price": ""},
-                    {"name": "Steel scrubbers", "code": "", "unit": "10-pack", "price": ""},
-                    {"name": "Multi-surface spray", "code": "", "unit": "each", "price": ""},
-                    {"name": "Sesame Snaps", "code": "SN001", "unit": "24-pack", "price": "12.00"},
-                    {"name": "Sesame Snaps (Chocolate)", "code": "SN002", "unit": "24-pack", "price": "13.00"},
-                    {"name": "Dino Gummies", "code": "SN003", "unit": "12-pack", "price": "9.60"},
-                    {"name": "Crisps (Lightly Salted)", "code": "CR001", "unit": "48-pack", "price": "14.40"},
-                    {"name": "Crisps (Sea Salt & Malt Vinegar)", "code": "CR002", "unit": "48-pack", "price": "14.40"},
-                    {"name": "Crisps (Rosemary & Sea Salt)", "code": "CR003", "unit": "48-pack", "price": "15.60"},
+                    {
+                        "name": "Bin bags",
+                        "code": "BB001",
+                        "unit": "200-pack",
+                        "price": "8.99",
+                    },
+                    {
+                        "name": "Cling film",
+                        "code": "KT001",
+                        "unit": "6-pack",
+                        "price": "5.50",
+                    },
+                    {
+                        "name": "Washing up sponges",
+                        "code": "",
+                        "unit": "10-pack",
+                        "price": "",
+                    },
+                    {
+                        "name": "Steel scrubbers",
+                        "code": "",
+                        "unit": "10-pack",
+                        "price": "",
+                    },
+                    {
+                        "name": "Multi-surface spray",
+                        "code": "",
+                        "unit": "each",
+                        "price": "",
+                    },
+                    {
+                        "name": "Sesame Snaps",
+                        "code": "SN001",
+                        "unit": "24-pack",
+                        "price": "12.00",
+                    },
+                    {
+                        "name": "Sesame Snaps (Chocolate)",
+                        "code": "SN002",
+                        "unit": "24-pack",
+                        "price": "13.00",
+                    },
+                    {
+                        "name": "Dino Gummies",
+                        "code": "SN003",
+                        "unit": "12-pack",
+                        "price": "9.60",
+                    },
+                    {
+                        "name": "Crisps (Lightly Salted)",
+                        "code": "CR001",
+                        "unit": "48-pack",
+                        "price": "14.40",
+                    },
+                    {
+                        "name": "Crisps (Sea Salt & Malt Vinegar)",
+                        "code": "CR002",
+                        "unit": "48-pack",
+                        "price": "14.40",
+                    },
+                    {
+                        "name": "Crisps (Rosemary & Sea Salt)",
+                        "code": "CR003",
+                        "unit": "48-pack",
+                        "price": "15.60",
+                    },
                 ],
             },
             {
@@ -886,7 +1055,12 @@ class Command(BaseCommand):
                         "product_url": "https://www.nisbets.co.uk/jantex-pro-dishwasher-detergent-5-litre/gm981",
                         "ordering_notes": "Hard water formula, use this version to reduce descaling.",
                     },
-                    {"name": "Multi-surface spray", "code": "", "unit": "each", "price": ""},
+                    {
+                        "name": "Multi-surface spray",
+                        "code": "",
+                        "unit": "each",
+                        "price": "",
+                    },
                 ],
             },
         ]
@@ -904,7 +1078,9 @@ class Command(BaseCommand):
                     item = ConsumableItem.objects.get(name=link["name"])
                 except ConsumableItem.DoesNotExist:
                     continue
-                if not SupplierRecord.objects.filter(item=item, supplier=supplier).exists():
+                if not SupplierRecord.objects.filter(
+                    item=item, supplier=supplier
+                ).exists():
                     _price = link.get("price") or None
                     SupplierRecord.objects.create(
                         item=item,
@@ -928,7 +1104,9 @@ class Command(BaseCommand):
             except ConsumableItem.DoesNotExist:
                 continue
             # Only create if no open flag already exists for this item
-            if NeedFlag.objects.filter(item=item, resolved_at__isnull=True).exists():
+            if NeedFlag.objects.filter(
+                item=item, resolved_at__isnull=True
+            ).exists():
                 continue
             pledge_idx = flag_data.get("pledged_by_index")
             flagger = _vols[0] if _vols else None
@@ -955,7 +1133,7 @@ class Command(BaseCommand):
             if Job.objects.filter(title=job_data["title"]).exists():
                 continue
             resolved = job_data.get("resolved", False)
-            job = Job.objects.create(
+            Job.objects.create(
                 title=job_data["title"],
                 area=job_data.get("area", ""),
                 description=job_data.get("description", ""),
@@ -964,7 +1142,9 @@ class Command(BaseCommand):
                 safety_risk=job_data.get("safety_risk", False),
                 skill_needed=job_data.get("skill_needed", False),
                 keyholder_required=job_data.get("keyholder_required", False),
-                location_type=job_data.get("location_type", Job.LOCATION_BUILDING),
+                location_type=job_data.get(
+                    "location_type", Job.LOCATION_BUILDING
+                ),
                 reporter_name=job_data.get("reporter_name", ""),
                 resolved=resolved,
                 resolved_at=tz.now() if resolved else None,
@@ -1028,7 +1208,10 @@ class Command(BaseCommand):
             cfg.age_rating_choices = [
                 {"value": "U", "label": "U (Universal)"},
                 {"value": "PG", "label": "PG (Parental Guidance)"},
-                {"value": "12A", "label": "12A (Cinema only, under 12s with adult)"},
+                {
+                    "value": "12A",
+                    "label": "12A (Cinema only, under 12s with adult)",
+                },
                 {"value": "12", "label": "12"},
                 {"value": "15", "label": "15"},
                 {"value": "18", "label": "18"},
@@ -1186,7 +1369,8 @@ class Command(BaseCommand):
                 "category": ExchangeItem.CATEGORY_KITCHEN,
                 "owner_type": ExchangeItem.OWNER_COLLECTIVE,
                 "quantity": "about 10kg",
-                "available_until": datetime.date.today() + datetime.timedelta(days=5),
+                "available_until": datetime.date.today()
+                + datetime.timedelta(days=5),
                 "location_notes": "Kitchen fridge/store, help yourself at any event",
                 "description": "CK bought in bulk and won't get through them before next month's session. Please take some!",
                 "status": ExchangeItem.STATUS_AVAILABLE,
@@ -1223,7 +1407,9 @@ class Command(BaseCommand):
                 name=item_data["name"],
                 listing_type=item_data["listing_type"],
                 category=item_data["category"],
-                condition=item_data.get("condition", ExchangeItem.CONDITION_GOOD),
+                condition=item_data.get(
+                    "condition", ExchangeItem.CONDITION_GOOD
+                ),
                 owner_type=item_data["owner_type"],
                 owner_volunteer=owner_vol,
                 location_notes=item_data.get("location_notes", ""),
@@ -1286,7 +1472,9 @@ class Command(BaseCommand):
             )
         )
 
-    def _seed_historical_shifts(self, volunteer_objects, counts):
+    def _seed_historical_shifts(
+        self, volunteer_objects, counts
+    ):  # noqa: ARG002 -- dead param, deferred to Chunk 11's seed_dev_data rewrite
         """Seed ~4 years of past confirmed showings with FK-linked volunteer rota entries.
 
         Volunteer stats / heatmap page uses RotaEntry.volunteer FK — the existing
@@ -1306,9 +1494,9 @@ class Command(BaseCommand):
 
         # Include demo accounts (admin etc.) which are created after volunteer_objects
         vols = list(
-            Volunteer.objects.select_related("member").filter(
-                member__isnull=False
-            ).exclude(member__name="")
+            Volunteer.objects.select_related("member")
+            .filter(member__isnull=False)
+            .exclude(member__name="")
         )
         if not vols:
             return
@@ -1386,7 +1574,9 @@ class Command(BaseCommand):
                 event_cycle_idx += 1
 
                 showing_dt = timezone.make_aware(
-                    datetime.datetime.combine(show_date, datetime.time(19, 0, 0))
+                    datetime.datetime.combine(
+                        show_date, datetime.time(19, 0, 0)
+                    )
                 )
                 showing, s_created = Showing.objects.get_or_create(
                     event=event,
@@ -1409,11 +1599,17 @@ class Command(BaseCommand):
                 for slot_idx in range(12):
                     vol = vols[(offset + slot_idx) % n_vols]
 
-                    if id(vol) == late_joiner_id and show_date < datetime.date(2023, 6, 1):
+                    if id(vol) == late_joiner_id and show_date < datetime.date(
+                        2023, 6, 1
+                    ):
                         continue
 
                     # Quiet 2024 spell: skip Feb–Oct for this cohort
-                    if id(vol) in quiet_2024_ids and year == 2024 and 2 <= month <= 10:
+                    if (
+                        id(vol) in quiet_2024_ids
+                        and year == 2024
+                        and 2 <= month <= 10
+                    ):
                         continue
 
                     role = roles[slot_idx % len(roles)]
@@ -1448,12 +1644,19 @@ class Command(BaseCommand):
         """
         now = timezone.now()
         demo_usernames = [
-            "admin", "programmer", "programmer2",
-            "volunteer", "volunteer2", "volunteer3", "volunteer4", "volunteer5",
+            "admin",
+            "programmer",
+            "programmer2",
+            "volunteer",
+            "volunteer2",
+            "volunteer3",
+            "volunteer4",
+            "volunteer5",
         ]
         demo_vols = list(
-            Volunteer.objects.select_related("member", "user")
-            .filter(user__username__in=demo_usernames, member__isnull=False)
+            Volunteer.objects.select_related("member", "user").filter(
+                user__username__in=demo_usernames, member__isnull=False
+            )
         )
         if not demo_vols:
             return
@@ -1503,7 +1706,9 @@ class Command(BaseCommand):
                 if created:
                     counts["demo_stars"] += 1
 
-    def _seed_recurring_events(self, rooms_dict, vol_list, counts, anchor):
+    def _seed_recurring_events(
+        self, rooms_dict, vol_list, counts, anchor
+    ):  # noqa: ARG002 -- anchor is dead, deferred to Chunk 11's seed_dev_data rewrite
         today = timezone.now().date()
         window_start = today - datetime.timedelta(weeks=8)
         window_end = today + datetime.timedelta(weeks=16)
@@ -1576,8 +1781,14 @@ class Command(BaseCommand):
         # slots. No two consecutive Sundays share a time. Cycling rather than
         # random keeps the sequence stable across idempotent reseeds.
         sunday_film_times = [
-            (19, 0), (17, 30), (20, 0), (18, 30),
-            (19, 0), (20, 30), (17, 0), (19, 30),
+            (19, 0),
+            (17, 30),
+            (20, 0),
+            (18, 30),
+            (19, 0),
+            (20, 30),
+            (17, 0),
+            (19, 30),
         ]
 
         # Seed Sunday evening films
@@ -1606,7 +1817,12 @@ class Command(BaseCommand):
         # Varied start times for Thursday films — slightly earlier/later
         # than a standard 19:00 to suggest a realistic programme.
         thursday_film_times = [
-            (19, 0), (18, 30), (20, 0), (19, 30), (18, 0), (20, 30),
+            (19, 0),
+            (18, 30),
+            (20, 0),
+            (19, 30),
+            (18, 0),
+            (20, 30),
         ]
 
         # Seed Thursday evening films
@@ -1646,7 +1862,9 @@ class Command(BaseCommand):
             n = n_map[occurrence]
 
             duration_mins = evt_data["duration"]
-            duration_time = datetime.time(duration_mins // 60, duration_mins % 60)
+            duration_time = datetime.time(
+                duration_mins // 60, duration_mins % 60
+            )
 
             # Iterate over months in the window
             current = today.replace(day=1)
@@ -1654,7 +1872,11 @@ class Command(BaseCommand):
                 target_date = _nth_weekday_of_month(
                     current.year, current.month, weekday, n
                 )
-                if target_date and target_date >= today and target_date <= window_end:
+                if (
+                    target_date
+                    and target_date >= today
+                    and target_date <= window_end
+                ):
                     self._seed_one_recurring_showing(
                         evt_data["name"],
                         target_date,
@@ -1720,7 +1942,9 @@ class Command(BaseCommand):
         if created and not event.media.exists():
             primary_tag = (tags or ["default"])[0]
             colour = TAG_COLOURS.get(primary_tag, TAG_COLOURS["default"])
-            if self._make_event_image(event, colour, name, image_url=image_url):
+            if self._make_event_image(
+                event, colour, name, image_url=image_url
+            ):
                 counts["images"] += 1
 
         showing_start = timezone.make_aware(
@@ -1753,7 +1977,8 @@ class Command(BaseCommand):
                     room=room,
                     defaults={
                         "start": showing_start,
-                        "end": showing_start + datetime.timedelta(minutes=_dur_mins),
+                        "end": showing_start
+                        + datetime.timedelta(minutes=_dur_mins),
                     },
                 )
             self._book_slot(room, showing_start, _dur_mins)
@@ -1860,7 +2085,9 @@ class Command(BaseCommand):
         if created and not event.media.exists():
             primary_tag = (tags or ["film"])[0]
             colour = TAG_COLOURS.get(primary_tag, TAG_COLOURS["default"])
-            if self._make_event_image(event, colour, title, image_url=image_url):
+            if self._make_event_image(
+                event, colour, title, image_url=image_url
+            ):
                 counts["images"] += 1
 
         showing_start = timezone.make_aware(
@@ -1938,12 +2165,18 @@ class Command(BaseCommand):
             _, re_created = RotaEntry.objects.get_or_create(
                 showing=showing,
                 role=role,
-                defaults={"required": True, "name": vol_name, "volunteer": vol},
+                defaults={
+                    "required": True,
+                    "name": vol_name,
+                    "volunteer": vol,
+                },
             )
             if re_created:
                 counts["rota_entries"] += 1
 
-    def _seed_programming_queue(self, rooms_dict, vol_list, counts):
+    def _seed_programming_queue(
+        self, rooms_dict, vol_list, counts
+    ):  # noqa: ARG002 -- dead param, deferred to Chunk 11's seed_dev_data rewrite
         """Seed proposed / draft events for the programming queue.
 
         These illustrate the queue's real-world states: events pencilled in
@@ -2138,7 +2371,9 @@ class Command(BaseCommand):
         for spec in PROPOSED_EVENTS:
             template = None
             if spec.get("template"):
-                template = EventTemplate.objects.filter(name=spec["template"]).first()
+                template = EventTemplate.objects.filter(
+                    name=spec["template"]
+                ).first()
 
             dur_mins = spec.get("duration", 120)
             dur_time = datetime.time(dur_mins // 60, dur_mins % 60)
@@ -2193,8 +2428,13 @@ class Command(BaseCommand):
 
             for d in spec.get("dates", []):
                 start = (
-                    base + datetime.timedelta(weeks=d["weeks"], days=d.get("days", 0))
-                ).replace(hour=d.get("hour", 19), minute=0, second=0, microsecond=0)
+                    base
+                    + datetime.timedelta(
+                        weeks=d["weeks"], days=d.get("days", 0)
+                    )
+                ).replace(
+                    hour=d.get("hour", 19), minute=0, second=0, microsecond=0
+                )
 
                 room = rooms_dict.get(d["room"]) if d.get("room") else None
                 if room is not None:
@@ -2220,7 +2460,8 @@ class Command(BaseCommand):
                             room=room,
                             defaults={
                                 "start": start,
-                                "end": start + datetime.timedelta(minutes=dur_mins),
+                                "end": start
+                                + datetime.timedelta(minutes=dur_mins),
                             },
                         )
                         self._book_slot(room, start, dur_mins)
@@ -2231,15 +2472,17 @@ class Command(BaseCommand):
         Called once before any showings are created so that _find_free_slot
         and _book_slot can detect clashes without hitting the DB on every check.
         """
-        self._room_bookings = defaultdict(list)  # room_pk → [(start, end), ...]
+        self._room_bookings = defaultdict(
+            list
+        )  # room_pk → [(start, end), ...]
         # Exclude seed showings: they will register themselves via _book_slot as
         # they're created, so existing seed data doesn't cause time-shifting on
         # idempotent re-runs (which would create duplicate showings).
-        for rb in RoomBooking.objects.filter(
-            showing__start__gte=timezone.now()
-        ).exclude(
-            showing__booked_by="seed_dev_data"
-        ).select_related("showing__event", "room"):
+        for rb in (
+            RoomBooking.objects.filter(showing__start__gte=timezone.now())
+            .exclude(showing__booked_by="seed_dev_data")
+            .select_related("showing__event", "room")
+        ):
             duration = rb.showing.event.duration
             if duration is None:
                 dur_mins = 120
@@ -2263,7 +2506,9 @@ class Command(BaseCommand):
         while attempt <= limit:
             end = attempt + duration
             booked = self._room_bookings.get(room.pk, [])
-            if not any(attempt < b_end and end > b_start for b_start, b_end in booked):
+            if not any(
+                attempt < b_end and end > b_start for b_start, b_end in booked
+            ):
                 return attempt
             attempt += step
         return preferred_start
@@ -2380,7 +2625,9 @@ class Command(BaseCommand):
                     "last_name": name.split()[1],
                 },
             )
-            Volunteer.objects.get_or_create(member=member, defaults={"user": user})
+            Volunteer.objects.get_or_create(
+                member=member, defaults={"user": user}
+            )
             created_count += 1
 
             if i < 5:
@@ -2478,7 +2725,10 @@ class Command(BaseCommand):
                 _, signup_created = InductionSignup.objects.get_or_create(
                     session=session,
                     email=email,
-                    defaults={"name": name, "status": InductionSignup.STATUS_PENDING},
+                    defaults={
+                        "name": name,
+                        "status": InductionSignup.STATUS_PENDING,
+                    },
                 )
                 if signup_created:
                     counts["induction_signups"] += 1
@@ -2527,7 +2777,8 @@ class Command(BaseCommand):
         for spec in _one_to_one_data:
             session_dt = timezone.make_aware(
                 datetime.datetime.combine(
-                    today + datetime.timedelta(weeks=spec["date_offset_weeks"]),
+                    today
+                    + datetime.timedelta(weeks=spec["date_offset_weeks"]),
                     datetime.time(spec["hour"], 0),
                 )
             )
@@ -2549,7 +2800,9 @@ class Command(BaseCommand):
                 defaults={
                     "name": req_data["name"],
                     "access_needs": req_data["access_needs"],
-                    "rough_availability": req_data.get("rough_availability", ""),
+                    "rough_availability": req_data.get(
+                        "rough_availability", ""
+                    ),
                     "status": req_data["status"],
                     "linked_session": session,
                 },
@@ -2564,7 +2817,10 @@ class Command(BaseCommand):
             _, signup_created = InductionSignup.objects.get_or_create(
                 session=session,
                 email=req_data["email"],
-                defaults={"name": req_data["name"], "status": InductionSignup.STATUS_PENDING},
+                defaults={
+                    "name": req_data["name"],
+                    "status": InductionSignup.STATUS_PENDING,
+                },
             )
             if signup_created:
                 counts["induction_signups"] += 1
@@ -2706,25 +2962,42 @@ class Command(BaseCommand):
             )
             if created:
                 counts["film_records"] += 1
-            Event.objects.filter(name=data["title"], film__isnull=True).update(film=film)
+            Event.objects.filter(name=data["title"], film__isnull=True).update(
+                film=film
+            )
 
     def _make_poster_image(self, event_name, bg_colour, width=600, height=900):
         from toolkit.diary.poster import make_poster_image
-        return make_poster_image(event_name, bg_colour, width=width, height=height)
 
-    def _make_event_image(self, event, colour, event_name="Event", image_url=None, image_path=None, auto_crop=None):
+        return make_poster_image(
+            event_name, bg_colour, width=width, height=height
+        )
+
+    def _make_event_image(
+        self,
+        event,
+        colour,
+        event_name="Event",
+        image_url=None,
+        image_path=None,
+        auto_crop=None,
+    ):
         """Download (with cache) or generate a placeholder image and attach it to the event."""
         try:
             img = None
             if image_path:
-                _seed_data_dir = os.path.dirname(os.path.abspath(__file__)) + "/seed_data"
+                _seed_data_dir = (
+                    os.path.dirname(os.path.abspath(__file__)) + "/seed_data"
+                )
                 full_path = os.path.join(_seed_data_dir, image_path)
                 try:
                     img = Image.open(full_path)
                     if img.mode != "RGB":
                         img = img.convert("RGB")
                 except Exception as exc:
-                    self.stdout.write(f"  Warning: could not load local image '{full_path}': {exc}")
+                    self.stdout.write(
+                        f"  Warning: could not load local image '{full_path}': {exc}"
+                    )
                     img = None
             elif image_url:
                 # Check cache first
@@ -2739,7 +3012,9 @@ class Command(BaseCommand):
                         req = urllib.request.Request(
                             image_url, headers={"User-Agent": "Mozilla/5.0"}
                         )
-                        with urllib.request.urlopen(req, timeout=10) as response:
+                        with urllib.request.urlopen(
+                            req, timeout=10
+                        ) as response:
                             img_data = response.read()
                         with open(cache_path, "wb") as f:
                             f.write(img_data)
@@ -2760,7 +3035,9 @@ class Command(BaseCommand):
                     # tested with authentic variety.
                     max_dim = 1200
                     if img.width > max_dim or img.height > max_dim:
-                        resample = getattr(Image.Resampling, "LANCZOS", Image.BICUBIC)
+                        resample = getattr(
+                            Image.Resampling, "LANCZOS", Image.BICUBIC
+                        )
                         img.thumbnail((max_dim, max_dim), resample=resample)
 
             if img is None:
@@ -2795,7 +3072,7 @@ class Command(BaseCommand):
                 if actual_ratio > target_ratio + 0.05:  # wider than 2:3
                     canvas_w = orig_w
                     canvas_h = round(orig_w / target_ratio)
-                    paste_x, paste_y = 0, (canvas_h - orig_h) // 2
+                    paste_y = (canvas_h - orig_h) // 2
 
                     crop_h_px = orig_h
                     crop_w_px = min(int(orig_h * target_ratio), orig_w)
@@ -2810,10 +3087,14 @@ class Command(BaseCommand):
                     media_item.crop_y = round(paste_y / canvas_h, 6)
                     media_item.crop_w = round(crop_w_px / canvas_w, 6)
                     media_item.crop_h = round(crop_h_px / canvas_h, 6)
-                    media_item.save(update_fields=["crop_x", "crop_y", "crop_w", "crop_h"])
+                    media_item.save(
+                        update_fields=["crop_x", "crop_y", "crop_w", "crop_h"]
+                    )
 
             event.media.add(media_item)
             return media_item
         except Exception as e:
-            self.stderr.write(f"Warning: could not create image for {event_name}: {e}")
+            self.stderr.write(
+                f"Warning: could not create image for {event_name}: {e}"
+            )
             return None

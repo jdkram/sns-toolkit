@@ -1,43 +1,17 @@
 import json
-import datetime
 
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from toolkit.toolkit_auth.decorators import (
-    feature_required,
-    write_required,
-    write_required_strict,
-)
-from django.db import models
-from django.db.models import Case, When, Value, IntegerField
 from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods, require_POST
 
-from django.http import HttpResponse, HttpResponseForbidden
-from django.utils import timezone
-from django.db.models import Exists, OuterRef
 
 from ..models import (
-    AreaPhoto,
-    Bulletin,
-    BulletinRead,
-    Collective,
-    ConsumableItem,
-    ExchangeItem,
-    FoundItem,
-    NeedFlag,
-    ProcurementPledge,
-    Supplier,
-    SupplierRecord,
-    RoomNote,
-    DonationItem,
-    Job,
     LoftItem,
     LoftItemPhoto,
 )
-from toolkit.diary.models import SiteConfiguration, get_site_config
 from .. import forms as lab_forms
+from ._common import _feature_enabled_or_404
 
 _LOFT_ZONES = [
     # (zone_id, display_name, section_key)
@@ -89,6 +63,7 @@ def _serialize_loft_items():
 
 
 @login_required
+@_feature_enabled_or_404("building_map_enabled")
 @require_POST
 def loft_item_create(request, zone_id):
     if zone_id not in _LOFT_ZONE_IDS:
@@ -121,6 +96,7 @@ def loft_item_create(request, zone_id):
 
 
 @login_required
+@_feature_enabled_or_404("building_map_enabled")
 @require_http_methods(["POST", "DELETE"])
 def loft_item(request, item_id):
     item = get_object_or_404(LoftItem, pk=item_id)
@@ -140,6 +116,7 @@ def loft_item(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("building_map_enabled")
 @require_POST
 def loft_item_photo_upload(request, item_id):
     item = get_object_or_404(LoftItem, pk=item_id)
@@ -163,8 +140,9 @@ def loft_item_photo_upload(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("building_map_enabled")
 @require_POST
-def loft_photo_delete(request, photo_id):
+def loft_photo_delete(request, photo_id):  # noqa: ARG001 -- view signature
     photo = get_object_or_404(LoftItemPhoto, pk=photo_id)
     photo.image.delete(save=False)
     photo.delete()

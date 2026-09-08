@@ -15,6 +15,7 @@ class OperationsTestsMixin:
 
     def _setup_test_users(self):
         from toolkit.test_common import create_toolkit_test_users
+
         users = create_toolkit_test_users(is_admin_superuser=False)
         self.user_admin = users.admin
         self.user_ro = users.read_only
@@ -26,7 +27,9 @@ class OperationsTestsMixin:
         self.user_vol = auth_models.User.objects.create_user(
             "volunteer", "vol@test.example", "T3stPassword!3"
         )
-        self.vol = Volunteer.objects.create(member=self.mem_vol, user=self.user_vol)
+        self.vol = Volunteer.objects.create(
+            member=self.mem_vol, user=self.user_vol
+        )
 
     def _setup_test_data(self):
         self.task_annual = MaintenanceTask.objects.create(

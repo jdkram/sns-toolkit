@@ -2,8 +2,8 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-09-02
-**Last major change:** Bug AT — batch of diary/calendar/rota UI fixes (month-heading clipping, room hide/show, rota filter panel restructure, Vacancies filter removed). 2026-09-01: Logging & email observability workstream complete repo-side: Bug AQ, 9.154, 9.156, 9.159 shipped; repo side of 9.155/9.157/9.158 done (see section 3c). Only the freyja server-side steps remain. 2026-07-15: email log trigger attribution + backend explainer (9.156b), plus a full security/robustness review of the email pipeline — 2 small fixes landed, throttling spec 9.161 added.
+**Last updated:** 2026-09-08
+**Last major change:** 2026-09-08: quality pass complete and merged (ruff/black/CI gates, 230 new tests, 7 security fixes, god-module splits, inline JS extraction; see the Quality pass section below). Before that, Bug AT — batch of diary/calendar/rota UI fixes (month-heading clipping, room hide/show, rota filter panel restructure, Vacancies filter removed). 2026-09-01: Logging & email observability workstream complete repo-side: Bug AQ, 9.154, 9.156, 9.159 shipped; repo side of 9.155/9.157/9.158 done (see section 3c). Only the freyja server-side steps remain. 2026-07-15: email log trigger attribution + backend explainer (9.156b), plus a full security/robustness review of the email pipeline — 2 small fixes landed, throttling spec 9.161 added.
 **Current phase:** Phase 4 ongoing
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs) · [REWRITE_STRATEGY.md](docs/REWRITE_STRATEGY.md) (tech notes and migration guide)
 
@@ -68,9 +68,45 @@ The tradeoff in one line: Ben's branch is small and maintained by someone else; 
 
 ---
 
+## Quality pass (`chore/quality-pass-2026-09`) ✅ complete 2026-09-08
+
+Full record, including the measured before/after and the chunk-by-chunk log, is archived at
+[docs/ARCHIVE/QUALITY_PASS_2026_09.md](docs/ARCHIVE/QUALITY_PASS_2026_09.md). The lasting
+outputs live elsewhere: the code standard in [docs/QUALITY_RUBRIC.md](docs/QUALITY_RUBRIC.md),
+the tool config in `pyproject.toml`, the gates in `.github/workflows/ci.yml` and
+`.pre-commit-config.yaml`, and the standing rules in CLAUDE.md's "Tooling and gates" section.
+
+Prompted by a worry that quality had drifted unmeasured across ~2,180 mostly AI-assisted
+commits. The June maintainability pass was Claude reviewing Claude; its own refactor shipped
+892 unused imports and a star-import hub that went unnoticed for two and a half months,
+because this repo had no linter. So this pass put deterministic tooling underneath the model
+layer, and routed the judgement work to a different model (MiniMax M3 and Kimi K2, $1.69 total).
+
+What changed, in one table:
+
+| | Before | After |
+|---|---|---|
+| Ruff findings | 998 (no linter configured) | 0, enforced by CI and pre-commit |
+| Tests | 1,129 | 1,359 |
+| Coverage | 81.5% | 85.5% |
+| Security findings | 7 stored-XSS / open-redirect / CSV-injection vectors, unknown | all fixed, 6 with regression tests |
+| Star-import hub (`members/views/_common.py`) | 542 untraceable symbol refs | gone; every import explicit |
+| God modules | `diary/forms.py`, `inductions/views.py`, `member_views.py` | split into packages by feature |
+| Inline JS in templates | 7,535 lines; four scripts over 700 lines each | those four extracted to `static/`, browser-verified |
+| Duplicated helpers | 2× volunteer lookup, 3× CSV export, 2× ICS builder | `toolkit/util/{volunteers,csv_export,ics}.py` (ICS unification fixed a real BST-offset bug) |
+| `labs` mini-tools | one feature flag (Exchange) | all seven toggleable in Site Settings (migration `0044`) |
+
+Left open, all recorded in [known-issues.md](docs/tasks/known-issues.md): Bugs AV–AY (a broken
+Bootstrap modal on the induction session page, two small pre-existing view bugs, and five
+verified sweep findings), plus a note that the new `__init__.py` re-export layers are indirection
+for a single consumer. Complexity is gated at 20 as a ratchet; 18 functions still exceed the
+honest target of 12, and `seed_dev_data.handle` (101) is excluded outright.
+
+---
+
 ## Maintainability pass (`chore/maintainability-pass`)
 
-Tracking file: [MAINTAINABILITY_PASS.md](MAINTAINABILITY_PASS.md). Chunks 1-5 done 2026-06-26.
+Tracking file (archived): [docs/ARCHIVE/MAINTAINABILITY_PASS_2026_06.md](docs/ARCHIVE/MAINTAINABILITY_PASS_2026_06.md). All chunks done 2026-06-28.
 
 | Chunk | Status | Notes |
 |---|---|---|

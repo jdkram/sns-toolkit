@@ -2,9 +2,37 @@
 from django.test import TestCase
 from django.urls import reverse
 
+from toolkit.diary.models import get_site_config
 from toolkit.labs.models import Job
 
 from .common import LabsTestsMixin
+
+
+class JobsGateTests(LabsTestsMixin, TestCase):
+    """Toggling SiteConfiguration.jobs_board_enabled off 404s the board."""
+
+    def setUp(self):
+        super().setUp()
+        cfg = get_site_config()
+        cfg.jobs_board_enabled = False
+        cfg.save()
+        self.client.login(username="volunteer", password="T3stPassword!3")
+
+    def test_list_404s_when_disabled(self):
+        response = self.client.get(reverse("labs-jobs"))
+        self.assertEqual(response.status_code, 404)
+
+    def test_add_404s_when_disabled(self):
+        response = self.client.get(reverse("labs-job-add"))
+        self.assertEqual(response.status_code, 404)
+
+    def test_enabled_by_default(self):
+        cfg = get_site_config()
+        cfg.jobs_board_enabled = True
+        cfg.save()
+        response = self.client.get(reverse("labs-jobs"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/jobs.html")
 
 
 class JobListTests(LabsTestsMixin, TestCase):
@@ -44,6 +72,7 @@ class JobAddTests(LabsTestsMixin, TestCase):
     def test_get_shows_form(self):
         response = self.client.get(reverse("labs-job-add"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/job_form.html")
 
     def test_post_creates_job_and_redirects(self):
         data = {
@@ -82,7 +111,9 @@ class JobAddTests(LabsTestsMixin, TestCase):
         self.assertEqual(job.posted_by, self.user_admin)
 
     def test_post_with_missing_title_returns_form(self):
-        response = self.client.post(reverse("labs-job-add"), {"title": "", "urgency": "low"})
+        response = self.client.post(
+            reverse("labs-job-add"), {"title": "", "urgency": "low"}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Job.objects.filter(title="").exists())
 
@@ -93,7 +124,9 @@ class JobEditTests(LabsTestsMixin, TestCase):
     def setUp(self):
         super().setUp()
         self.client.login(username="admin", password="T3stPassword!")
-        self.url = reverse("labs-job-edit", kwargs={"job_id": self.job_open.pk})
+        self.url = reverse(
+            "labs-job-edit", kwargs={"job_id": self.job_open.pk}
+        )
 
     def test_get_shows_form_prefilled(self):
         response = self.client.get(self.url)
@@ -149,7 +182,9 @@ class JobUnclaimTests(LabsTestsMixin, TestCase):
 
     def test_claimant_can_unclaim_own_job(self):
         self.client.login(username="volunteer", password="T3stPassword!3")
-        url = reverse("labs-job-unclaim", kwargs={"job_id": self.job_claimed.pk})
+        url = reverse(
+            "labs-job-unclaim", kwargs={"job_id": self.job_claimed.pk}
+        )
         response = self.client.post(url)
         self.assertRedirects(response, reverse("labs-jobs"))
         self.job_claimed.refresh_from_db()
@@ -157,7 +192,9 @@ class JobUnclaimTests(LabsTestsMixin, TestCase):
 
     def test_write_user_can_unclaim_any_job(self):
         self.client.login(username="admin", password="T3stPassword!")
-        url = reverse("labs-job-unclaim", kwargs={"job_id": self.job_claimed.pk})
+        url = reverse(
+            "labs-job-unclaim", kwargs={"job_id": self.job_claimed.pk}
+        )
         response = self.client.post(url)
         self.assertRedirects(response, reverse("labs-jobs"))
         self.job_claimed.refresh_from_db()
@@ -165,7 +202,9 @@ class JobUnclaimTests(LabsTestsMixin, TestCase):
 
     def test_other_volunteer_cannot_unclaim_someone_elses_job(self):
         self.client.login(username="no_perm", password="T3stPassword!2")
-        url = reverse("labs-job-unclaim", kwargs={"job_id": self.job_claimed.pk})
+        url = reverse(
+            "labs-job-unclaim", kwargs={"job_id": self.job_claimed.pk}
+        )
         self.client.post(url)
         self.job_claimed.refresh_from_db()
         self.assertEqual(self.job_claimed.claimed_by, self.user_vol)

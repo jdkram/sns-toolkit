@@ -20,6 +20,7 @@ Venue name and from-address are read from settings.VENUE consistently here
 so callers don't each re-inline the fallback chain that drifted between
 apps (longname->name vs longname->name->"" vs hardcoded VENUE["longname"]).
 """
+
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
@@ -35,7 +36,10 @@ def venue_name() -> str:
 
 def from_email() -> str:
     """From: address for outbound password emails — VENUE.mailout_from_address or DEFAULT_FROM_EMAIL."""
-    return settings.VENUE.get("mailout_from_address") or settings.DEFAULT_FROM_EMAIL
+    return (
+        settings.VENUE.get("mailout_from_address")
+        or settings.DEFAULT_FROM_EMAIL
+    )
 
 
 def password_reset_timeout_days() -> int:

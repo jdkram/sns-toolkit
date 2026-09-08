@@ -1,6 +1,7 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Opus 4.8"]; status: "#ai-written"
 """Tests for volunteer pool-management tools: auto-dormancy, purge, the
 returning-volunteer experience, and the pool-health dashboard."""
+
 import datetime
 from io import StringIO
 
@@ -11,7 +12,13 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from toolkit.diary.models import Role, RotaEntry, Showing, Event, get_site_config
+from toolkit.diary.models import (
+    Role,
+    RotaEntry,
+    Showing,
+    Event,
+    get_site_config,
+)
 from toolkit.members.models import AnonymisationLog, Member, Volunteer
 
 from .common import MembersTestsMixin
@@ -22,8 +29,13 @@ def _days_ago(days):
 
 
 class PoolManagementBase(MembersTestsMixin, TestCase):
-    def _make_vol(self, username, status=Volunteer.STATUS_ACTIVE,
-                  last_login=None, joined_days_ago=1):
+    def _make_vol(
+        self,
+        username,
+        status=Volunteer.STATUS_ACTIVE,
+        last_login=None,
+        joined_days_ago=1,
+    ):
         """Create a Member + User + Volunteer with controlled login timestamps.
 
         date_joined, last_login, and Volunteer.created_at are all set via
@@ -31,13 +43,17 @@ class PoolManagementBase(MembersTestsMixin, TestCase):
         accounts precisely in time. joined_days_ago applies to all three so
         the volunteer's induction date is consistent with their login history.
         """
-        member = Member.objects.create(name=f"PM {username}", email=f"{username}@pm.test")
+        member = Member.objects.create(
+            name=f"PM {username}", email=f"{username}@pm.test"
+        )
         user = User.objects.create_user(username, f"{username}@pm.test", "pw")
         User.objects.filter(pk=user.pk).update(
             date_joined=_days_ago(joined_days_ago), last_login=last_login
         )
         vol = Volunteer.objects.create(member=member, user=user, status=status)
-        Volunteer.objects.filter(pk=vol.pk).update(created_at=_days_ago(joined_days_ago))
+        Volunteer.objects.filter(pk=vol.pk).update(
+            created_at=_days_ago(joined_days_ago)
+        )
         return Volunteer.objects.get(pk=vol.pk)
 
     def _set_config(self, **kwargs):
@@ -87,10 +103,12 @@ class TestAutoDormancy(PoolManagementBase):
         self.assertEqual(vol.status, Volunteer.STATUS_ACTIVE)
 
     def test_retired_and_suspended_untouched(self):
-        retired = self._make_vol("ret", status=Volunteer.STATUS_RETIRED,
-                                 last_login=_days_ago(400))
-        suspended = self._make_vol("sus", status=Volunteer.STATUS_SUSPENDED,
-                                   last_login=_days_ago(400))
+        retired = self._make_vol(
+            "ret", status=Volunteer.STATUS_RETIRED, last_login=_days_ago(400)
+        )
+        suspended = self._make_vol(
+            "sus", status=Volunteer.STATUS_SUSPENDED, last_login=_days_ago(400)
+        )
         self._run()
         retired.refresh_from_db()
         suspended.refresh_from_db()
@@ -120,11 +138,16 @@ class TestAutoDormancy(PoolManagementBase):
         role = Role.objects.create(name="PM Role", standard=True)
         event = Event.objects.create(name="PM Event")
         showing = Showing.objects.create(
-            event=event, start=timezone.now() + datetime.timedelta(days=7),
+            event=event,
+            start=timezone.now() + datetime.timedelta(days=7),
             confirmed=True,
         )
         entry = RotaEntry.objects.create(
-            showing=showing, role=role, volunteer=vol, name=vol.member.name, rank=1
+            showing=showing,
+            role=role,
+            volunteer=vol,
+            name=vol.member.name,
+            rank=1,
         )
         self._run()
         entry.refresh_from_db()
@@ -137,16 +160,31 @@ class TestPurgeCandidatesAndCommand(PoolManagementBase):
         self._set_config(volunteer_purge_days=1095)
 
     def test_purge_candidates_queryset(self):
-        old_dormant = self._make_vol("od", status=Volunteer.STATUS_DORMANT,
-                                     last_login=_days_ago(1200), joined_days_ago=1200)
-        old_retired = self._make_vol("or", status=Volunteer.STATUS_RETIRED,
-                                     last_login=_days_ago(1200), joined_days_ago=1200)
-        recent_dormant = self._make_vol("rd", status=Volunteer.STATUS_DORMANT,
-                                        last_login=_days_ago(30))
-        active_old = self._make_vol("ao", status=Volunteer.STATUS_ACTIVE,
-                                    last_login=_days_ago(1200), joined_days_ago=1200)
+        old_dormant = self._make_vol(
+            "od",
+            status=Volunteer.STATUS_DORMANT,
+            last_login=_days_ago(1200),
+            joined_days_ago=1200,
+        )
+        old_retired = self._make_vol(
+            "or",
+            status=Volunteer.STATUS_RETIRED,
+            last_login=_days_ago(1200),
+            joined_days_ago=1200,
+        )
+        recent_dormant = self._make_vol(
+            "rd", status=Volunteer.STATUS_DORMANT, last_login=_days_ago(30)
+        )
+        active_old = self._make_vol(
+            "ao",
+            status=Volunteer.STATUS_ACTIVE,
+            last_login=_days_ago(1200),
+            joined_days_ago=1200,
+        )
         pks = set(
-            Volunteer.objects.purge_candidates(1095).values_list("pk", flat=True)
+            Volunteer.objects.purge_candidates(1095).values_list(
+                "pk", flat=True
+            )
         )
         self.assertIn(old_dormant.pk, pks)
         self.assertIn(old_retired.pk, pks)
@@ -155,13 +193,23 @@ class TestPurgeCandidatesAndCommand(PoolManagementBase):
 
     def test_never_logged_in_uses_join_date(self):
         # Falls back to date_joined when last_login is null.
-        old = self._make_vol("nlo", status=Volunteer.STATUS_DORMANT,
-                             last_login=None, joined_days_ago=1200)
-        pks = set(Volunteer.objects.purge_candidates(1095).values_list("pk", flat=True))
+        old = self._make_vol(
+            "nlo",
+            status=Volunteer.STATUS_DORMANT,
+            last_login=None,
+            joined_days_ago=1200,
+        )
+        pks = set(
+            Volunteer.objects.purge_candidates(1095).values_list(
+                "pk", flat=True
+            )
+        )
         self.assertIn(old.pk, pks)
 
     def test_purge_days_zero_disables(self):
-        self._make_vol("od", status=Volunteer.STATUS_DORMANT, last_login=_days_ago(1200))
+        self._make_vol(
+            "od", status=Volunteer.STATUS_DORMANT, last_login=_days_ago(1200)
+        )
         self.assertEqual(Volunteer.objects.purge_candidates(0).count(), 0)
 
     def _run(self, *args):
@@ -170,8 +218,12 @@ class TestPurgeCandidatesAndCommand(PoolManagementBase):
         return out.getvalue()
 
     def test_dry_run_default_makes_no_changes(self):
-        vol = self._make_vol("od", status=Volunteer.STATUS_DORMANT,
-                             last_login=_days_ago(1200), joined_days_ago=1200)
+        vol = self._make_vol(
+            "od",
+            status=Volunteer.STATUS_DORMANT,
+            last_login=_days_ago(1200),
+            joined_days_ago=1200,
+        )
         output = self._run()
         vol.refresh_from_db()
         self.assertNotIn("anon-", vol.user.username)
@@ -179,29 +231,48 @@ class TestPurgeCandidatesAndCommand(PoolManagementBase):
         self.assertIn("Dry run", output)
 
     def test_apply_without_confirm_aborts(self):
-        self._make_vol("od", status=Volunteer.STATUS_DORMANT, last_login=_days_ago(1200), joined_days_ago=1200)
+        self._make_vol(
+            "od",
+            status=Volunteer.STATUS_DORMANT,
+            last_login=_days_ago(1200),
+            joined_days_ago=1200,
+        )
         with self.assertRaises(CommandError):
             self._run("--apply")
         self.assertEqual(AnonymisationLog.objects.count(), 0)
 
     def test_apply_wrong_phrase_aborts(self):
-        self._make_vol("od", status=Volunteer.STATUS_DORMANT, last_login=_days_ago(1200), joined_days_ago=1200)
+        self._make_vol(
+            "od",
+            status=Volunteer.STATUS_DORMANT,
+            last_login=_days_ago(1200),
+            joined_days_ago=1200,
+        )
         with self.assertRaises(CommandError):
             self._run("--apply", "--confirm", "do it")
         self.assertEqual(AnonymisationLog.objects.count(), 0)
 
     def test_apply_correct_phrase_anonymises(self):
-        vol = self._make_vol("od", status=Volunteer.STATUS_DORMANT,
-                             last_login=_days_ago(1200), joined_days_ago=1200)
+        vol = self._make_vol(
+            "od",
+            status=Volunteer.STATUS_DORMANT,
+            last_login=_days_ago(1200),
+            joined_days_ago=1200,
+        )
         # Past rota history that must survive (de-identified).
         role = Role.objects.create(name="PM Role", standard=True)
         event = Event.objects.create(name="PM Event")
         showing = Showing.objects.create(
-            event=event, start=timezone.now() - datetime.timedelta(days=30),
+            event=event,
+            start=timezone.now() - datetime.timedelta(days=30),
             confirmed=True,
         )
         entry = RotaEntry.objects.create(
-            showing=showing, role=role, volunteer=vol, name=vol.member.name, rank=1
+            showing=showing,
+            role=role,
+            volunteer=vol,
+            name=vol.member.name,
+            rank=1,
         )
         count = Volunteer.objects.purge_candidates(1095).count()
         self._run("--apply", "--confirm", f"anonymise {count} volunteers")
@@ -209,7 +280,9 @@ class TestPurgeCandidatesAndCommand(PoolManagementBase):
         vol.refresh_from_db()
         self.assertEqual(vol.status, Volunteer.STATUS_ANONYMISED)
         self.assertTrue(vol.user.username.startswith("anon-"))
-        self.assertEqual(AnonymisationLog.objects.filter(volunteer_pk=vol.pk).count(), 1)
+        self.assertEqual(
+            AnonymisationLog.objects.filter(volunteer_pk=vol.pk).count(), 1
+        )
         # Rota row preserved, but FK/name cleared.
         entry.refresh_from_db()
         self.assertIsNone(entry.volunteer_id)
@@ -262,12 +335,22 @@ class TestWelcomeCardAndDashboard(PoolManagementBase):
     def test_pool_health_dashboard(self):
         self._set_config(volunteer_purge_days=1095)
         # Dormant, never logged in, within retention window — appears in "recently dormant"
-        self._make_vol("never", status=Volunteer.STATUS_DORMANT, last_login=None,
-                       joined_days_ago=200)
+        self._make_vol(
+            "never",
+            status=Volunteer.STATUS_DORMANT,
+            last_login=None,
+            joined_days_ago=200,
+        )
         # Retired, previously logged in, past retention window — appears in "long inactive"
-        self._make_vol("purge", status=Volunteer.STATUS_RETIRED,
-                       last_login=_days_ago(1200), joined_days_ago=1200)
-        self.assertTrue(self.client.login(username="admin", password="T3stPassword!"))
+        self._make_vol(
+            "purge",
+            status=Volunteer.STATUS_RETIRED,
+            last_login=_days_ago(1200),
+            joined_days_ago=1200,
+        )
+        self.assertTrue(
+            self.client.login(username="admin", password="T3stPassword!")
+        )
         resp = self.client.get(reverse("view-volunteer-pool-health"))
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, "volunteer_pool_health.html")
@@ -288,6 +371,7 @@ class TestBeginnerHighlightHint(PoolManagementBase):
         vol = self._make_vol("bh", status=Volunteer.STATUS_DORMANT)
         # Rota edit requires the change_rotaentry permission.
         from django.contrib.auth.models import Permission
+
         vol.user.user_permissions.add(
             Permission.objects.get(codename="change_rotaentry")
         )
@@ -298,6 +382,7 @@ class TestBeginnerHighlightHint(PoolManagementBase):
     def test_active_volunteer_does_not_force_highlight(self):
         vol = self._make_vol("ah", status=Volunteer.STATUS_ACTIVE)
         from django.contrib.auth.models import Permission
+
         vol.user.user_permissions.add(
             Permission.objects.get(codename="change_rotaentry")
         )
@@ -309,18 +394,34 @@ class TestBeginnerHighlightHint(PoolManagementBase):
 class TestRetentionExempt(PoolManagementBase):
     def test_exempt_volunteer_excluded_from_purge_candidates(self):
         self._set_config(volunteer_purge_days=1095)
-        vol = self._make_vol("ex", status=Volunteer.STATUS_DORMANT,
-                             last_login=_days_ago(1200), joined_days_ago=1200)
+        vol = self._make_vol(
+            "ex",
+            status=Volunteer.STATUS_DORMANT,
+            last_login=_days_ago(1200),
+            joined_days_ago=1200,
+        )
         vol.retention_exempt = True
         vol.save()
-        pks = set(Volunteer.objects.purge_candidates(1095).values_list("pk", flat=True))
+        pks = set(
+            Volunteer.objects.purge_candidates(1095).values_list(
+                "pk", flat=True
+            )
+        )
         self.assertNotIn(vol.pk, pks)
 
     def test_non_exempt_volunteer_included_in_purge_candidates(self):
         self._set_config(volunteer_purge_days=1095)
-        vol = self._make_vol("ne", status=Volunteer.STATUS_DORMANT,
-                             last_login=_days_ago(1200), joined_days_ago=1200)
-        pks = set(Volunteer.objects.purge_candidates(1095).values_list("pk", flat=True))
+        vol = self._make_vol(
+            "ne",
+            status=Volunteer.STATUS_DORMANT,
+            last_login=_days_ago(1200),
+            joined_days_ago=1200,
+        )
+        pks = set(
+            Volunteer.objects.purge_candidates(1095).values_list(
+                "pk", flat=True
+            )
+        )
         self.assertIn(vol.pk, pks)
 
     def test_exempt_section_shown_on_pool_health(self):
@@ -339,7 +440,9 @@ class TestAdminRestoreVolunteer(PoolManagementBase):
     def test_restores_dormant_to_active(self):
         vol = self._make_vol("rv", status=Volunteer.STATUS_DORMANT)
         self.client.login(username="admin", password="T3stPassword!")
-        resp = self.client.post(reverse("admin-restore-volunteer", kwargs={"volunteer_id": vol.pk}))
+        resp = self.client.post(
+            reverse("admin-restore-volunteer", kwargs={"volunteer_id": vol.pk})
+        )
         self.assertEqual(resp.status_code, 302)
         vol.refresh_from_db()
         self.assertEqual(vol.status, Volunteer.STATUS_ACTIVE)
@@ -347,14 +450,18 @@ class TestAdminRestoreVolunteer(PoolManagementBase):
     def test_restores_retired_to_active(self):
         vol = self._make_vol("rr", status=Volunteer.STATUS_RETIRED)
         self.client.login(username="admin", password="T3stPassword!")
-        self.client.post(reverse("admin-restore-volunteer", kwargs={"volunteer_id": vol.pk}))
+        self.client.post(
+            reverse("admin-restore-volunteer", kwargs={"volunteer_id": vol.pk})
+        )
         vol.refresh_from_db()
         self.assertEqual(vol.status, Volunteer.STATUS_ACTIVE)
 
     def test_non_superuser_forbidden(self):
         vol = self._make_vol("nsp", status=Volunteer.STATUS_DORMANT)
         self.client.force_login(vol.user)
-        resp = self.client.post(reverse("admin-restore-volunteer", kwargs={"volunteer_id": vol.pk}))
+        resp = self.client.post(
+            reverse("admin-restore-volunteer", kwargs={"volunteer_id": vol.pk})
+        )
         self.assertNotEqual(resp.status_code, 200)
         vol.refresh_from_db()
         self.assertEqual(vol.status, Volunteer.STATUS_DORMANT)
@@ -362,24 +469,39 @@ class TestAdminRestoreVolunteer(PoolManagementBase):
     def test_get_not_allowed(self):
         vol = self._make_vol("gna", status=Volunteer.STATUS_DORMANT)
         self.client.login(username="admin", password="T3stPassword!")
-        resp = self.client.get(reverse("admin-restore-volunteer", kwargs={"volunteer_id": vol.pk}))
+        resp = self.client.get(
+            reverse("admin-restore-volunteer", kwargs={"volunteer_id": vol.pk})
+        )
         self.assertEqual(resp.status_code, 405)
 
 
 class TestAutoDormancyGUI(PoolManagementBase):
     def setUp(self):
         super().setUp()
-        self._set_config(volunteer_dormancy_days=365, volunteer_never_logged_in_grace_days=90)
+        self._set_config(
+            volunteer_dormancy_days=365,
+            volunteer_never_logged_in_grace_days=90,
+        )
 
     def test_preview_shows_candidates(self):
-        self._make_vol("ia", status=Volunteer.STATUS_ACTIVE, last_login=_days_ago(400), joined_days_ago=400)
+        self._make_vol(
+            "ia",
+            status=Volunteer.STATUS_ACTIVE,
+            last_login=_days_ago(400),
+            joined_days_ago=400,
+        )
         self.client.login(username="admin", password="T3stPassword!")
         resp = self.client.get(reverse("auto-dormancy-preview"))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "PM ia")
 
     def test_apply_marks_dormant(self):
-        vol = self._make_vol("ap", status=Volunteer.STATUS_ACTIVE, last_login=_days_ago(400), joined_days_ago=400)
+        vol = self._make_vol(
+            "ap",
+            status=Volunteer.STATUS_ACTIVE,
+            last_login=_days_ago(400),
+            joined_days_ago=400,
+        )
         self.client.login(username="admin", password="T3stPassword!")
         resp = self.client.post(reverse("auto-dormancy-apply"))
         self.assertEqual(resp.status_code, 302)
@@ -396,30 +518,47 @@ class TestAutoDormancyGUI(PoolManagementBase):
 class TestAnonymiseMembershipGuard(PoolManagementBase):
     def test_warning_shown_for_active_member(self):
         import datetime as dt
+
         vol = self._make_vol("mg", status=Volunteer.STATUS_DORMANT)
-        vol.member.membership_expires = (timezone.now() + dt.timedelta(days=30)).date()
+        vol.member.membership_expires = (
+            timezone.now() + dt.timedelta(days=30)
+        ).date()
         vol.member.save()
         self.client.login(username="admin", password="T3stPassword!")
-        resp = self.client.get(reverse("anonymise-volunteer", kwargs={"volunteer_id": vol.pk}))
+        resp = self.client.get(
+            reverse("anonymise-volunteer", kwargs={"volunteer_id": vol.pk})
+        )
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(resp.context["has_active_membership"])
         self.assertContains(resp, "active membership")
 
     def test_no_warning_for_expired_member(self):
         import datetime as dt
+
         vol = self._make_vol("em", status=Volunteer.STATUS_DORMANT)
-        vol.member.membership_expires = (timezone.now() - dt.timedelta(days=30)).date()
+        vol.member.membership_expires = (
+            timezone.now() - dt.timedelta(days=30)
+        ).date()
         vol.member.save()
         self.client.login(username="admin", password="T3stPassword!")
-        resp = self.client.get(reverse("anonymise-volunteer", kwargs={"volunteer_id": vol.pk}))
+        resp = self.client.get(
+            reverse("anonymise-volunteer", kwargs={"volunteer_id": vol.pk})
+        )
         self.assertFalse(resp.context["has_active_membership"])
 
     def test_purge_command_skips_active_member(self):
         import datetime as dt
+
         self._set_config(volunteer_purge_days=1095)
-        vol = self._make_vol("pm", status=Volunteer.STATUS_DORMANT,
-                             last_login=_days_ago(1200), joined_days_ago=1200)
-        vol.member.membership_expires = (timezone.now() + dt.timedelta(days=30)).date()
+        vol = self._make_vol(
+            "pm",
+            status=Volunteer.STATUS_DORMANT,
+            last_login=_days_ago(1200),
+            joined_days_ago=1200,
+        )
+        vol.member.membership_expires = (
+            timezone.now() + dt.timedelta(days=30)
+        ).date()
         vol.member.save()
         out = StringIO()
         call_command("purge_stale_volunteers", stdout=out)
@@ -443,35 +582,61 @@ class TestLastGaspEmail(PoolManagementBase):
         config.save()
 
     def test_preview_renders(self):
-        vol = self._make_vol("lg", status=Volunteer.STATUS_DORMANT, last_login=_days_ago(1200))
+        vol = self._make_vol(
+            "lg", status=Volunteer.STATUS_DORMANT, last_login=_days_ago(1200)
+        )
         self.client.login(username="admin", password="T3stPassword!")
-        resp = self.client.get(reverse("last-gasp-email", kwargs={"volunteer_id": vol.pk}))
+        resp = self.client.get(
+            reverse("last-gasp-email", kwargs={"volunteer_id": vol.pk})
+        )
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "PM lg")
         self.assertContains(resp, "Still with us")
 
     def test_send_creates_log_entry(self):
         from toolkit.members.models import LastGaspEmailLog
-        vol = self._make_vol("lgsend", status=Volunteer.STATUS_DORMANT, last_login=_days_ago(1200))
+
+        vol = self._make_vol(
+            "lgsend",
+            status=Volunteer.STATUS_DORMANT,
+            last_login=_days_ago(1200),
+        )
         self.client.login(username="admin", password="T3stPassword!")
-        with self.settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"):
-            self.client.post(reverse("last-gasp-email", kwargs={"volunteer_id": vol.pk}))
-        self.assertEqual(LastGaspEmailLog.objects.filter(volunteer=vol).count(), 1)
+        with self.settings(
+            EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"
+        ):
+            self.client.post(
+                reverse("last-gasp-email", kwargs={"volunteer_id": vol.pk})
+            )
+        self.assertEqual(
+            LastGaspEmailLog.objects.filter(volunteer=vol).count(), 1
+        )
 
     def test_cooldown_blocks_second_send(self):
         from toolkit.members.models import LastGaspEmailLog
-        vol = self._make_vol("lgcd", status=Volunteer.STATUS_DORMANT, last_login=_days_ago(1200))
+
+        vol = self._make_vol(
+            "lgcd", status=Volunteer.STATUS_DORMANT, last_login=_days_ago(1200)
+        )
         LastGaspEmailLog.objects.create(volunteer=vol, sent_by=None)
         self.client.login(username="admin", password="T3stPassword!")
-        with self.settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"):
-            resp = self.client.post(reverse("last-gasp-email", kwargs={"volunteer_id": vol.pk}))
+        with self.settings(
+            EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"
+        ):
+            resp = self.client.post(
+                reverse("last-gasp-email", kwargs={"volunteer_id": vol.pk})
+            )
         self.assertEqual(resp.status_code, 302)
-        self.assertEqual(LastGaspEmailLog.objects.filter(volunteer=vol).count(), 1)
+        self.assertEqual(
+            LastGaspEmailLog.objects.filter(volunteer=vol).count(), 1
+        )
 
     def test_non_superuser_forbidden(self):
         vol = self._make_vol("lgperm", status=Volunteer.STATUS_DORMANT)
         self.client.force_login(vol.user)
-        resp = self.client.get(reverse("last-gasp-email", kwargs={"volunteer_id": vol.pk}))
+        resp = self.client.get(
+            reverse("last-gasp-email", kwargs={"volunteer_id": vol.pk})
+        )
         self.assertNotEqual(resp.status_code, 200)
 
 
@@ -480,8 +645,11 @@ class TestConsentOverdue(PoolManagementBase):
 
     def setUp(self):
         super().setUp()
-        self._set_config(consent_renewal_days=365, consent_renewal_grace_days=30)
+        self._set_config(
+            consent_renewal_days=365, consent_renewal_grace_days=30
+        )
         from toolkit.inductions.models import InductionsSettings
+
         self.inductions_settings = InductionsSettings.load()
         self.inductions_settings.privacy_policy_version = 1
         self.inductions_settings.save()
@@ -531,6 +699,7 @@ class TestConsentOverdue(PoolManagementBase):
 class TestRenewConsentSelf(PoolManagementBase):
     def test_renews_consent_and_clears_reminder(self):
         from toolkit.inductions.models import InductionsSettings
+
         InductionsSettings.load()  # ensure singleton row exists at version 1
 
         vol = self._make_vol("rc1")

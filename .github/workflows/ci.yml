@@ -1,0 +1,36 @@
+# human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Opus 5"]; status: "#ai-input"
+#
+# Why this exists: a June 2026 refactor shipped
+# 885 unused imports and a star-import hub that went unnoticed for two and
+# a half months because nothing checked. This is the check.
+#
+# No database service is needed: toolkit/test_settings.py runs the suite
+# against SQLite, not the MySQL used in production.
+name: CI
+
+on:
+  push:
+    branches: [master, sns_2026_overhaul]
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements/dev.txt
+
+      - name: ruff
+        run: ruff check toolkit
+
+      - name: black --check
+        run: black --check toolkit
+
+      - name: Django test suite
+        run: python manage.py test --settings=toolkit.test_settings

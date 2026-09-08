@@ -35,9 +35,6 @@ from toolkit.members.views import (
     auto_dormancy_apply,
     last_gasp_email,
     bulk_last_gasp_email,
-)
-
-from toolkit.members.member_views import (
     add_member,
     search,
     view,
@@ -156,8 +153,14 @@ volunteer_urls = [
         send_volunteer_password_reset,
         name="send-volunteer-password-reset",
     ),
-    re_path(r"^reactivate/$", reactivate_self, name="volunteer-reactivate-self"),
-    re_path(r"^renew-consent/$", renew_consent_self, name="volunteer-renew-consent-self"),
+    re_path(
+        r"^reactivate/$", reactivate_self, name="volunteer-reactivate-self"
+    ),
+    re_path(
+        r"^renew-consent/$",
+        renew_consent_self,
+        name="volunteer-renew-consent-self",
+    ),
     re_path(
         r"^bulk-award-qualification/$",
         bulk_award_qualification,
@@ -203,8 +206,14 @@ volunteer_urls = [
         save_volunteer_permissions,
         name="save-volunteer-permissions",
     ),
-    re_path(r"^directory/$", view_volunteer_directory, name="volunteer-directory"),
-    re_path(r"^digest/unsubscribe/$", volunteer_digest_unsubscribe, name="volunteer-digest-unsubscribe"),
+    re_path(
+        r"^directory/$", view_volunteer_directory, name="volunteer-directory"
+    ),
+    re_path(
+        r"^digest/unsubscribe/$",
+        volunteer_digest_unsubscribe,
+        name="volunteer-digest-unsubscribe",
+    ),
     re_path(r"^stats/$", volunteer_stats, name="volunteer-stats"),
 ]
 

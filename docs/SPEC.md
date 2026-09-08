@@ -478,7 +478,7 @@ sequenceDiagram
     T->>V: Redirect to login
 ```
 
-**Code:** `toolkit/members/volunteer_views.py` — `edit_volunteer()` (the `create_new` branch), `_send_password_set_email()`.
+**Code:** `toolkit/members/views/volunteer_edit.py` — `edit_volunteer()` (the `create_new` branch), `_send_password_set_email()`.
 
 ---
 
@@ -594,10 +594,10 @@ The "Anonymise this volunteer" action (Panopticon only, `/volunteers/<id>/anonym
 
 | What | File | Function / class |
 |---|---|---|
-| Account auto-creation on volunteer add | `toolkit/members/volunteer_views.py` | `edit_volunteer()` — `create_new` branch, lines ~329–346 |
-| Welcome email helper | `toolkit/members/volunteer_views.py` | `_send_password_set_email()` |
-| Manual resend (Panopticon button) | `toolkit/members/volunteer_views.py` | `send_volunteer_password_reset()` |
-| Direct password set | `toolkit/members/volunteer_views.py` | `set_volunteer_password()` |
+| Account auto-creation on volunteer add | `toolkit/members/views/volunteer_edit.py` | `edit_volunteer()` — `create_new` branch |
+| Welcome email helper | `toolkit/members/views/volunteer_edit.py` | `_send_password_set_email()` |
+| Manual resend (Panopticon button) | `toolkit/members/views/volunteer_edit.py` | `send_volunteer_password_reset()` |
+| Direct password set | `toolkit/members/views/volunteer_edit.py` | `set_volunteer_password()` |
 | Password-set URL pattern | `toolkit/toolkit_auth/urls.py` | `password_reset_confirm` |
 | Password-set confirm view | Django built-in | `django.contrib.auth.views.PasswordResetConfirmView` |
 | Token generator | Django built-in | `django.contrib.auth.tokens.PasswordResetTokenGenerator` |

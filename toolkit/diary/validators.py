@@ -33,11 +33,7 @@ def _get_extra_allowed_domains():
 
         raw = SiteConfiguration.load().eventlink_extra_allowed_domains
         if raw:
-            return [
-                d.strip()
-                for d in raw.splitlines()
-                if d.strip()
-            ]
+            return [d.strip() for d in raw.splitlines() if d.strip()]
     except Exception:
         pass
 

@@ -14,7 +14,8 @@ def role_label(rota_entry, showing):
     no extra queries are made.
     """
     count = sum(
-        1 for e in showing.rotaentry_set.all()
+        1
+        for e in showing.rotaentry_set.all()
         if e.role_id == rota_entry.role_id
     )
     if count > 1:

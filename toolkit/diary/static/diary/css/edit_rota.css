@@ -1,0 +1,896 @@
+/* human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Sonnet 5"]; status: "#ai-input" */
+/* Extracted verbatim from edit_rota.html's inline <style> (September 2026 quality pass). */
+
+
+    /* ── Controls bar ────────────────────────────────────────────────── */
+    .rota-controls {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 0.75em 1em;
+        margin-bottom: 1.5em;
+    }
+
+    /* ── Core filter row: always visible — search, starred/mine, highlights,
+       then the "More filters" toggle + excluded-count badge trail off to
+       the right. Extras (date range, role, badges, tags) live below,
+       collapsed by default. ─────────────────────────────────────────── */
+    .rota-filters-core {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5em 0.9em;
+    }
+    .rota-filters-core .form-check { margin-bottom: 0; }
+    .rota-filters-core .form-check-label { font-size: 0.88em; }
+    .rota-filter-toggle {
+        background: none;
+        border: none;
+        padding: 0;
+        font-size: 0.88em;
+        color: #0056b3;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.3em;
+        margin-left: auto;
+        white-space: nowrap;
+    }
+    .rota-filter-toggle:hover { text-decoration: underline; }
+    .rota-filter-chevron { font-style: normal; font-size: 0.8em; }
+    .rota-filter-status {
+        font-size: 0.8em;
+        color: #856404;
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 3px;
+        padding: 0.1em 0.5em;
+        display: none;
+    }
+
+    /* ── Collapsible extras body ───────────────────────────────────────── */
+    #rota-filter-body {
+        padding-top: 0.6em;
+        margin-top: 0.6em;
+        border-top: 1px solid #dee2e6;
+    }
+
+    /* ── Top row: date range + role side by side on desktop ──────────── */
+    .rota-top-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5em 1.2em;
+        margin-bottom: 0.5em;
+    }
+    .rota-daterange {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.4em;
+    }
+    .rota-daterange label { font-size: 0.88em; margin-bottom: 0; white-space: nowrap; }
+    .rota-daterange input[type="date"] { width: 9.5em; min-width: 0; }
+    .rota-search { flex: 1 1 auto; min-width: 10em; max-width: 22em; }
+    .rota-search input { width: 100%; }
+
+    /* ── Extras filter row: role select + badge toggles ───────────────── */
+    .rota-filters {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5em 0.9em;
+        margin-bottom: 0.4em;
+    }
+    .rota-filters .form-check { margin-bottom: 0; }
+    .rota-filters .form-check-label { font-size: 0.88em; }
+    .rota-filters .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 0.35em;
+    }
+    .rota-filters .filter-group label { margin-bottom: 0; font-size: 0.88em; }
+    /* Thin vertical rule between filters and highlights */
+    .filter-section-divider {
+        width: 1px;
+        height: 1.1em;
+        background: #ced4da;
+        align-self: center;
+        flex-shrink: 0;
+    }
+    /* Highlight section label */
+    .highlight-section-label {
+        font-size: 0.78em;
+        color: #6c757d;
+        font-style: italic;
+        white-space: nowrap;
+    }
+    /* Highlight checkboxes: amber label to match what they do in the list */
+    .form-check--highlight .form-check-label {
+        font-size: 0.88em;
+        color: #6d5310;
+    }
+
+    /* Tag filter bar */
+    .rota-tag-filters {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.4em;
+        padding-top: 0.4em;
+        border-top: 1px solid #dee2e6;
+        margin-top: 0.2em;
+    }
+    .rota-tag-filters .tag-filter-label {
+        font-size: 0.85em;
+        color: #6c757d;
+        margin-right: 0.15em;
+    }
+
+    /* ── Showing header row ──────────────────────────────────────────── */
+    /* Two-line layout on mobile: title leads, meta (date/room/link) wraps
+       beneath it — the event name is what a volunteer scans for first.
+       Desktop collapses both into one row via display:contents + order,
+       so this ordering only affects the mobile column layout below. */
+    .showing-header-row {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1em;
+        margin: 0.3em 0;
+    }
+    .showing-title-line {
+        order: -1;
+    }
+
+    /* Meta row: toggle (mobile-only inline), date, room, external link.
+       flex-wrap: wrap prevents overflow when room/hire badges push beyond
+       the viewport at ~320px — which on iOS Safari shifts the fixed navbar. */
+    .showing-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.4em;
+        flex-wrap: wrap;
+        min-width: 0;
+    }
+    /* Tail group: room badge + outside-hire + ↗ stay together on wrap */
+    .showing-meta-tail {
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 0.4em;
+    }
+
+    /* Title row: event name + optional tags */
+    .showing-title-line {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 0.3em;
+    }
+
+    .showing-meta .showing-date {
+        font-size: 0.9rem;
+        font-weight: normal;
+        color: #666;
+        white-space: nowrap;
+    }
+
+    /* Event name is the visual anchor — make it clearly dominant */
+    .showing-title-line .showing-event-name {
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+
+    .showing-meta .showing-public-link {
+        font-size: 1rem;
+        color: #bbb;
+        text-decoration: none;
+    }
+
+    .showing-meta .showing-public-link:hover {
+        color: #777;
+    }
+
+    /* Chain-link permalink icon — SVG via CSS mask so it renders as
+       plain text-colour on every device, with no emoji font variance. */
+    .showing-anchor-link {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        margin-left: 0.25em;
+        vertical-align: -0.15em;
+        color: transparent;    /* suppress any fallback text */
+        text-decoration: none;
+        background-color: #ccc;
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z'/%3E%3Cpath d='M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z'/%3E%3C/svg%3E");
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z'/%3E%3Cpath d='M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z'/%3E%3C/svg%3E");
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+    }
+    .showing-anchor-link:hover {
+        background-color: #777;
+    }
+
+    .showing-room-badge {
+        font-size: 0.8rem;
+        color: #444;
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25em;
+    }
+    .showing-room-badge .room-colour-dot {
+        display: inline-block;
+        width: 0.5em;
+        height: 0.5em;
+        border-radius: 50%;
+        flex-shrink: 0;
+        align-self: center;
+    }
+
+    /* Tags sit inline to the right of the event name, visually quiet */
+    .event-tag-badges {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 0.25em;
+        align-items: center;
+        align-self: center;
+    }
+
+    .event-tag-badges .badge {
+        font-size: 0.45em;
+        font-weight: normal;
+        background: transparent;
+        color: #bbb;
+        border: 1px solid #eee;
+        padding: 0.08em 0.35em;
+        cursor: pointer;
+        transition: background 0.1s, color 0.1s;
+        vertical-align: middle;
+    }
+
+    .event-tag-badges .badge:hover {
+        background: #f0f0f0;
+        color: #555;
+        border-color: #bbb;
+    }
+
+    /* ── Nextcloud link ──────────────────────────────────────────────── */
+    .rota-nextcloud-link {
+        font-size: 0.85em;
+        color: #6c757d;
+        margin: 0.2em 0 0 3em;
+        display: block;
+    }
+
+    .event-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0 0.75em;
+        margin: 0.25em 0 0.1em 3em;
+        font-size: 0.82em;
+    }
+
+    .event-links a {
+        color: #0056b3;
+    }
+
+    /* ── Role badges ─────────────────────────────────────────────────── */
+    .role-badge {
+        font-size: 0.85em;
+        cursor: default;
+        /* Pull slightly away from the role name */
+        margin-left: 0.25em;
+    }
+
+    .role-badge--accessible {
+        /* No special styling needed — the ♿ symbol speaks for itself */
+    }
+
+    /* ── Outside hire badge ──────────────────────────────────────────── */
+    .outside-hire-badge {
+        font-size: 0.75rem;
+        font-weight: bold;
+        color: #856404;
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 3px;
+        padding: 0.1em 0.4em;
+        white-space: nowrap;
+        align-self: center;
+    }
+
+    /* ── Empty slot highlight ────────────────────────────────────────── */
+    li.rota-empty-slot {
+        background: #fde68a;
+        border-radius: 3px;
+    }
+
+    /* ── Day-group separator (9.76.1) ───────────────────────────────── */
+    .rota-day-group-header {
+        font-size: 1rem;
+        font-weight: 700;
+        font-variant: small-caps;
+        color: #212529;
+        border-top: 2px solid #212529;
+        padding: 0.6em 0 0.25em;
+        margin-top: 1.2em;
+        position: sticky;
+        top: 3.6rem; /* overridden at runtime by updateDayHeaderOffset() */
+        background: white;
+        z-index: 10;
+    }
+    .rota-day-anchor {
+        color: inherit;
+        text-decoration: none;
+    }
+    .rota-day-anchor::after {
+        content: ' #';
+        opacity: 0;
+        font-variant: normal;
+        font-size: 0.8em;
+        transition: opacity 0.15s;
+    }
+    .rota-day-group-header:hover .rota-day-anchor::after {
+        opacity: 0.4;
+    }
+
+    /* ── Event mark toggle (☆ → ★ → ☽ → ☆) ─────────────────────────── */
+    .rota-showing {
+        position: relative;
+    }
+    .rota-mark-toggle {
+        background: none;
+        border: none;
+        cursor: pointer;
+        /* Fixed box so ☆/★/☽ all occupy the same space */
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.6rem;
+        height: 1.6rem;
+        font-size: 1.1rem;
+        padding: 0;
+        user-select: none;
+        color: #ccc;
+        transition: color 0.12s;
+        vertical-align: middle;
+    }
+    .rota-mark-toggle:hover {
+        color: #999;
+    }
+    .rota-mark-toggle[data-mark="star"] {
+        color: #e8a000;
+    }
+    .rota-mark-toggle[data-mark="shadow"] {
+        color: #7ba7c0;
+    }
+    /* ☽ mooned: collapse to title row only, fade the whole showing */
+    .rota-showing.rota-mooned ul.rota,
+    .rota-showing.rota-mooned .event-links,
+    .rota-showing.rota-mooned .showing_rota_notes,
+    .rota-showing.rota-mooned .past_showing_rota_notes {
+        display: none;
+    }
+    .rota-showing.rota-mooned {
+        opacity: 0.45;
+    }
+    .rota-showing.rota-mooned:hover {
+        opacity: 0.75;
+    }
+    /* ── Cancelled showing ──────────────────────────────────────────────── */
+    .rota-cancelled-notice {
+        display: inline-block;
+        background: #b22222;
+        color: #fff;
+        font-weight: bold;
+        font-size: 0.78rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 0.2em 0.6em;
+        border-radius: 3px;
+        margin-bottom: 0.5rem;
+    }
+    .rota-showing--cancelled {
+        opacity: 0.7;
+    }
+    .rota-showing--cancelled:hover {
+        opacity: 1;
+    }
+    /* ── Role warning badge (needs keyholder / programmer) ──────────────── */
+    .rota-role-warning-badge {
+        font-size: 0.75rem;
+        font-weight: bold;
+        color: #856404;
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 3px;
+        padding: 0.1em 0.4em;
+        white-space: nowrap;
+        align-self: center;
+    }
+
+    /* Good-first-role slot highlight (applied via wrapper class) */
+    .rota-beginner-active li[data-beginner="1"] {
+        background: #e8f5e9;
+        border-radius: 3px;
+    }
+    /* Badge visibility toggles — applied via wrapper classes set by user prefs */
+    .rota-hide-beginner .role-badge--beginner { display: none; }
+    .rota-hide-wheelchair .role-badge--accessible { display: none; }
+    .rota-hide-keyholder .role-badge--keyholder { display: none; }
+    @media (min-width: 800px) {
+        .rota-wrapper {
+            padding-left: 2.5rem;
+            padding-right: 2.5rem;
+        }
+        /* On desktop, collapse the two sub-spans so all children flow into
+           a single flex row — same one-line layout as before, mobile
+           two-line structure is still in the HTML */
+        .showing-header-row {
+            flex-direction: row;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5em;
+        }
+        .showing-meta,
+        .showing-meta-tail,
+        .showing-title-line {
+            display: contents;
+        }
+        /* Restore original visual order: date → name → room → hire → tags → link */
+        .showing-date        { order: 1; }
+        .showing-event-name  { order: 2; }
+        .showing-room-badge  { order: 3; }
+        .outside-hire-badge       { order: 4; }
+        .rota-role-warning-badge  { order: 5; }
+        .event-tag-badges         { order: 6; }
+        .showing-anchor-link      { order: 7; }
+        .showing-public-link      { order: 8; }
+        /* Pull toggle out of flow into the left gutter */
+        .rota-mark-toggle {
+            position: absolute;
+            left: -2.2rem;
+            top: 0.15rem;
+        }
+    }
+    @media (max-width: 640px) {
+        /* Let date inputs shrink on very narrow screens */
+        .rota-daterange input[type="date"] { width: 8em; }
+        /* Role dropdown goes full-width so long role names don't clip or overflow */
+        .rota-filters .filter-group { width: 100%; }
+        .rota-filters .filter-group select { width: 100% !important; }
+        /* Divider + highlight label wrap awkwardly at this width — hide them */
+        .filter-section-divider,
+        .highlight-section-label { display: none; }
+    }
+
+    /* ── Month navigation rail ───────────────────────────────────────── */
+    #rota-nav-rail {
+        position: fixed;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 3.2em;
+        z-index: 50;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        pointer-events: none;
+    }
+    #rota-nav-rail .rail-inner {
+        position: relative;
+        background: rgba(248, 249, 250, 0.92);
+        border: 1px solid #dee2e6;
+        border-right: none;
+        border-radius: 4px 0 0 4px;
+        padding: 0.4em 0;
+        pointer-events: auto;
+        max-height: 72vh;
+        overflow-y: auto;
+        scrollbar-width: none; /* Firefox */
+    }
+    #rota-nav-rail .rail-inner::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+    .rail-month {
+        display: block;
+        text-align: center;
+        font-size: 0.68em;
+        color: #6c757d;
+        padding: 0.18em 0.3em;
+        cursor: pointer;
+        white-space: nowrap;
+        line-height: 1.2;
+        transition: color 0.1s, background 0.1s;
+        border-radius: 2px;
+        margin: 0 0.2em;
+        text-decoration: none;
+    }
+    .rail-month:hover { color: #212529; background: #e9ecef; }
+    .rail-month.rail-active { color: #212529; font-weight: 600; }
+    /* Monday sub-links: smaller, indented, quiet */
+    .rail-monday {
+        display: block;
+        text-align: center;
+        font-size: 0.56em;
+        color: #adb5bd;
+        padding: 0.06em 0.4em;
+        cursor: pointer;
+        border-radius: 2px;
+        margin: 0 0.4em;
+        line-height: 1.3;
+        transition: color 0.1s, background 0.1s;
+    }
+    .rail-monday:hover { color: #495057; background: #e9ecef; }
+    /* "Later ↓" and "Next →" links at the bottom of the rail */
+    .rail-later, .rail-next-batch {
+        border-top: 1px solid #dee2e6;
+        margin-top: 0.35em;
+        padding-top: 0.25em;
+        font-size: 0.63em;
+    }
+    .rail-later { color: #6c757d; }
+    .rail-next-batch { color: #0056b3; }
+    /* ── Next-batch prompt at the bottom of the page ──────────────── */
+    .rota-next-prompt {
+        text-align: center;
+        padding: 1.4em 1em 1em;
+        margin-top: 0.5em;
+        border-top: 1px solid #dee2e6;
+        font-size: 0.88em;
+    }
+    .rota-next-prompt a { color: #0056b3; }
+    .rail-cursor {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #6c757d;
+        border-radius: 1px;
+        pointer-events: none;
+        transition: top 0.1s linear;
+    }
+    @media (max-width: 768px) { #rota-nav-rail { display: none; } }
+
+    /* ── Existing rota styles ────────────────────────────────────────── */
+    .na {
+        color: lightgray;
+        cursor: pointer;
+    }
+    .rota_name {
+        cursor: pointer;
+    }
+    .showing_title a, .title_row a:visited {
+        color: blue;
+        text-decoration: none;
+    }
+    .showing_title a:hover {
+        text-decoration: underline;
+    }
+    .showing-times {
+        font-size: 0.82em;
+        color: #555;
+        margin: 0.1em 0 0.3em 3em;
+        padding: 0;
+    }
+    .showing_rota_notes, .past_showing_rota_notes {
+        border-top: thin dashed lightgray;
+        border-bottom: thin solid lightgray;
+        width: 90%;
+        font-size: 90%;
+        font-family: monospace;
+        white-space: pre-wrap;
+        padding: 0.4em 1em;
+        margin-top: 0;
+        margin-left: 3em;
+        overflow: auto;
+    }
+    /* Remove browser default ul margin so the gap above the notes bar
+       matches the gap above the first role (symmetrical). */
+    ul.rota { margin-bottom: 0; }
+
+    /* ── Notes inline-edit UI ────────────────────────────────────────── */
+    .showing_rota_notes form,
+    .past_showing_rota_notes form {
+        margin-top: 0.3em;
+        white-space: normal;
+    }
+    /* Force the textarea to block so the action buttons appear below it,
+       not squeezed into the remaining inline space beside it. */
+    .showing_rota_notes form textarea,
+    .past_showing_rota_notes form textarea {
+        display: block;
+        margin-bottom: 0.4em;
+    }
+    .showing_rota_notes .rota-notes-save,
+    .past_showing_rota_notes .rota-notes-save {
+        vertical-align: middle;
+    }
+    .showing_rota_notes .rota-notes-cancel,
+    .past_showing_rota_notes .rota-notes-cancel {
+        font-size: 0.85em;
+        color: #6c757d;
+        margin-left: 0.6em;
+        text-decoration: none;
+        vertical-align: middle;
+    }
+    .showing_rota_notes .rota-notes-cancel:hover,
+    .past_showing_rota_notes .rota-notes-cancel:hover { color: #dc3545; }
+
+    .showing_rota_notes span {
+        cursor: pointer;
+    }
+    .past_showing, .past_showing a, .past_showing a:visited {
+       color: darkgray;
+    }
+    ul.rota li {
+        list-style-type: none;
+    }
+    .rota_role {
+        display: inline-block;
+        width: 50%;
+        font-weight: bold;
+        font-size: 90%;
+        vertical-align: top;
+    }
+    .rota_name form {
+        display: inline;
+    }
+    @media screen and (min-width: 640px) {
+        ul.rota {
+            display: flex;
+            flex-flow: row wrap;
+        }
+        ul.rota li {
+            width: 50%;
+        }
+    }
+    @media screen and (min-width: 800px) {
+        .rota_role {
+            width: 35%;
+        }
+    }
+    @media screen and (max-width: 640px) {
+        ul.rota { padding-left: 0; }
+        .showing_rota_notes,
+        .past_showing_rota_notes { margin-left: 0.5em; }
+        .event-links { margin-left: 0.5em; }
+    }
+    .rota_role--described {
+        cursor: pointer;
+    }
+    .rota_role--gated {
+        text-decoration: underline;
+        text-decoration-style: dotted;
+        text-underline-offset: 2px;
+        cursor: help;
+    }
+    li[data-one-shot="1"] .rota_role::after {
+        content: " ✦";
+        color: #999;
+        font-size: 0.7em;
+        vertical-align: middle;
+    }
+    .rota-role-desc {
+        display: block;
+        font-size: 0.8em;
+        font-weight: normal;
+        color: #555;
+        background: #f8f9fa;
+        border-left: 2px solid #ced4da;
+        padding: 0.2em 0.5em;
+        margin-top: 0.2em;
+        width: 100%;
+    }
+
+    /* ── Volunteer tap-to-toggle ─────────────────────────────────────── */
+    .rota-signup-available { cursor: pointer; }
+    .rota-signup-available .rota-signup-prompt {
+        color: #ccc;
+        font-weight: normal;
+        transition: color 0.12s;
+    }
+    @media (hover: hover) {
+        .rota-signup-available:hover .rota-signup-prompt { color: #0056b3; }
+        .rota-signup-mine:hover { color: #dc3545; text-decoration: line-through; }
+    }
+    .rota-signup-loading { opacity: 0.45; pointer-events: none; }
+    .rota-supedit-btn {
+        font-size: 0.7em;
+        color: #bbb;
+        margin-left: 0.3em;
+        text-decoration: none;
+        vertical-align: super;
+    }
+    .rota-supedit-btn:hover { color: #555; text-decoration: none; }
+
+    /* scroll-margin-top: navbar (~3.6rem) + sticky day header (~2.5rem) + breathing room */
+    .rota-showing { scroll-margin-top: 7rem; }
+
+    /* ── My-shift / starred-event row highlights ────────────────────────── */
+    /* "Mine" (signed up) takes colour precedence over "starred". */
+    .rota-showing--mine {
+        background: rgba(76, 175, 80, 0.07);
+        border-radius: 2px;
+    }
+    /* The specific role slot that's yours — bold + coloured name, plus a
+       text tag so the cue doesn't rely on colour alone. */
+    .rota_name--mine {
+        font-weight: 700;
+        color: #1b5e20;
+    }
+    .rota-name-you-tag {
+        font-size: 0.78em;
+        font-weight: 600;
+        color: #1b5e20;
+        margin-left: 0.3em;
+    }
+    .rota-showing--starred {
+        background: rgba(232, 160, 0, 0.07);
+        border-radius: 2px;
+    }
+
+    /* Deep-link highlight: permanent teal left bar, background fades over 5s */
+    @keyframes rota-linked-bg {
+        0%   { background-color: rgba(23, 162, 184, 0.2); }
+        50%  { background-color: rgba(23, 162, 184, 0.2); }
+        100% { background-color: transparent; }
+    }
+    .rota-showing--linked {
+        box-shadow: inset 4px 0 0 #17a2b8;
+        padding-left: 6px;
+        animation: rota-linked-bg 5s ease-out forwards;
+        border-radius: 0 2px 2px 0;
+    }
+
+    /* ── Keyboard shortcuts help overlay ────────────────────────────── */
+    #rota-kb-help {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .rota-kb-help-card {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 1.2em 1.5em 1em;
+        max-width: 30em;
+        width: 90vw;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        font-size: 0.9em;
+    }
+    .rota-kb-help-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.8em;
+        padding-bottom: 0.5em;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .rota-kb-help-close {
+        background: none;
+        border: none;
+        font-size: 1.1em;
+        color: #6c757d;
+        cursor: pointer;
+        padding: 0 0.2em;
+        line-height: 1;
+    }
+    .rota-kb-help-close:hover { color: #212529; }
+    .rota-kb-section { margin-bottom: 0.8em; }
+    .rota-kb-section-heading {
+        font-size: 0.75em;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: #6c757d;
+        margin-bottom: 0.3em;
+    }
+    .rota-kb-row {
+        display: flex;
+        align-items: baseline;
+        gap: 0.75em;
+        padding: 0.15em 0;
+        line-height: 1.45;
+    }
+    .rota-kb-row kbd {
+        display: inline-block;
+        min-width: 5em;
+        text-align: right;
+        font-family: monospace;
+        font-size: 0.85em;
+        background: #f8f9fa;
+        border: 1px solid #ced4da;
+        border-radius: 3px;
+        padding: 0.1em 0.4em;
+        color: #212529;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .rota-kb-row span { color: #495057; }
+
+    /* ── Link-copied toast ───────────────────────────────────────────── */
+    #rota-toast {
+        position: fixed;
+        bottom: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #212529;
+        color: #fff;
+        padding: 0.5em 1em;
+        border-radius: 4px;
+        font-size: 0.85em;
+        z-index: 9998;
+        opacity: 1;
+        transition: opacity 0.8s;
+        pointer-events: none;
+    }
+    #rota-toast.rota-toast-fade { opacity: 0; }
+
+    /* ── Role signup picker modal ─────────────────────────────────────── */
+    #rota-signup-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        z-index: 9999;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 6rem;
+    }
+    .rota-signup-card {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 1em 1.2em;
+        max-width: 26em;
+        width: 90vw;
+        max-height: 70vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        font-size: 0.9em;
+    }
+    .rota-signup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.6em;
+        padding-bottom: 0.5em;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .rota-signup-close {
+        background: none;
+        border: none;
+        font-size: 1.1em;
+        color: #6c757d;
+        cursor: pointer;
+        padding: 0 0.2em;
+        line-height: 1;
+    }
+    .rota-signup-close:hover { color: #212529; }
+    #rota-signup-search { margin-bottom: 0.5em; flex-shrink: 0; }
+    #rota-signup-role-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        overflow-y: auto;
+    }
+    .rota-signup-role-item {
+        padding: 0.4em 0.6em;
+        border-radius: 4px;
+        line-height: 1.35;
+    }
+    .rota-signup-role-available { cursor: pointer; }
+    .rota-signup-role-mine { cursor: pointer; color: #0a6640; font-weight: 500; }
+    .rota-signup-role-taken { color: #6c757d; font-style: italic; }
+    .rota-signup-role-available:hover,
+    .rota-signup-role-active.rota-signup-role-available { background: #e8f4e8; color: #1a5c1a; }
+    .rota-signup-role-mine:hover,
+    .rota-signup-role-active.rota-signup-role-mine { background: #d4edda; }

@@ -32,7 +32,10 @@ class BulletinListTests(LabsTestsMixin, TestCase):
     def test_expired_bulletin_not_shown(self):
         past = timezone.now() - datetime.timedelta(days=1)
         expired = Bulletin.objects.create(
-            title="Old news", body="Gone.", author=self.user_admin, expires_at=past
+            title="Old news",
+            body="Gone.",
+            author=self.user_admin,
+            expires_at=past,
         )
         response = self.client.get(reverse("labs-bulletins"))
         titles = [b.title for b in response.context["bulletins"]]
@@ -68,7 +71,10 @@ class BulletinArchiveTests(LabsTestsMixin, TestCase):
     def test_explicitly_expired_bulletin_appears_in_archive(self):
         past = timezone.now() - datetime.timedelta(days=1)
         expired = Bulletin.objects.create(
-            title="Last week's notice", body="Done.", author=self.user_admin, expires_at=past
+            title="Last week's notice",
+            body="Done.",
+            author=self.user_admin,
+            expires_at=past,
         )
         response = self.client.get(reverse("labs-bulletins-archive"))
         titles = [b.title for b in response.context["bulletins"]]
@@ -89,22 +95,39 @@ class BulletinAddTests(LabsTestsMixin, TestCase):
     def test_get_shows_form(self):
         response = self.client.get(reverse("labs-bulletin-add"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/bulletin_form.html")
 
     def test_post_creates_bulletin(self):
-        data = {"title": "New water boiler", "body": "The boiler has been replaced."}
+        data = {
+            "title": "New water boiler",
+            "body": "The boiler has been replaced.",
+        }
         response = self.client.post(reverse("labs-bulletin-add"), data)
         self.assertRedirects(response, reverse("labs-bulletins"))
-        self.assertTrue(Bulletin.objects.filter(title="New water boiler").exists())
+        self.assertTrue(
+            Bulletin.objects.filter(title="New water boiler").exists()
+        )
 
     def test_posted_bulletin_has_author_set(self):
-        data = {"title": "Venue meeting notes", "body": "Notes from the meeting."}
+        data = {
+            "title": "Venue meeting notes",
+            "body": "Notes from the meeting.",
+        }
         self.client.post(reverse("labs-bulletin-add"), data)
         b = Bulletin.objects.get(title="Venue meeting notes")
         self.assertEqual(b.author, self.user_vol)
 
     def test_post_with_empty_title_returns_form(self):
-        response = self.client.post(reverse("labs-bulletin-add"), {"title": "", "body": "x"})
+        count_before = Bulletin.objects.count()
+        response = self.client.post(
+            reverse("labs-bulletin-add"), {"title": "", "body": "x"}
+        )
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/bulletin_form.html")
+        self.assertFormError(
+            response.context["form"], "title", "This field is required."
+        )
+        self.assertEqual(Bulletin.objects.count(), count_before)
 
     def test_bulletin_post_all_allows_any_logged_in_user(self):
         # Default site config: BULLETIN_POST_ALL — even no_perm users can post
@@ -115,10 +138,13 @@ class BulletinAddTests(LabsTestsMixin, TestCase):
         cfg.save()
         response = self.client.get(reverse("labs-bulletin-add"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/bulletin_form.html")
 
     def test_bulletin_post_programmer_blocks_basic_user(self):
         cfg = get_site_config()
-        cfg.bulletin_post_permission = SiteConfiguration.BULLETIN_POST_PROGRAMMER
+        cfg.bulletin_post_permission = (
+            SiteConfiguration.BULLETIN_POST_PROGRAMMER
+        )
         cfg.save()
         response = self.client.get(reverse("labs-bulletin-add"))
         self.assertEqual(response.status_code, 403)
@@ -127,7 +153,9 @@ class BulletinAddTests(LabsTestsMixin, TestCase):
         self.client.logout()
         self.client.login(username="admin", password="T3stPassword!")
         cfg = get_site_config()
-        cfg.bulletin_post_permission = SiteConfiguration.BULLETIN_POST_PANOPTICON
+        cfg.bulletin_post_permission = (
+            SiteConfiguration.BULLETIN_POST_PANOPTICON
+        )
         cfg.save()
         response = self.client.get(reverse("labs-bulletin-add"))
         self.assertEqual(response.status_code, 403)
@@ -141,13 +169,18 @@ class BulletinPinTests(LabsTestsMixin, TestCase):
         self.client.login(username="admin", password="T3stPassword!")
 
     def test_pin_unpinned_bulletin(self):
-        url = reverse("labs-bulletin-pin", kwargs={"bulletin_id": self.bulletin.pk})
+        url = reverse(
+            "labs-bulletin-pin", kwargs={"bulletin_id": self.bulletin.pk}
+        )
         self.client.post(url)
         self.bulletin.refresh_from_db()
         self.assertTrue(self.bulletin.pinned)
 
     def test_unpin_pinned_bulletin(self):
-        url = reverse("labs-bulletin-pin", kwargs={"bulletin_id": self.bulletin_pinned.pk})
+        url = reverse(
+            "labs-bulletin-pin",
+            kwargs={"bulletin_id": self.bulletin_pinned.pk},
+        )
         self.client.post(url)
         self.bulletin_pinned.refresh_from_db()
         self.assertFalse(self.bulletin_pinned.pinned)
@@ -161,14 +194,18 @@ class BulletinDeleteTests(LabsTestsMixin, TestCase):
         self.user_admin.save()
         self.client.login(username="admin", password="T3stPassword!")
         bulletin_pk = self.bulletin.pk
-        url = reverse("labs-bulletin-delete", kwargs={"bulletin_id": bulletin_pk})
+        url = reverse(
+            "labs-bulletin-delete", kwargs={"bulletin_id": bulletin_pk}
+        )
         response = self.client.post(url)
         self.assertRedirects(response, reverse("labs-bulletins"))
         self.assertFalse(Bulletin.objects.filter(pk=bulletin_pk).exists())
 
     def test_non_superuser_gets_403(self):
         self.client.login(username="admin", password="T3stPassword!")
-        url = reverse("labs-bulletin-delete", kwargs={"bulletin_id": self.bulletin.pk})
+        url = reverse(
+            "labs-bulletin-delete", kwargs={"bulletin_id": self.bulletin.pk}
+        )
         response = self.client.post(url)
         self.assertEqual(response.status_code, 403)
         self.assertTrue(Bulletin.objects.filter(pk=self.bulletin.pk).exists())
@@ -182,28 +219,36 @@ class BulletinReadTests(LabsTestsMixin, TestCase):
         self.client.login(username="volunteer", password="T3stPassword!3")
 
     def test_bulletin_read_creates_read_record(self):
-        url = reverse("labs-bulletin-read", kwargs={"bulletin_id": self.bulletin.pk})
+        url = reverse(
+            "labs-bulletin-read", kwargs={"bulletin_id": self.bulletin.pk}
+        )
         self.client.post(url)
         self.assertTrue(
-            BulletinRead.objects.filter(bulletin=self.bulletin, user=self.user_vol).exists()
+            BulletinRead.objects.filter(
+                bulletin=self.bulletin, user=self.user_vol
+            ).exists()
         )
 
     def test_bulletin_read_is_idempotent(self):
-        url = reverse("labs-bulletin-read", kwargs={"bulletin_id": self.bulletin.pk})
+        url = reverse(
+            "labs-bulletin-read", kwargs={"bulletin_id": self.bulletin.pk}
+        )
         self.client.post(url)
         self.client.post(url)
         self.assertEqual(
-            BulletinRead.objects.filter(bulletin=self.bulletin, user=self.user_vol).count(), 1
+            BulletinRead.objects.filter(
+                bulletin=self.bulletin, user=self.user_vol
+            ).count(),
+            1,
         )
 
     def test_read_all_marks_all_active_bulletins(self):
         url = reverse("labs-bulletins-read-all")
         self.client.post(url)
-        unread_count = (
-            BulletinRead.objects
-            .filter(user=self.user_vol, bulletin__in=[self.bulletin, self.bulletin_pinned])
-            .count()
-        )
+        unread_count = BulletinRead.objects.filter(
+            user=self.user_vol,
+            bulletin__in=[self.bulletin, self.bulletin_pinned],
+        ).count()
         self.assertEqual(unread_count, 2)
 
     def test_read_all_does_not_duplicate_existing_reads(self):
@@ -211,5 +256,31 @@ class BulletinReadTests(LabsTestsMixin, TestCase):
         url = reverse("labs-bulletins-read-all")
         self.client.post(url)
         self.assertEqual(
-            BulletinRead.objects.filter(bulletin=self.bulletin, user=self.user_vol).count(), 1
+            BulletinRead.objects.filter(
+                bulletin=self.bulletin, user=self.user_vol
+            ).count(),
+            1,
         )
+
+    def test_read_all_ignores_off_site_referer(self):
+        """An attacker-controlled HTTP_REFERER must not become the redirect
+        target (open redirect)."""
+        url = reverse("labs-bulletins-read-all")
+        response = self.client.post(
+            url, HTTP_REFERER="https://evil.example/phish"
+        )
+        self.assertNotIn("evil.example", response.url)
+
+    def test_bulletin_read_ignores_off_site_referer(self):
+        url = reverse(
+            "labs-bulletin-read", kwargs={"bulletin_id": self.bulletin.pk}
+        )
+        response = self.client.post(
+            url, HTTP_REFERER="https://evil.example/phish"
+        )
+        self.assertNotIn("evil.example", response.url)
+
+    def test_read_all_honours_same_site_referer(self):
+        url = reverse("labs-bulletins-read-all")
+        response = self.client.post(url, HTTP_REFERER="/labs/bulletins/")
+        self.assertEqual(response.url, "/labs/bulletins/")

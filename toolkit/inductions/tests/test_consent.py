@@ -5,6 +5,7 @@ Covers: consent_policy_version stamped at signup, the two reminder commands
 (send_consent_renewal_reminders, send_policy_change_notification), and the
 "mark privacy policy as updated" admin action.
 """
+
 import datetime
 from io import StringIO
 
@@ -34,14 +35,18 @@ def _days_ago(days):
 
 
 def _mk_signup(session, name, email):
-    return InductionSignup.objects.create(session=session, name=name, email=email)
+    return InductionSignup.objects.create(
+        session=session, name=name, email=email
+    )
 
 
 class SignupStampsPolicyVersion(InductionsTestsMixin, TestCase):
     def test_signup_stamps_current_policy_version(self):
         self.settings.privacy_policy_version = 3
         self.settings.save()
-        v = _create_volunteer_from_signup(_mk_signup(self.session, "Jo Bloggs", "jo@test.example"))
+        v = _create_volunteer_from_signup(
+            _mk_signup(self.session, "Jo Bloggs", "jo@test.example")
+        )
         self.assertEqual(v.consent_policy_version, 3)
 
 
@@ -50,12 +55,26 @@ class ConsentRenewalReminders(InductionsTestsMixin, TestCase):
         super().setUp()
         _set_config(consent_renewal_days=365, consent_renewal_grace_days=30)
 
-    def _make_vol(self, username, gdpr_opt_in=None, reminder_sent_at=None, status=Volunteer.STATUS_ACTIVE, retention_exempt=False):
+    def _make_vol(
+        self,
+        username,
+        gdpr_opt_in=None,
+        reminder_sent_at=None,
+        status=Volunteer.STATUS_ACTIVE,
+        retention_exempt=False,
+    ):
         from django.contrib.auth.models import User
-        member = Member.objects.create(name=f"CR {username}", email=f"{username}@cr.test", gdpr_opt_in=gdpr_opt_in)
+
+        member = Member.objects.create(
+            name=f"CR {username}",
+            email=f"{username}@cr.test",
+            gdpr_opt_in=gdpr_opt_in,
+        )
         user = User.objects.create_user(username, f"{username}@cr.test", "pw")
         return Volunteer.objects.create(
-            member=member, user=user, status=status,
+            member=member,
+            user=user,
+            status=status,
             retention_exempt=retention_exempt,
             consent_reminder_sent_at=reminder_sent_at,
         )
@@ -79,12 +98,18 @@ class ConsentRenewalReminders(InductionsTestsMixin, TestCase):
         self.assertEqual(len(mail.outbox), 0)
 
     def test_does_not_resend_within_same_cycle(self):
-        self._make_vol("recent-reminder", gdpr_opt_in=_days_ago(400), reminder_sent_at=_days_ago(5))
+        self._make_vol(
+            "recent-reminder",
+            gdpr_opt_in=_days_ago(400),
+            reminder_sent_at=_days_ago(5),
+        )
         self._run()
         self.assertEqual(len(mail.outbox), 0)
 
     def test_retention_exempt_not_reminded(self):
-        self._make_vol("exempt", gdpr_opt_in=_days_ago(400), retention_exempt=True)
+        self._make_vol(
+            "exempt", gdpr_opt_in=_days_ago(400), retention_exempt=True
+        )
         self._run()
         self.assertEqual(len(mail.outbox), 0)
 
@@ -101,12 +126,23 @@ class ConsentRenewalReminders(InductionsTestsMixin, TestCase):
 
 
 class PolicyChangeNotification(InductionsTestsMixin, TestCase):
-    def _make_vol(self, username, consent_policy_version=1, status=Volunteer.STATUS_ACTIVE, retention_exempt=False):
+    def _make_vol(
+        self,
+        username,
+        consent_policy_version=1,
+        status=Volunteer.STATUS_ACTIVE,
+        retention_exempt=False,
+    ):
         from django.contrib.auth.models import User
-        member = Member.objects.create(name=f"PC {username}", email=f"{username}@pc.test")
+
+        member = Member.objects.create(
+            name=f"PC {username}", email=f"{username}@pc.test"
+        )
         user = User.objects.create_user(username, f"{username}@pc.test", "pw")
         return Volunteer.objects.create(
-            member=member, user=user, status=status,
+            member=member,
+            user=user,
+            status=status,
             retention_exempt=retention_exempt,
             consent_policy_version=consent_policy_version,
         )
@@ -131,7 +167,9 @@ class PolicyChangeNotification(InductionsTestsMixin, TestCase):
         self.assertEqual(len(mail.outbox), 0)
 
     def test_retention_exempt_not_notified(self):
-        self._make_vol("exempt", consent_policy_version=1, retention_exempt=True)
+        self._make_vol(
+            "exempt", consent_policy_version=1, retention_exempt=True
+        )
         self.settings.privacy_policy_version = 2
         self.settings.save()
         out = StringIO()
@@ -142,10 +180,15 @@ class PolicyChangeNotification(InductionsTestsMixin, TestCase):
 class MarkPolicyUpdatedAdminAction(InductionsTestsMixin, TestCase):
     def _make_vol(self, username, consent_policy_version=1):
         from django.contrib.auth.models import User
-        member = Member.objects.create(name=f"MP {username}", email=f"{username}@mp.test")
+
+        member = Member.objects.create(
+            name=f"MP {username}", email=f"{username}@mp.test"
+        )
         user = User.objects.create_user(username, f"{username}@mp.test", "pw")
         return Volunteer.objects.create(
-            member=member, user=user, status=Volunteer.STATUS_ACTIVE,
+            member=member,
+            user=user,
+            status=Volunteer.STATUS_ACTIVE,
             consent_policy_version=consent_policy_version,
         )
 
@@ -153,7 +196,9 @@ class MarkPolicyUpdatedAdminAction(InductionsTestsMixin, TestCase):
         self._make_vol("v1a", consent_policy_version=1)
         self._make_vol("v1b", consent_policy_version=1)
         self.login_admin()
-        resp = self.client.post(reverse("inductions:manage_mark_policy_updated"))
+        resp = self.client.post(
+            reverse("inductions:manage_mark_policy_updated")
+        )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data["ok"])
@@ -166,10 +211,14 @@ class MarkPolicyUpdatedAdminAction(InductionsTestsMixin, TestCase):
 
     def test_requires_panopticon(self):
         self.login_nobody()
-        resp = self.client.post(reverse("inductions:manage_mark_policy_updated"))
+        resp = self.client.post(
+            reverse("inductions:manage_mark_policy_updated")
+        )
         self.assertNotEqual(resp.status_code, 200)
 
     def test_get_not_allowed(self):
         self.login_admin()
-        resp = self.client.get(reverse("inductions:manage_mark_policy_updated"))
+        resp = self.client.get(
+            reverse("inductions:manage_mark_policy_updated")
+        )
         self.assertEqual(resp.status_code, 405)

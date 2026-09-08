@@ -34,7 +34,9 @@ class BasicWhatsOnFeed(Feed):
         return showing.event.copy_html
 
     def item_link(self, showing):
-        return reverse("single-event-view", kwargs={"event_id": showing.event_id})
+        return reverse(
+            "single-event-view", kwargs={"event_id": showing.event_id}
+        )
 
     def item_pubdate(self, showing):
         # Feed readers use pubdate to decide what's "new".

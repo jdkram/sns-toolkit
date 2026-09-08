@@ -1,12 +1,8 @@
-import re
 import json
-import os.path
 
 import zoneinfo
-from datetime import datetime, date, time, timedelta
-import tempfile
+from datetime import datetime, timedelta
 
-from unittest.mock import patch
 
 from django.test import TestCase
 from django.test.utils import override_settings
@@ -15,19 +11,9 @@ from django.urls import reverse
 from toolkit.diary.models import (
     Showing,
     Event,
-    EventLink,
-    Role,
-    DiaryIdea,
-    EventTemplate,
-    MediaItem,
-    RotaEntry,
-    Room,
-    RoomBooking,
-    get_site_config,
 )
 
 import toolkit.diary.edit_prefs
-from toolkit.diary.form_widgets import JQueryDateTimePicker
 
 from .common import DiaryTestsMixin
 
@@ -220,7 +206,9 @@ class PreferencesTests(DiaryTestsMixin, TestCase):
 
     def _get_prefs_json(self, **kwargs):
         # set_edit_preferences returns JSON of current prefs:
-        response = self.client.get(reverse("set_edit_preferences"), data=kwargs)
+        response = self.client.get(
+            reverse("set_edit_preferences"), data=kwargs
+        )
         self.assertEqual(response.status_code, 200)
         return json.loads(response.content)
 
@@ -320,6 +308,7 @@ class EditDiaryListViewTests(DiaryTestsMixin, TestCase):
     @override_settings(MULTIROOM_ENABLED=True)
     def test_multiroom_thead_has_room_name_columns(self):
         from toolkit.diary.models import Room
+
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         for room in Room.objects.all():
@@ -370,6 +359,7 @@ class PastEventsSearchViewTests(DiaryTestsMixin, TestCase):
     def test_page_loads(self):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
+        self.assertIn("events", response.context)
 
     def test_only_past_events_shown(self):
         response = self.client.get(self.url)
@@ -399,6 +389,9 @@ class PastEventsSearchViewTests(DiaryTestsMixin, TestCase):
     def test_invalid_date_ignored_not_500(self):
         response = self.client.get(self.url, {"date_from": "not-a-date"})
         self.assertEqual(response.status_code, 200)
+        # An unparseable date_from is ignored rather than applied as a
+        # filter, so the past event is still in the (unfiltered) results.
+        self.assertIn(self.past_event, list(response.context["events"]))
 
     def test_result_links_to_edit_page(self):
         response = self.client.get(self.url, {"q": "Jazz"})
@@ -406,5 +399,3 @@ class PastEventsSearchViewTests(DiaryTestsMixin, TestCase):
             "edit-event-details-view", kwargs={"event_id": self.past_event.pk}
         )
         self.assertContains(response, expected_url)
-
-

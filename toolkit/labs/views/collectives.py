@@ -1,47 +1,19 @@
-import json
-import datetime
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from toolkit.toolkit_auth.decorators import (
-    feature_required,
-    write_required,
-    write_required_strict,
-)
-from django.db import models
-from django.db.models import Case, When, Value, IntegerField
-from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_http_methods, require_POST
 
-from django.http import HttpResponse, HttpResponseForbidden
-from django.utils import timezone
-from django.db.models import Exists, OuterRef
 
 from ..models import (
-    AreaPhoto,
-    Bulletin,
-    BulletinRead,
     Collective,
-    ConsumableItem,
-    ExchangeItem,
-    FoundItem,
-    NeedFlag,
-    ProcurementPledge,
-    Supplier,
-    SupplierRecord,
-    RoomNote,
-    DonationItem,
-    Job,
-    LoftItem,
-    LoftItemPhoto,
 )
-from toolkit.diary.models import SiteConfiguration, get_site_config
+from toolkit.diary.models import get_site_config
 from .. import forms as lab_forms
 
-from ._common import _user_volunteer
+from ._common import _feature_enabled_or_404, _user_volunteer
 
 
+@_feature_enabled_or_404("collectives_enabled")
 def collectives_public(request):
     from toolkit.diary.models import get_site_config
 
@@ -62,6 +34,7 @@ def collectives_public(request):
 
 
 @login_required
+@_feature_enabled_or_404("collectives_enabled")
 def collectives(request):
     items = (
         Collective.objects.filter(active=True)
@@ -78,9 +51,11 @@ def collectives(request):
         user_collective_slugs = frozenset()
         user_is_volunteer = False
     config = get_site_config()
-    has_public_collectives = Collective.objects.filter(
-        active=True, listed_publicly=True
-    ).exclude(public_copy="").exists()
+    has_public_collectives = (
+        Collective.objects.filter(active=True, listed_publicly=True)
+        .exclude(public_copy="")
+        .exists()
+    )
     return render(
         request,
         "labs/collectives.html",
@@ -95,6 +70,7 @@ def collectives(request):
 
 
 @login_required
+@_feature_enabled_or_404("collectives_enabled")
 @require_POST
 def collective_join(request, slug):
     collective = get_object_or_404(Collective, slug=slug, active=True)
@@ -115,6 +91,7 @@ def collective_join(request, slug):
 
 
 @login_required
+@_feature_enabled_or_404("collectives_enabled")
 @require_POST
 def collective_leave(request, slug):
     collective = get_object_or_404(Collective, slug=slug, active=True)
@@ -129,6 +106,7 @@ def collective_leave(request, slug):
 
 
 @login_required
+@_feature_enabled_or_404("collectives_enabled")
 def collectives_print(request):
     items = Collective.objects.filter(active=True)
     return render(
@@ -137,6 +115,7 @@ def collectives_print(request):
 
 
 @login_required
+@_feature_enabled_or_404("collectives_enabled")
 @require_http_methods(["GET", "POST"])
 def collective_edit(request, slug):
     collective = get_object_or_404(Collective, slug=slug, active=True)

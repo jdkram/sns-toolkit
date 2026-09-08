@@ -6,13 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('labs', '0015_v2'),
+        ("labs", "0015_v2"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='job',
-            name='skill_required',
-            field=models.CharField(blank=True, default='', help_text="Which skill or trade, e.g. 'Electrical', 'Sound desk', 'Carpentry'.", max_length=128),
+            model_name="job",
+            name="skill_required",
+            field=models.CharField(
+                blank=True,
+                default="",
+                help_text="Which skill or trade, e.g. 'Electrical', 'Sound desk', 'Carpentry'.",
+                max_length=128,
+            ),
         ),
     ]

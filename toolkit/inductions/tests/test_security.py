@@ -5,10 +5,15 @@ Management views are Panopticon-only: anonymous users are redirected to login,
 authenticated non-superusers get 403. Public views are reachable by anyone when
 the feature is enabled, and 404 when it is switched off.
 """
+
 from django.test import TestCase
 from django.urls import reverse
 
-from toolkit.inductions.models import InductionRequest, InductionsSettings
+from toolkit.inductions.models import (
+    InductionRequest,
+    InductionSignup,
+    InductionsSettings,
+)
 from toolkit.inductions.tests.common import InductionsTestsMixin
 
 
@@ -16,7 +21,9 @@ class ManageEndpointSecurity(InductionsTestsMixin, TestCase):
     def setUp(self):
         super().setUp()
         self.req = InductionRequest.objects.create(
-            name="Carol", email="carol@test.example", access_needs="Step-free access",
+            name="Carol",
+            email="carol@test.example",
+            access_needs="Step-free access",
         )
 
     def _get_urls(self):
@@ -29,7 +36,9 @@ class ManageEndpointSecurity(InductionsTestsMixin, TestCase):
             reverse("inductions:manage_session_detail", args=[s]),
             reverse("inductions:manage_session_edit", args=[s]),
             reverse("inductions:manage_export_csv", args=[s]),
-            reverse("inductions:manage_access_needs_detail", args=[self.req.pk]),
+            reverse(
+                "inductions:manage_access_needs_detail", args=[self.req.pk]
+            ),
         ]
 
     def _post_urls(self):
@@ -76,14 +85,22 @@ class ManageEndpointSecurity(InductionsTestsMixin, TestCase):
 class PublicEndpointGating(InductionsTestsMixin, TestCase):
     def test_public_pages_reachable_when_enabled(self):
         self.assertEqual(
-            self.client.get(reverse("inductions:session_list_public")).status_code, 200
-        )
-        self.assertEqual(
-            self.client.get(reverse("inductions:signup", args=[self.session.slug])).status_code,
+            self.client.get(
+                reverse("inductions:session_list_public")
+            ).status_code,
             200,
         )
         self.assertEqual(
-            self.client.get(reverse("inductions:access_needs_signup")).status_code, 200
+            self.client.get(
+                reverse("inductions:signup", args=[self.session.slug])
+            ).status_code,
+            200,
+        )
+        self.assertEqual(
+            self.client.get(
+                reverse("inductions:access_needs_signup")
+            ).status_code,
+            200,
         )
 
     def test_public_pages_404_when_disabled(self):
@@ -91,14 +108,22 @@ class PublicEndpointGating(InductionsTestsMixin, TestCase):
         cfg.inductions_enabled = False
         cfg.save()
         self.assertEqual(
-            self.client.get(reverse("inductions:session_list_public")).status_code, 404
-        )
-        self.assertEqual(
-            self.client.get(reverse("inductions:signup", args=[self.session.slug])).status_code,
+            self.client.get(
+                reverse("inductions:session_list_public")
+            ).status_code,
             404,
         )
         self.assertEqual(
-            self.client.get(reverse("inductions:access_needs_signup")).status_code, 404
+            self.client.get(
+                reverse("inductions:signup", args=[self.session.slug])
+            ).status_code,
+            404,
+        )
+        self.assertEqual(
+            self.client.get(
+                reverse("inductions:access_needs_signup")
+            ).status_code,
+            404,
         )
 
     def test_manage_still_works_when_feature_disabled(self):
@@ -108,7 +133,10 @@ class PublicEndpointGating(InductionsTestsMixin, TestCase):
         cfg.save()
         self.login_admin()
         self.assertEqual(
-            self.client.get(reverse("inductions:manage_session_list")).status_code, 200
+            self.client.get(
+                reverse("inductions:manage_session_list")
+            ).status_code,
+            200,
         )
 
     def test_access_needs_404_when_access_needs_disabled(self):
@@ -116,5 +144,26 @@ class PublicEndpointGating(InductionsTestsMixin, TestCase):
         cfg.access_needs_enabled = False
         cfg.save()
         self.assertEqual(
-            self.client.get(reverse("inductions:access_needs_signup")).status_code, 404
+            self.client.get(
+                reverse("inductions:access_needs_signup")
+            ).status_code,
+            404,
         )
+
+
+class ExportCsvFormulaInjection(InductionsTestsMixin, TestCase):
+    """A checked-in name starting with =/+/-/@ must not survive into the CSV
+    as a live spreadsheet formula (formula injection via export)."""
+
+    def test_leading_formula_characters_are_neutralised(self):
+        self.signup.name = "=cmd|'/bin/calc'!A0"
+        self.signup.status = InductionSignup.STATUS_CHECKED_IN
+        self.signup.save()
+
+        self.login_admin()
+        response = self.client.get(
+            reverse("inductions:manage_export_csv", args=[self.session.slug])
+        )
+        content = response.content.decode()
+        self.assertNotIn("\n=cmd", content)
+        self.assertIn("\t=cmd", content)

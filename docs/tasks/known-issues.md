@@ -182,6 +182,30 @@ Fix: Add `overflow-x: auto` to `.card-body` in that template, or make `.tag-opti
 
 Fix: Wrap the `<table>` in `<div style="overflow-x: auto;">` inside the `card-body` div. This gives horizontal scrolling without restructuring the table.
 
+**Bug AV** — Induction session detail: the Panopticon "edit signup" modal never initialises 🔵 S
+
+`new bootstrap.Modal(el)` in `inductions/js/session_detail.js` throws `TypeError: Cannot read properties of undefined (reading 'backdrop')` inside Bootstrap's `_initializeBackDrop` on every page load. Pre-existing: reproduced identically on the pre-September-2026 inline-script version of the template, so not caused by the extraction. Since 2026-09-08 the crash is contained in a try/catch so it no longer silently disables the cap editor, room counter, keyboard navigation, walk-in registration and table sorting that sit after it in the same script; the edit modal itself is still broken. Root cause not investigated. Start by checking which Bootstrap bundle `base_admin.html` loads and whether the modal markup is inside the block that renders twice (`{% block script %}` appears twice in `base_admin.html`, so every page's script block executes twice).
+
+**Bug AW** — `unsubscribe_member_right_now` and `opt_in` route access-denied users into the wrong view 🟢 XS
+
+Both views in `members/views/member_views.py` call `panopticon_required(unsubscribe_member)(...)` on their access-denied branch instead of wrapping themselves, so a Panopticon-level user without a magic key lands in the generic unsubscribe flow rather than the one they asked for. Predates the 2026 rewrite (`git log -S` traces it to feature 9.74). Surfaced by the September 2026 review sweep.
+
+**Bug AX** — Structured-cost-terms placeholder has never shown its default text 🟢 XS
+
+`diary/js/form_event.js` reads `DEFAULT_TERMS_PLACEHOLDER` from a template variable (`DEFAULT_TERMS_TEXT`) that no view or context processor ever sets, so it has always rendered as an empty string. Either pass the value through from the view or drop the fallback.
+
+**Bug AY** — Findings from the September 2026 review sweeps, verified but not yet fixed 🔵 S
+
+Each is small on its own; grouped so they are not lost. Fix when the relevant file is next touched.
+
+1. `EventTag.delete()` (`diary/models/misc.py`) and `Role.delete()` (`diary/models/rota.py`) return `False` and `(0, {})` respectively, not Django's documented `(count, dict)` shape. Generic code doing `count, _ = obj.delete()` misbehaves silently.
+2. `inductions/views/manage_settings.py`'s test-send: a `KeyError` from a malformed admin email template is caught and the raw, unformatted template is returned as if the send succeeded. An operator testing a broken template gets no signal.
+3. `manage_mark_policy_updated` (same app) bumps the policy version before `notify_policy_change()` runs. If the send fails, every volunteer is marked "behind" and re-emailed on every retry.
+4. `_passes_level` in `diary/models/site_config.py`: an unrecognised `PERMISSION_LEVEL_CHOICES` string falls through to `user.is_superuser`. Should fail closed.
+5. `labs/views/floorplan.py` and `loft.py` build URLs by string-replacing a sentinel (`/0/`, `/ROOM_ID/`) into a `reverse()`d path, matched on the JS side. A URL converter change breaks this with no error anywhere. Same pattern in `inductions/js/session_detail.js`.
+
+Structural, not a bug: the `members/views/`, `diary/forms/` and `inductions/views/` packages each re-export every name through `__init__.py` for a single consumer (`urls.py`). An independent review flagged this as indirection without a public API. Reasonable to collapse to direct submodule imports in `urls.py` at some point; not urgent.
+
 ---
 
 
@@ -204,7 +228,7 @@ Add `RotaEntry.volunteer = ForeignKey(Volunteer, null=True, blank=True, on_delet
 Implementation steps, in order:
 
 1. **Migration**: add the nullable FK column.
-2. **Port name coercion from s+s** (`edit_views.py` `edit_rota_entry` view): when a non-superuser submits a non-empty rota slot, ignore the typed text and set `rota_entry.volunteer = request.user.volunteer`. Superusers retain free-text mode. This must land *before* the backfill migration, otherwise the backfill data is polluted with arbitrary strings.
+2. **Port name coercion from s+s** (`edit_views/` `edit_rota_entry` view): when a non-superuser submits a non-empty rota slot, ignore the typed text and set `rota_entry.volunteer = request.user.volunteer`. Superusers retain free-text mode. This must land *before* the backfill migration, otherwise the backfill data is polluted with arbitrary strings.
 3. **Backfill migration**: case-insensitive name match over existing `RotaEntry.name` values → `Volunteer.member.name`. Skip and log: entries with ambiguous matches (two volunteers share a name); entries with no match (typos, anonymised volunteers). This is best-effort.
 4. **GDPR anonymisation update** (`volunteer_views.py:592`): primary path becomes `RotaEntry.objects.filter(volunteer=v).update(volunteer=None, name="")`. Keep the existing text-match sweep as fallback for legacy entries where the FK was never set.
 5. **Pronouns tooltip update** (`edit_views.py:1380`): currently builds a name→pronouns dict and does a text lookup. Post-FK, entries with `volunteer` set go direct to `entry.volunteer.member.personal_pronouns`. Dict fallback remains for legacy entries.

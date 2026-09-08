@@ -183,6 +183,38 @@ current first candidate, since it needs no further dev work, only deployment.
 
 ---
 
+## Tooling and gates (since September 2026)
+
+A quality pass in September 2026 put deterministic tooling underneath this repo. The record of
+what it measured and changed is archived at
+[docs/ARCHIVE/QUALITY_PASS_2026_09.md](docs/ARCHIVE/QUALITY_PASS_2026_09.md); the checkable
+code standard it produced is [docs/QUALITY_RUBRIC.md](docs/QUALITY_RUBRIC.md). What applies to
+all work here now:
+
+- **`pyproject.toml` owns the tool settings.** `black` and `ruff` are both pinned at
+  line-length 79 and are installed in the container. Run `ruff check toolkit` and
+  `black toolkit` with no arguments; do not pass `--line-length` by hand.
+- **Every commit must leave `ruff`, `black --check` and the test suite green.** CI
+  (`.github/workflows/ci.yml`) and the pre-commit hook enforce the same three checks.
+- **`ruff --fix` is not universally safe.** Re-export shims (`*/views/__init__.py`) and
+  side-effect imports (`audit/apps.py`, which registers signal handlers) look like dead code
+  to it. Check before running `--fix` over new territory.
+- **The complexity gate is a ratchet.** `max-complexity` in `pyproject.toml` sits at the current
+  worst function. Lower it whenever one of the functions above 12 gets split; never raise it.
+- **`SiteConfiguration`'s cache outlives a rolled-back test transaction.** Any test mixin whose
+  tests mutate `SiteConfiguration` needs `cache.delete(SiteConfiguration._CACHE_KEY)` in
+  `setUp`, or a flag flipped in one test leaks into whichever test runs next alphabetically.
+  `diary/tests/common.py` and `labs/tests/common.py` already have it.
+- **A brand-new `static/` directory in an app is invisible to the running dev server.** Django's
+  static finder lists the apps with a `static/` directory once at startup. After adding one,
+  `docker compose restart toolkit`, or the files 404 despite existing on disk.
+- **Inline JS in templates is the exception, not the rule.** The four largest scripts were
+  extracted to `static/` files that export a single setup function, called from a short inline
+  block that passes template values as arguments (see `diary/js/form_event.js`). Follow that
+  pattern for anything beyond a few lines.
+
+---
+
 ## Current task: Port S+S-specific features from the `s+s` branch
 
 The `s+s` branch was the Star and Shadow production branch but ran Django 2.2 (EOL). We have started fresh from `master` (which is far more modern) and ported the S+S-specific functionality across. Initial Docker setup and basic seed data are complete; focus is now on porting remaining features.
@@ -271,6 +303,8 @@ docker compose exec toolkit /venv/bin/python3 manage.py test toolkit.diary.tests
 | Dev docker compose | [docker-compose.yml](docker-compose.yml) |
 | S+S-specific templates | [star_and_shadow_templates/](star_and_shadow_templates/) |
 | Current work / status / roadmap | [CURRENT_WORK.md](CURRENT_WORK.md) |
+| Code standard (checkable rules R1–R14) | [docs/QUALITY_RUBRIC.md](docs/QUALITY_RUBRIC.md) |
+| Tool config: ruff, black, complexity gate | [pyproject.toml](pyproject.toml) |
 | System specification | [docs/SPEC.md](docs/SPEC.md) |
 | Logging: what's logged where, email log lines | [docs/LOGGING.md](docs/LOGGING.md) |
 | Feature specs & design rationale | [docs/TASKS.md](docs/TASKS.md) (index) → [docs/tasks/](docs/tasks/) (domain files) |

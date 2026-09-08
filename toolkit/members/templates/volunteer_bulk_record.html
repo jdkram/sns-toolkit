@@ -195,7 +195,9 @@ document.addEventListener("DOMContentLoaded", function () {
         return names;
       },
       function () {
-        return "Awarding qualification: <strong>{% if selected_qual %}{{ selected_qual.name|escapejs }}{% endif %}</strong>";
+        var nameEl = document.getElementById("award-qual-name");
+        var qualName = nameEl ? nameEl.textContent : "";
+        return "Awarding qualification: <strong>" + esc(qualName) + "</strong>";
       }
     );
   }
@@ -365,7 +367,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:0.5rem">
-      <span>Awarding: <strong>{{ selected_qual.name }}</strong>
+      <span>Awarding: <strong id="award-qual-name">{{ selected_qual.name }}</strong>
         {% if selected_qual.notes %}<span class="text-muted ms-2" style="font-size:0.9em">{{ selected_qual.notes }}</span>{% endif %}
       </span>
       <div class="select-controls">

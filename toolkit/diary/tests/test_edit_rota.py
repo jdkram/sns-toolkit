@@ -72,7 +72,9 @@ class EditRotaViewGet(DiaryTestsMixin, TestCase):
         config.save()
         response = self.client.get(reverse("rota-edit"))
         self.assertEqual(response.status_code, 200)
-        self.assertIs(response.context["rota_clear_email_prompt_enabled"], True)
+        self.assertIs(
+            response.context["rota_clear_email_prompt_enabled"], True
+        )
 
     @patch("django.utils.timezone.now")
     def test_rota_edit_context_prompt_disabled(self, now_patch):
@@ -82,7 +84,9 @@ class EditRotaViewGet(DiaryTestsMixin, TestCase):
         config.save()
         response = self.client.get(reverse("rota-edit"))
         self.assertEqual(response.status_code, 200)
-        self.assertIs(response.context["rota_clear_email_prompt_enabled"], False)
+        self.assertIs(
+            response.context["rota_clear_email_prompt_enabled"], False
+        )
 
     @patch("django.utils.timezone.now")
     def test_date_range(self, now_patch):
@@ -201,6 +205,7 @@ class EditRotaViewPost(DiaryTestsMixin, TestCase):
         now_patch.return_value = self._fake_now
 
         from django.contrib.auth.models import User
+
         _grant_rota_permission(User.objects.get(username="vol1"))
 
         self.client.logout()
@@ -228,6 +233,7 @@ class EditRotaViewPost(DiaryTestsMixin, TestCase):
         now_patch.return_value = self._fake_now
 
         from django.contrib.auth.models import User
+
         _grant_rota_permission(User.objects.get(username="vol1"))
 
         self.client.logout()
@@ -236,7 +242,9 @@ class EditRotaViewPost(DiaryTestsMixin, TestCase):
         url = reverse("rota-edit")
         rota_entry = self.e4s3.rotaentry_set.all()[0]
         rota_entry.name = "Volunteer One"
-        rota_entry.volunteer = Member.objects.get(name="Volunteer One").volunteer
+        rota_entry.volunteer = Member.objects.get(
+            name="Volunteer One"
+        ).volunteer
         rota_entry.save()
 
         response = self.client.post(

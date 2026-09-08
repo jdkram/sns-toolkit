@@ -14,9 +14,7 @@ ALLOWED_HOSTS = [os.environ["ALLOWED_HOST"]]
 
 # Required for Django 4+ when behind a reverse proxy with HTTPS.
 # Form submissions (login, event edits, rota) will 403 without this.
-CSRF_TRUSTED_ORIGINS = [
-    f"https://{os.environ['ALLOWED_HOST']}"
-]
+CSRF_TRUSTED_ORIGINS = [f"https://{os.environ['ALLOWED_HOST']}"]
 
 # Used to build absolute URLs (login links, etc.) in emails sent from
 # management commands, which have no request to call build_absolute_uri() on.
@@ -84,7 +82,9 @@ DATABASES = {
 # smtp.EmailBackend and configure the EMAIL_* settings below if you want
 # mailouts to actually send. Console backend is safe for now.
 EMAIL_BACKEND = "toolkit.util.email_backend.LoggingEmailBackend"
-TOOLKIT_WRAPPED_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+TOOLKIT_WRAPPED_EMAIL_BACKEND = (
+    "django.core.mail.backends.console.EmailBackend"
+)
 # Fail fast on SMTP connection attempts rather than hanging a worker.
 # Django's default has no timeout. Only takes effect with smtp.EmailBackend.
 EMAIL_TIMEOUT = 10

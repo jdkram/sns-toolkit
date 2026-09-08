@@ -1,5 +1,5 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 
 from toolkit.diary.models import get_site_config
@@ -99,7 +99,9 @@ class ExchangeListTests(ExchangeEnabledMixin, TestCase):
 
     def test_filter_by_category(self):
         self.client.login(username="admin", password="T3stPassword!")
-        response = self.client.get(reverse("labs-exchange") + "?category=kitchen")
+        response = self.client.get(
+            reverse("labs-exchange") + "?category=kitchen"
+        )
         self.assertContains(response, "Old kettle")
         self.assertNotContains(response, "DeWalt drill")
 
@@ -122,19 +124,29 @@ class ExchangeListTests(ExchangeEnabledMixin, TestCase):
 class ExchangeItemDetailTests(ExchangeEnabledMixin, TestCase):
     def test_detail_view_200(self):
         self.client.login(username="admin", password="T3stPassword!")
-        response = self.client.get(reverse("labs-exchange-item", kwargs={"item_id": self.item_give.pk}))
+        response = self.client.get(
+            reverse(
+                "labs-exchange-item", kwargs={"item_id": self.item_give.pk}
+            )
+        )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Old kettle")
 
     def test_edit_link_shown_to_owner(self):
         self.client.login(username="volunteer", password="T3stPassword!3")
-        response = self.client.get(reverse("labs-exchange-item", kwargs={"item_id": self.item_give.pk}))
+        response = self.client.get(
+            reverse(
+                "labs-exchange-item", kwargs={"item_id": self.item_give.pk}
+            )
+        )
         self.assertContains(response, "Edit listing")
 
     def test_edit_link_hidden_from_other_volunteer(self):
         other_user = self.user_ro
         response = self.client.force_login(other_user) or self.client.get(
-            reverse("labs-exchange-item", kwargs={"item_id": self.item_give.pk})
+            reverse(
+                "labs-exchange-item", kwargs={"item_id": self.item_give.pk}
+            )
         )
         self.assertNotContains(response, "Edit listing")
 
@@ -148,18 +160,21 @@ class ExchangeAddTests(ExchangeEnabledMixin, TestCase):
 
     def test_post_creates_item(self):
         self.client.login(username="volunteer", password="T3stPassword!3")
-        response = self.client.post(reverse("labs-exchange-add"), {
-            "listing_type": ExchangeItem.TYPE_GIVE,
-            "name": "Spare bookshelf",
-            "description": "Pine, good condition",
-            "category": ExchangeItem.CATEGORY_FURNITURE,
-            "condition": ExchangeItem.CONDITION_GOOD,
-            "owner_type": ExchangeItem.OWNER_VOLUNTEER,
-            "owner_volunteer": self.vol.pk,
-            "location_notes": "Bring a car",
-            "status": ExchangeItem.STATUS_AVAILABLE,
-            "notes": "",
-        })
+        response = self.client.post(
+            reverse("labs-exchange-add"),
+            {
+                "listing_type": ExchangeItem.TYPE_GIVE,
+                "name": "Spare bookshelf",
+                "description": "Pine, good condition",
+                "category": ExchangeItem.CATEGORY_FURNITURE,
+                "condition": ExchangeItem.CONDITION_GOOD,
+                "owner_type": ExchangeItem.OWNER_VOLUNTEER,
+                "owner_volunteer": self.vol.pk,
+                "location_notes": "Bring a car",
+                "status": ExchangeItem.STATUS_AVAILABLE,
+                "notes": "",
+            },
+        )
         self.assertEqual(response.status_code, 302)
         item = ExchangeItem.objects.get(name="Spare bookshelf")
         self.assertEqual(item.added_by, self.user_vol)
@@ -169,26 +184,44 @@ class ExchangeAddTests(ExchangeEnabledMixin, TestCase):
 class ExchangeEditTests(ExchangeEnabledMixin, TestCase):
     def test_owner_can_edit(self):
         self.client.login(username="volunteer", password="T3stPassword!3")
-        response = self.client.get(reverse("labs-exchange-edit", kwargs={"item_id": self.item_give.pk}))
+        response = self.client.get(
+            reverse(
+                "labs-exchange-edit", kwargs={"item_id": self.item_give.pk}
+            )
+        )
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/exchange_form.html")
 
     def test_other_user_cannot_edit(self):
         self.client.login(username="read_only", password="T3stPassword!1")
-        response = self.client.get(reverse("labs-exchange-edit", kwargs={"item_id": self.item_give.pk}))
+        response = self.client.get(
+            reverse(
+                "labs-exchange-edit", kwargs={"item_id": self.item_give.pk}
+            )
+        )
         self.assertEqual(response.status_code, 403)
 
     def test_superuser_can_edit_any(self):
         self.user_admin.is_superuser = True
         self.user_admin.save()
         self.client.login(username="admin", password="T3stPassword!")
-        response = self.client.get(reverse("labs-exchange-edit", kwargs={"item_id": self.item_give.pk}))
+        response = self.client.get(
+            reverse(
+                "labs-exchange-edit", kwargs={"item_id": self.item_give.pk}
+            )
+        )
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/exchange_form.html")
 
 
 class ExchangeWithdrawTests(ExchangeEnabledMixin, TestCase):
     def test_owner_can_withdraw(self):
         self.client.login(username="volunteer", password="T3stPassword!3")
-        response = self.client.post(reverse("labs-exchange-withdraw", kwargs={"item_id": self.item_give.pk}))
+        response = self.client.post(
+            reverse(
+                "labs-exchange-withdraw", kwargs={"item_id": self.item_give.pk}
+            )
+        )
         self.assertEqual(response.status_code, 302)
         self.item_give.refresh_from_db()
         self.assertFalse(self.item_give.active)
@@ -196,25 +229,41 @@ class ExchangeWithdrawTests(ExchangeEnabledMixin, TestCase):
 
     def test_other_user_cannot_withdraw(self):
         self.client.login(username="read_only", password="T3stPassword!1")
-        response = self.client.post(reverse("labs-exchange-withdraw", kwargs={"item_id": self.item_give.pk}))
+        response = self.client.post(
+            reverse(
+                "labs-exchange-withdraw", kwargs={"item_id": self.item_give.pk}
+            )
+        )
         self.assertEqual(response.status_code, 403)
 
 
 class ExchangeModelTests(TestCase):
     def test_status_label_give_available(self):
-        item = ExchangeItem(listing_type=ExchangeItem.TYPE_GIVE, status=ExchangeItem.STATUS_AVAILABLE)
+        item = ExchangeItem(
+            listing_type=ExchangeItem.TYPE_GIVE,
+            status=ExchangeItem.STATUS_AVAILABLE,
+        )
         self.assertEqual(item.status_label(), "Available")
 
     def test_status_label_give_claimed(self):
-        item = ExchangeItem(listing_type=ExchangeItem.TYPE_GIVE, status=ExchangeItem.STATUS_CLAIMED)
+        item = ExchangeItem(
+            listing_type=ExchangeItem.TYPE_GIVE,
+            status=ExchangeItem.STATUS_CLAIMED,
+        )
         self.assertEqual(item.status_label(), "Gone to a good home")
 
     def test_status_label_lend_available(self):
-        item = ExchangeItem(listing_type=ExchangeItem.TYPE_LEND, status=ExchangeItem.STATUS_AVAILABLE)
+        item = ExchangeItem(
+            listing_type=ExchangeItem.TYPE_LEND,
+            status=ExchangeItem.STATUS_AVAILABLE,
+        )
         self.assertEqual(item.status_label(), "Available to borrow")
 
     def test_status_label_lend_on_loan(self):
-        item = ExchangeItem(listing_type=ExchangeItem.TYPE_LEND, status=ExchangeItem.STATUS_ON_LOAN)
+        item = ExchangeItem(
+            listing_type=ExchangeItem.TYPE_LEND,
+            status=ExchangeItem.STATUS_ON_LOAN,
+        )
         self.assertEqual(item.status_label(), "On loan")
 
     def test_str(self):

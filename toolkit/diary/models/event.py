@@ -432,7 +432,9 @@ class Event(models.Model):
             for tag in self.template.tags.all():
                 self.tags.add(tag)
 
-    def delete(self, *args, **kwargs):
+    def delete(
+        self, *args, **kwargs  # noqa: ARG002 -- Model.delete() signature
+    ):
         # Don't allow Events to be deleted. This doesn't block deletes on
         # querysets, SQL, etc.
         raise django.db.IntegrityError("Event deletion not allowed")

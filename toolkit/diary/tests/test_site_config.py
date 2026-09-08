@@ -2,7 +2,7 @@ import urllib.error
 from unittest.mock import patch
 
 from django import forms
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 
 from toolkit.diary.forms import SiteConfigurationForm
@@ -124,7 +124,9 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             ),
             "volunteer_purge_days": str(config.volunteer_purge_days),
             "consent_renewal_days": str(config.consent_renewal_days),
-            "consent_renewal_grace_days": str(config.consent_renewal_grace_days),
+            "consent_renewal_grace_days": str(
+                config.consent_renewal_grace_days
+            ),
             "volunteer_digest_day": str(config.volunteer_digest_day),
             "email_log_retain_days": str(config.email_log_retain_days),
             "deletion_log_retain_days": str(config.deletion_log_retain_days),
@@ -264,7 +266,9 @@ class OmdbApiKeyValidationTests(DiaryTestsMixin, TestCase):
         self.assertIn("daily request limit", str(ctx.exception))
 
     @patch("toolkit.diary.omdb.verify_api_key")
-    def test_network_error_is_rejected_with_friendly_message(self, mock_verify):
+    def test_network_error_is_rejected_with_friendly_message(
+        self, mock_verify
+    ):
         mock_verify.side_effect = urllib.error.URLError("timed out")
         form = self._form_with_key("some-key")
         with self.assertRaises(forms.ValidationError):

@@ -14,7 +14,12 @@ from django.db.models.functions import Coalesce, Greatest
 from django.utils.timezone import now as timezone_now
 from django.core.exceptions import ValidationError
 
-from toolkit.diary.models import Role, RotaEntry, VolunteerEventMark, get_site_config
+from toolkit.diary.models import (
+    Role,
+    RotaEntry,
+    VolunteerEventMark,
+    get_site_config,
+)
 from toolkit.util import generate_random_string
 
 logger = logging.getLogger(__name__)
@@ -229,7 +234,10 @@ class VolunteerQuerySet(models.QuerySet):
         return (
             self.filter(
                 retention_exempt=False,
-                status__in=[Volunteer.STATUS_DORMANT, Volunteer.STATUS_RETIRED],
+                status__in=[
+                    Volunteer.STATUS_DORMANT,
+                    Volunteer.STATUS_RETIRED,
+                ],
             )
             .annotate(
                 last_activity=Greatest(
@@ -313,7 +321,10 @@ class Volunteer(models.Model):
 
         from toolkit.inductions.models import InductionsSettings
 
-        if self.consent_policy_version < InductionsSettings.load().privacy_policy_version:
+        if (
+            self.consent_policy_version
+            < InductionsSettings.load().privacy_policy_version
+        ):
             return True
 
         if self.consent_reminder_sent_at is None:
@@ -322,8 +333,9 @@ class Volunteer(models.Model):
         grace_days = get_site_config().consent_renewal_grace_days
         if not grace_days:
             return False
-        return self.consent_reminder_sent_at < timezone_now() - datetime.timedelta(
-            days=grace_days
+        return (
+            self.consent_reminder_sent_at
+            < timezone_now() - datetime.timedelta(days=grace_days)
         )
 
     portrait = models.ImageField(
@@ -340,7 +352,8 @@ class Volunteer(models.Model):
 
     # Access rider
     access_intro = models.TextField(
-        blank=True, max_length=500,
+        blank=True,
+        max_length=500,
         help_text="A sentence or two about yourself for context (optional).",
     )
     access_needs = models.TextField(
@@ -348,13 +361,16 @@ class Volunteer(models.Model):
         help_text="What you need to participate in shifts and events at the venue.",
     )
     access_links = models.TextField(
-        blank=True, max_length=500,
+        blank=True,
+        max_length=500,
         help_text="Links to further information about your access needs (optional).",
     )
 
     # Emergency contact (panopticon-visible only; not included in the directory)
     emergency_contact_name = models.CharField(max_length=128, blank=True)
-    emergency_contact_relationship = models.CharField(max_length=64, blank=True)
+    emergency_contact_relationship = models.CharField(
+        max_length=64, blank=True
+    )
     emergency_contact_phone = models.CharField(max_length=64, blank=True)
 
     # Directory sharing controls — all opt-in, default off.
@@ -368,7 +384,9 @@ class Volunteer(models.Model):
     ]
     dir_share_listed = models.BooleanField(default=False)
     dir_share_name_style = models.CharField(
-        max_length=10, choices=NAME_STYLE_CHOICES, default=NAME_STYLE_FULL,
+        max_length=10,
+        choices=NAME_STYLE_CHOICES,
+        default=NAME_STYLE_FULL,
     )
     dir_share_pronouns = models.BooleanField(default=False)
     dir_share_email = models.BooleanField(default=False)
@@ -382,18 +400,21 @@ class Volunteer(models.Model):
         help_text="Send a weekly email summary of upcoming shifts, new programme items, and starred events.",
     )
     last_digest_sent_at = models.DateTimeField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         help_text="Set automatically after each digest send. Used to compute the 'new on programme' lookback window.",
     )
 
     # Dashboard and diary personalisation — persisted to DB so preferences
     # survive across devices and browser data clears.
     dashboard_hidden_cards = models.JSONField(
-        default=list, blank=True,
+        default=list,
+        blank=True,
         help_text="Dashboard card IDs the user has hidden (e.g. 'dash_unconfirmed').",
     )
     dashboard_card_order = models.JSONField(
-        default=list, blank=True,
+        default=list,
+        blank=True,
         help_text="Ordered list of dashboard card IDs, as set by the user's drag-to-reorder.",
     )
     diary_days_ahead = models.IntegerField(
@@ -401,7 +422,8 @@ class Volunteer(models.Model):
         help_text="Days ahead shown in the diary edit list. Set when the user selects a range.",
     )
     favourite_link_keys = models.JSONField(
-        default=list, blank=True,
+        default=list,
+        blank=True,
         help_text="Ordered list of link catalogue keys pinned to the dashboard favourites panel.",
     )
 
@@ -444,7 +466,9 @@ class Volunteer(models.Model):
             if is_suspended and self.user.is_active:
                 self.user.is_active = False
                 self.user.save(update_fields=["is_active"])
-            elif was_suspended and not is_suspended and not self.user.is_active:
+            elif (
+                was_suspended and not is_suspended and not self.user.is_active
+            ):
                 # Reinstating: restore login. Only fires on the suspended->other
                 # transition, so we never silently re-enable an account that was
                 # disabled for some other reason (e.g. GDPR anonymisation).
@@ -809,6 +833,7 @@ class PanopticonGrant(models.Model):
     Exists for accountability: the access list page shows who has Panopticon
     access, why, when it was granted, and when it was last reviewed.
     """
+
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="panopticon_grant"
     )
@@ -821,7 +846,11 @@ class PanopticonGrant(models.Model):
     )
     last_reviewed_at = models.DateField(null=True, blank=True)
     reviewed_by = models.ForeignKey(
-        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
     )
 
     class Meta:
@@ -841,6 +870,7 @@ class PanopticonGrant(models.Model):
 
 class ProgrammerGrant(models.Model):
     """Lightweight record created when a user is granted Programmer group membership."""
+
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="programmer_grant"
     )

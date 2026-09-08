@@ -349,7 +349,12 @@ def single_showing_ics(request, showing_id=None):
     return response
 
 
-def view_event(request, event_id=None, legacy_id=None, event_slug=None):
+def view_event(
+    request,
+    event_id=None,
+    legacy_id=None,
+    event_slug=None,  # noqa: ARG001 -- URLconf passes this for older links
+):
     # Show details of an individual event, with given event_id. Also allows
     # lookup by 'legacy_id', the non-primary key id used in the old toolkit.
     context = {}

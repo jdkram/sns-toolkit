@@ -1,9 +1,8 @@
 import re
 import json
-import os.path
 
 import zoneinfo
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, date, timedelta
 import tempfile
 
 from unittest.mock import patch
@@ -16,20 +15,14 @@ from toolkit.diary.models import (
     Showing,
     Event,
     EventLink,
-    EventTag,
     EventTemplate,
-    EventTemplateRole,
     Role,
     DiaryIdea,
     MediaItem,
     RotaEntry,
-    Room,
     RoomBooking,
-    get_site_config,
 )
 
-import toolkit.diary.edit_prefs
-from toolkit.diary.form_widgets import JQueryDateTimePicker
 
 from .common import DiaryTestsMixin, UKTZ
 
@@ -119,7 +112,9 @@ class EditIdeasViewTests(DiaryTestsMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "form_idea.html")
 
-        self.assertContains(response, "An ide\u0113 f\u014d\u0159 some \u20acvent")
+        self.assertContains(
+            response, "An ide\u0113 f\u014d\u0159 some \u20acvent"
+        )
 
     def test_get_json_existing_idea(self):
         # Ensure there's something in the DB for Jan 2012:
@@ -136,7 +131,9 @@ class EditIdeasViewTests(DiaryTestsMixin, TestCase):
         )
         self.assertEqual(response.status_code, 200)
         response_data = response.json()
-        self.assertEqual(response["Content-Type"], "application/json; charset=utf-8")
+        self.assertEqual(
+            response["Content-Type"], "application/json; charset=utf-8"
+        )
         self.assertEqual(
             response_data,
             {
@@ -164,7 +161,9 @@ class EditIdeasViewTests(DiaryTestsMixin, TestCase):
         # Check that's made it into the database:
         idea, created = DiaryIdea.objects.get_or_create(month=date(2012, 1, 1))
         self.assertFalse(created)
-        self.assertEqual(idea.ideas, "An ide\u0113 f\u014d\u0159 some \u20acvent")
+        self.assertEqual(
+            idea.ideas, "An ide\u0113 f\u014d\u0159 some \u20acvent"
+        )
 
         self.assert_redirect_to_index(response)
 
@@ -187,7 +186,9 @@ class EditIdeasViewTests(DiaryTestsMixin, TestCase):
         # Check that's made it into the database:
         idea, created = DiaryIdea.objects.get_or_create(month=date(2012, 1, 1))
         self.assertFalse(created)
-        self.assertEqual(idea.ideas, "An ide\u0113 f\u014d\u0159 some \u20acvent")
+        self.assertEqual(
+            idea.ideas, "An ide\u0113 f\u014d\u0159 some \u20acvent"
+        )
 
         self.assert_redirect_to_index(response)
 
@@ -302,8 +303,12 @@ class ViewEventFieldTests(DiaryTestsMixin, TestCase):
         self.assertTemplateUsed(response, "view_copy.html")
 
         self.assertNotContains(response, "EVENT THREE TITLE")
-        self.assertContains(response, "Sun 09 18:00 .... Event four titl\u0113")
-        self.assertContains(response, "<p>EVENT FOUR TITL\u0112</p>", html=True)
+        self.assertContains(
+            response, "Sun 09 18:00 .... Event four titl\u0113"
+        )
+        self.assertContains(
+            response, "<p>EVENT FOUR TITL\u0112</p>", html=True
+        )
         self.assertContains(response, "<p>Event four C\u014dpy</p>", html=True)
 
     def test_view_event_field_copy_summary(self):
@@ -337,7 +342,9 @@ class ViewEventFieldTests(DiaryTestsMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "view_terms.html")
 
-        self.assertContains(response, "Sun 09 18:00 .... Event four titl\u0113")
+        self.assertContains(
+            response, "Sun 09 18:00 .... Event four titl\u0113"
+        )
         self.assertContains(response, "Cube event / Public event / Confirmed")
         self.assertContains(response, "Terminal price: \u00a31 / \u20ac3")
 
@@ -461,12 +468,16 @@ class ViewTermsReportCsvTests(DiaryTestsMixin, TestCase):
         url += "?daysahead=365"
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers["content-type"], "text/csv; charset=utf-8")
+        self.assertEqual(
+            response.headers["content-type"], "text/csv; charset=utf-8"
+        )
         self.assertEqual(
             response.headers["content-disposition"],
             'attachment; filename="terms-1990-01-15.csv"',
         )
-        self.assertEqual(response.content.decode("utf-8"), "date,time,title,terms\r\n")
+        self.assertEqual(
+            response.content.decode("utf-8"), "date,time,title,terms\r\n"
+        )
 
     def test_showings(self):
         url = reverse(
@@ -523,8 +534,18 @@ class DiaryCalendarViewTests(DiaryTestsMixin, TestCase):
         self.assertJSONEqual(
             self._get_room_list(response),
             [
-                {"id": 1, "title": "Room one", "eventColor": "#Ff0000", "eventTextColor": "#ffffff"},
-                {"id": 2, "title": "Room two", "eventColor": "#00abcd", "eventTextColor": "#ffffff"},
+                {
+                    "id": 1,
+                    "title": "Room one",
+                    "eventColor": "#Ff0000",
+                    "eventTextColor": "#ffffff",
+                },
+                {
+                    "id": 2,
+                    "title": "Room two",
+                    "eventColor": "#00abcd",
+                    "eventTextColor": "#ffffff",
+                },
             ],
         )
 
@@ -573,7 +594,9 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
     def test_invalid_end(self):
         # Valid start, invalid end
         url = reverse("edit-diary-data")
-        response = self.client.get(url, data={"start": "2000-01-01", "end": "0"})
+        response = self.client.get(
+            url, data={"start": "2000-01-01", "end": "0"}
+        )
         self.assertEqual(response.status_code, 404)
 
     # Common code for following two tests
@@ -612,6 +635,7 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
         # In multiroom mode, room-booked showings get IDs like "rb-{pk}" rather
         # than integer showing PKs. Normalise both formats to showing PKs.
         from toolkit.diary.models import RoomBooking as _RB
+
         rb_to_showing = {rb.pk: rb.showing_id for rb in _RB.objects.all()}
 
         def _showing_id(id_val):
@@ -733,7 +757,9 @@ class DiaryDataViewTests(DiaryTestsMixin, TestCase):
                 expected_data[sid]["resourceIds"] = ["unroomed"]
             # Showing 2 has a room booking → uses the room's resourceId and colour.
             expected_data[2]["resourceIds"] = [2]
-            expected_data[2]["id"] = data_by_showing[2]["id"]  # "rb-{pk}" string
+            expected_data[2]["id"] = data_by_showing[2][
+                "id"
+            ]  # "rb-{pk}" string
             # In multiroom mode, colour comes from the FC resource eventColor,
             # not the event's color key. s_auxiliary_room added (room not is_primary).
             del expected_data[2]["color"]
@@ -760,7 +786,9 @@ class BatchAddShowingsTests(DiaryTestsMixin, TestCase):
     def setUp(self):
         super().setUp()
         self.client.login(username="admin", password="T3stPassword!")
-        self.url = reverse("batch-add-showings", kwargs={"event_id": self.e4.pk})
+        self.url = reverse(
+            "batch-add-showings", kwargs={"event_id": self.e4.pk}
+        )
 
     def test_get_renders_form(self):
         response = self.client.get(self.url)
@@ -818,7 +846,9 @@ class BatchAddShowingsTests(DiaryTestsMixin, TestCase):
                 "booked_by": "Tester",
             },
         )
-        showing = Showing.objects.get(event=self.e4, start__year=2099, start__month=5)
+        showing = Showing.objects.get(
+            event=self.e4, start__year=2099, start__month=5
+        )
         local_start = showing.start.astimezone()
         self.assertEqual(local_start.hour, 18)
         self.assertEqual(local_start.minute, 0)
@@ -880,9 +910,7 @@ class BatchAddShowingsTests(DiaryTestsMixin, TestCase):
         self.assertNotContains(response, "Showings added")
 
     def test_post_too_many_dates_shows_error(self):
-        many_dates = ",".join(
-            "2099-08-{:02d}".format(i) for i in range(1, 54)
-        )
+        many_dates = ",".join("2099-08-{:02d}".format(i) for i in range(1, 54))
         response = self.client.post(
             self.url,
             {
@@ -921,10 +949,13 @@ class BatchAddShowingsTests(DiaryTestsMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Add terms to the event before creating confirmed showings.")
-        self.assertEqual(Showing.objects.filter(event=event).count(), initial_count)
-
-
+        self.assertContains(
+            response,
+            "Add terms to the event before creating confirmed showings.",
+        )
+        self.assertEqual(
+            Showing.objects.filter(event=event).count(), initial_count
+        )
 
 
 class EventTemplateFormLayoutTests(DiaryTestsMixin, TestCase):
@@ -1002,6 +1033,29 @@ class EventTemplateFormLayoutTests(DiaryTestsMixin, TestCase):
         self.assertEqual(str(self.tmpl1.cost_flat_fee_gbp), "150.00")
 
 
+class TemplateDeleteConfirmEscapingTests(DiaryTestsMixin, TestCase):
+    """The delete button's `onclick="confirm(...)"` embeds the template name
+    as a JS string literal inside an HTML attribute. A name containing a
+    single quote must not be able to break out of that literal once the
+    browser HTML-decodes the attribute (JS-context XSS)."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+
+    def test_template_name_with_quote_is_js_escaped(self):
+        self.tmpl1.name = "Evil');alert(1);('"
+        self.tmpl1.save()
+
+        url = reverse(
+            "edit_event_template_detail", kwargs={"template_id": self.tmpl1.pk}
+        )
+        response = self.client.get(url)
+        rendered = response.content.decode()
+        self.assertNotIn("confirm('Delete template 'Evil'", rendered)
+        self.assertIn("Evil\\u0027)", rendered)
+
+
 class TemplateExportImportTests(DiaryTestsMixin, TestCase):
     def setUp(self):
         super().setUp()
@@ -1010,7 +1064,9 @@ class TemplateExportImportTests(DiaryTestsMixin, TestCase):
     # ── Export ───────────────────────────────────────────────────────────────
 
     def test_export_json_appears_on_detail_page(self):
-        url = reverse("edit_event_template_detail", kwargs={"template_id": self.tmpl1.pk})
+        url = reverse(
+            "edit_event_template_detail", kwargs={"template_id": self.tmpl1.pk}
+        )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '"name"')
@@ -1018,6 +1074,7 @@ class TemplateExportImportTests(DiaryTestsMixin, TestCase):
 
     def test_export_json_is_valid_json(self):
         from toolkit.diary.edit_views import _export_template_json
+
         j = _export_template_json(self.tmpl1)
         data = json.loads(j)
         self.assertEqual(data["name"], "Template 1")
@@ -1026,6 +1083,7 @@ class TemplateExportImportTests(DiaryTestsMixin, TestCase):
 
     def test_export_includes_roles_and_tags(self):
         from toolkit.diary.edit_views import _export_template_json
+
         j = _export_template_json(self.tmpl2)
         data = json.loads(j)
         role_names = [s["role"] for s in data["role_slots"]]
@@ -1036,6 +1094,7 @@ class TemplateExportImportTests(DiaryTestsMixin, TestCase):
     def test_export_not_shown_to_non_superuser(self):
         import django.contrib.auth.models as auth_models
         import django.contrib.contenttypes as contenttypes
+
         programmer = auth_models.User.objects.create_user(
             "programmer_test", "", "T3stPassword!X"
         )
@@ -1047,8 +1106,12 @@ class TemplateExportImportTests(DiaryTestsMixin, TestCase):
         )
         programmer.user_permissions.add(write_permission)
         self.client.logout()
-        self.client.login(username="programmer_test", password="T3stPassword!X")
-        url = reverse("edit_event_template_detail", kwargs={"template_id": self.tmpl1.pk})
+        self.client.login(
+            username="programmer_test", password="T3stPassword!X"
+        )
+        url = reverse(
+            "edit_event_template_detail", kwargs={"template_id": self.tmpl1.pk}
+        )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "import-event-template")
@@ -1059,19 +1122,21 @@ class TemplateExportImportTests(DiaryTestsMixin, TestCase):
         return reverse("import-event-template")
 
     def _valid_json(self, name="Import Test"):
-        return json.dumps({
-            "name": name,
-            "pricing": "£5",
-            "film_information": "",
-            "copy_summary": "A test.",
-            "copy": "",
-            "terms": "",
-            "rota_notes": "",
-            "private": False,
-            "outside_hire": False,
-            "tags": ["tag one"],
-            "role_slots": [{"role": "Role 1 (standard)", "count": 2}],
-        })
+        return json.dumps(
+            {
+                "name": name,
+                "pricing": "£5",
+                "film_information": "",
+                "copy_summary": "A test.",
+                "copy": "",
+                "terms": "",
+                "rota_notes": "",
+                "private": False,
+                "outside_hire": False,
+                "tags": ["tag one"],
+                "role_slots": [{"role": "Role 1 (standard)", "count": 2}],
+            }
+        )
 
     def test_import_get_renders_form(self):
         response = self.client.get(self._import_url())
@@ -1086,7 +1151,8 @@ class TemplateExportImportTests(DiaryTestsMixin, TestCase):
 
     def test_import_creates_template(self):
         response = self.client.post(
-            self._import_url(), {"json_text": self._valid_json(), "overwrite": ""}
+            self._import_url(),
+            {"json_text": self._valid_json(), "overwrite": ""},
         )
         self.assertEqual(response.status_code, 302)
         tmpl = EventTemplate.objects.get(name="Import Test")
@@ -1094,7 +1160,8 @@ class TemplateExportImportTests(DiaryTestsMixin, TestCase):
 
     def test_import_copies_roles(self):
         self.client.post(
-            self._import_url(), {"json_text": self._valid_json(), "overwrite": ""}
+            self._import_url(),
+            {"json_text": self._valid_json(), "overwrite": ""},
         )
         tmpl = EventTemplate.objects.get(name="Import Test")
         slot = tmpl.role_slots.first()
@@ -1103,7 +1170,8 @@ class TemplateExportImportTests(DiaryTestsMixin, TestCase):
 
     def test_import_copies_tags(self):
         self.client.post(
-            self._import_url(), {"json_text": self._valid_json(), "overwrite": ""}
+            self._import_url(),
+            {"json_text": self._valid_json(), "overwrite": ""},
         )
         tmpl = EventTemplate.objects.get(name="Import Test")
         tag_names = list(tmpl.tags.values_list("name", flat=True))
@@ -1111,47 +1179,62 @@ class TemplateExportImportTests(DiaryTestsMixin, TestCase):
 
     def test_import_creates_copy_when_name_exists(self):
         self.client.post(
-            self._import_url(), {"json_text": self._valid_json("Template 1"), "overwrite": ""}
+            self._import_url(),
+            {"json_text": self._valid_json("Template 1"), "overwrite": ""},
         )
-        self.assertTrue(EventTemplate.objects.filter(name="Template 1 (copy)").exists())
+        self.assertTrue(
+            EventTemplate.objects.filter(name="Template 1 (copy)").exists()
+        )
 
     def test_import_overwrites_when_flag_set(self):
-        initial_pricing = self.tmpl1.pricing
-        new_json = json.dumps({
-            "name": "Template 1",
-            "pricing": "NEW PRICING",
-            "role_slots": [],
-            "tags": [],
-        })
-        self.client.post(self._import_url(), {"json_text": new_json, "overwrite": "1"})
+        new_json = json.dumps(
+            {
+                "name": "Template 1",
+                "pricing": "NEW PRICING",
+                "role_slots": [],
+                "tags": [],
+            }
+        )
+        self.client.post(
+            self._import_url(), {"json_text": new_json, "overwrite": "1"}
+        )
         self.tmpl1.refresh_from_db()
         self.assertEqual(self.tmpl1.pricing, "NEW PRICING")
 
     def test_import_skips_unknown_roles(self):
-        j = json.dumps({
-            "name": "Unknown Role Test",
-            "role_slots": [{"role": "Nonexistent Role XYZ", "count": 1}],
-            "tags": [],
-        })
-        response = self.client.post(self._import_url(), {"json_text": j, "overwrite": ""})
+        j = json.dumps(
+            {
+                "name": "Unknown Role Test",
+                "role_slots": [{"role": "Nonexistent Role XYZ", "count": 1}],
+                "tags": [],
+            }
+        )
+        response = self.client.post(
+            self._import_url(), {"json_text": j, "overwrite": ""}
+        )
         self.assertEqual(response.status_code, 302)
         tmpl = EventTemplate.objects.get(name="Unknown Role Test")
         self.assertEqual(tmpl.role_slots.count(), 0)
 
     def test_import_skips_unknown_tags(self):
-        j = json.dumps({
-            "name": "Unknown Tag Test",
-            "role_slots": [],
-            "tags": ["nonexistent-tag-xyz"],
-        })
-        response = self.client.post(self._import_url(), {"json_text": j, "overwrite": ""})
+        j = json.dumps(
+            {
+                "name": "Unknown Tag Test",
+                "role_slots": [],
+                "tags": ["nonexistent-tag-xyz"],
+            }
+        )
+        response = self.client.post(
+            self._import_url(), {"json_text": j, "overwrite": ""}
+        )
         self.assertEqual(response.status_code, 302)
         tmpl = EventTemplate.objects.get(name="Unknown Tag Test")
         self.assertEqual(tmpl.tags.count(), 0)
 
     def test_import_invalid_json_shows_error(self):
         response = self.client.post(
-            self._import_url(), {"json_text": "not valid json", "overwrite": ""}
+            self._import_url(),
+            {"json_text": "not valid json", "overwrite": ""},
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Invalid JSON")
@@ -1245,7 +1328,9 @@ class CreateTemplateFromEventTests(DiaryTestsMixin, TestCase):
         self.assertEqual(initial["end_delta_minutes"], 120)
 
     def test_get_prefills_links(self):
-        EventLink(event=self.e4, label="Crew chat", url="https://riseup.net/x").save()
+        EventLink(
+            event=self.e4, label="Crew chat", url="https://riseup.net/x"
+        ).save()
 
         response = self.client.get(self._url(self.e4))
         links_formset = response.context["links_formset"]

@@ -9,7 +9,9 @@ from .models import MailoutJob
 
 @write_required
 @require_POST
-def job_cancel(request: HttpRequest, job_id: int) -> HttpResponse:
+def job_cancel(
+    request: HttpRequest, job_id: int  # noqa: ARG001 -- view signature
+) -> HttpResponse:
     job = get_object_or_404(MailoutJob, pk=job_id)
     job.do_cancel()
     job.save()

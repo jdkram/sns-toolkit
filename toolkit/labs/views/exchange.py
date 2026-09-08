@@ -1,55 +1,22 @@
-import json
-import datetime
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from toolkit.toolkit_auth.decorators import (
-    feature_required,
-    write_required,
-    write_required_strict,
-)
-from django.db import models
-from django.db.models import Case, When, Value, IntegerField
-from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
-from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.http import require_POST
 
-from django.http import HttpResponse, HttpResponseForbidden
-from django.utils import timezone
-from django.db.models import Exists, OuterRef
+from django.http import HttpResponseForbidden
 
 from ..models import (
-    AreaPhoto,
-    Bulletin,
-    BulletinRead,
-    Collective,
-    ConsumableItem,
     ExchangeItem,
-    FoundItem,
-    NeedFlag,
-    ProcurementPledge,
-    Supplier,
-    SupplierRecord,
-    RoomNote,
-    DonationItem,
-    Job,
-    LoftItem,
-    LoftItemPhoto,
 )
-from toolkit.diary.models import SiteConfiguration, get_site_config
 from .. import forms as lab_forms
+from ._common import _feature_enabled_or_404
 
 # ── Community exchange ────────────────────────────────────────────────────────
 
 
 @login_required
+@_feature_enabled_or_404("community_exchange_enabled")
 def exchange_list(request):
-    cfg = get_site_config()
-    if not cfg.community_exchange_enabled:
-        from django.http import Http404
-
-        raise Http404
-
     items = ExchangeItem.objects.filter(active=True).select_related(
         "owner_volunteer__member"
     )
@@ -89,13 +56,8 @@ def exchange_list(request):
 
 
 @login_required
+@_feature_enabled_or_404("community_exchange_enabled")
 def exchange_item(request, item_id):
-    cfg = get_site_config()
-    if not cfg.community_exchange_enabled:
-        from django.http import Http404
-
-        raise Http404
-
     item = get_object_or_404(ExchangeItem, pk=item_id, active=True)
     can_edit = request.user.is_superuser or (
         item.owner_volunteer
@@ -117,13 +79,8 @@ def exchange_item(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("community_exchange_enabled")
 def exchange_add(request):
-    cfg = get_site_config()
-    if not cfg.community_exchange_enabled:
-        from django.http import Http404
-
-        raise Http404
-
     if request.method == "POST":
         form = lab_forms.ExchangeItemForm(
             request.POST, request.FILES, user=request.user
@@ -154,13 +111,8 @@ def exchange_add(request):
 
 
 @login_required
+@_feature_enabled_or_404("community_exchange_enabled")
 def exchange_edit(request, item_id):
-    cfg = get_site_config()
-    if not cfg.community_exchange_enabled:
-        from django.http import Http404
-
-        raise Http404
-
     item = get_object_or_404(ExchangeItem, pk=item_id, active=True)
     can_edit = request.user.is_superuser or (
         item.owner_volunteer
@@ -191,14 +143,9 @@ def exchange_edit(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("community_exchange_enabled")
 @require_POST
 def exchange_withdraw(request, item_id):
-    cfg = get_site_config()
-    if not cfg.community_exchange_enabled:
-        from django.http import Http404
-
-        raise Http404
-
     item = get_object_or_404(ExchangeItem, pk=item_id, active=True)
     can_edit = request.user.is_superuser or (
         item.owner_volunteer
@@ -216,14 +163,9 @@ def exchange_withdraw(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("community_exchange_enabled")
 @require_POST
 def exchange_mark_on_loan(request, item_id):
-    cfg = get_site_config()
-    if not cfg.community_exchange_enabled:
-        from django.http import Http404
-
-        raise Http404
-
     item = get_object_or_404(ExchangeItem, pk=item_id, active=True)
     if item.listing_type != ExchangeItem.TYPE_LEND:
         return HttpResponseForbidden()
@@ -256,14 +198,9 @@ def exchange_mark_on_loan(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("community_exchange_enabled")
 @require_POST
 def exchange_mark_returned(request, item_id):
-    cfg = get_site_config()
-    if not cfg.community_exchange_enabled:
-        from django.http import Http404
-
-        raise Http404
-
     item = get_object_or_404(ExchangeItem, pk=item_id, active=True)
     if item.listing_type != ExchangeItem.TYPE_LEND:
         return HttpResponseForbidden()
@@ -296,14 +233,9 @@ def exchange_mark_returned(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("community_exchange_enabled")
 @require_POST
 def exchange_mark_all_gone(request, item_id):
-    cfg = get_site_config()
-    if not cfg.community_exchange_enabled:
-        from django.http import Http404
-
-        raise Http404
-
     item = get_object_or_404(ExchangeItem, pk=item_id, active=True)
     if item.listing_type != ExchangeItem.TYPE_SHARE:
         return HttpResponseForbidden()
@@ -321,14 +253,9 @@ def exchange_mark_all_gone(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("community_exchange_enabled")
 @require_POST
 def exchange_mark_missing(request, item_id):
-    cfg = get_site_config()
-    if not cfg.community_exchange_enabled:
-        from django.http import Http404
-
-        raise Http404
-
     item = get_object_or_404(ExchangeItem, pk=item_id, active=True)
     can_edit = request.user.is_superuser or (
         item.owner_volunteer

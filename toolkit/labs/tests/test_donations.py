@@ -2,9 +2,38 @@
 from django.test import TestCase
 from django.urls import reverse
 
+from toolkit.diary.models import get_site_config
 from toolkit.labs.models import DonationItem
 
 from .common import LabsTestsMixin
+
+
+class DonationsGateTests(LabsTestsMixin, TestCase):
+    """Toggling SiteConfiguration.donations_enabled off 404s both the
+    public wishlist and its Panopticon management page."""
+
+    def setUp(self):
+        super().setUp()
+        cfg = get_site_config()
+        cfg.donations_enabled = False
+        cfg.save()
+
+    def test_public_list_404s_when_disabled(self):
+        response = self.client.get(reverse("labs-donations"))
+        self.assertEqual(response.status_code, 404)
+
+    def test_manage_404s_when_disabled(self):
+        self.client.login(username="admin", password="T3stPassword!")
+        response = self.client.get(reverse("labs-donations-manage"))
+        self.assertEqual(response.status_code, 404)
+
+    def test_enabled_by_default(self):
+        cfg = get_site_config()
+        cfg.donations_enabled = True
+        cfg.save()
+        response = self.client.get(reverse("labs-donations"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/donations.html")
 
 
 class DonationListTests(LabsTestsMixin, TestCase):
@@ -13,6 +42,7 @@ class DonationListTests(LabsTestsMixin, TestCase):
     def test_page_loads_without_login(self):
         response = self.client.get(reverse("labs-donations"))
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/donations.html")
 
     def test_shows_active_items(self):
         response = self.client.get(reverse("labs-donations"))
@@ -21,7 +51,10 @@ class DonationListTests(LabsTestsMixin, TestCase):
 
     def test_hides_inactive_items(self):
         hidden = DonationItem.objects.create(
-            name="Secret stash", category="Other", status=DonationItem.STATUS_WANTED, active=False
+            name="Secret stash",
+            category="Other",
+            status=DonationItem.STATUS_WANTED,
+            active=False,
         )
         response = self.client.get(reverse("labs-donations"))
         self.assertNotContains(response, hidden.name)
@@ -59,7 +92,9 @@ class DonationManageTests(LabsTestsMixin, TestCase):
         }
         response = self.client.post(reverse("labs-donations-manage"), data)
         self.assertRedirects(response, reverse("labs-donations-manage"))
-        self.assertTrue(DonationItem.objects.filter(name="Spare projector bulb").exists())
+        self.assertTrue(
+            DonationItem.objects.filter(name="Spare projector bulb").exists()
+        )
 
     def test_add_action_sets_last_edited_by(self):
         data = {
@@ -94,7 +129,9 @@ class DonationManageTests(LabsTestsMixin, TestCase):
         self.assertRedirects(response, reverse("labs-donations-manage"))
         self.don_wanted.refresh_from_db()
         self.assertEqual(self.don_wanted.name, "Old Sofa (updated)")
-        self.assertEqual(self.don_wanted.status, DonationItem.STATUS_CHECK_FIRST)
+        self.assertEqual(
+            self.don_wanted.status, DonationItem.STATUS_CHECK_FIRST
+        )
 
     def test_delete_action_removes_item(self):
         item_pk = self.don_not_needed.pk
@@ -115,5 +152,11 @@ class DonationManageTests(LabsTestsMixin, TestCase):
             "internal_notes": "",
             "contact": "",
         }
+        count_before = DonationItem.objects.count()
         response = self.client.post(reverse("labs-donations-manage"), data)
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "labs/donations_manage.html")
+        self.assertFormError(
+            response.context["add_form"], "name", "This field is required."
+        )
+        self.assertEqual(DonationItem.objects.count(), count_before)

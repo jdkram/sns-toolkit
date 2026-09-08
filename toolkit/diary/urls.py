@@ -62,7 +62,6 @@ from toolkit.diary.public_views import (
 
 from toolkit.diary.mailout_views import mailout, queue_mailout
 
-
 programme_urls = [
     # View lists of event for various time/dates
     re_path(r"^(?:view/)?$", view_diary, name="programme-view"),
@@ -270,7 +269,11 @@ diary_urls = [
     # Add a new event + showing
     re_path(r"^edit/event/add$", add_event, name="add-event"),
     # Quick-create a "building open" session (minimal keyholder form)
-    re_path(r"^edit/event/open$", quick_create_open_session, name="quick-create-open-session"),
+    re_path(
+        r"^edit/event/open$",
+        quick_create_open_session,
+        name="quick-create-open-session",
+    ),
     # Edit event types (list + per-template detail/create)
     re_path(
         r"^edit/eventtemplates/$",
@@ -293,7 +296,11 @@ diary_urls = [
         name="import-event-template",
     ),
     # Programming queue
-    re_path(r"^edit/programming-queue/$", programming_queue, name="programming-queue"),
+    re_path(
+        r"^edit/programming-queue/$",
+        programming_queue,
+        name="programming-queue",
+    ),
     re_path(
         r"^edit/event/id/(?P<event_id>\d+)/programming-status/$",
         update_event_programming_status,
@@ -301,13 +308,25 @@ diary_urls = [
     ),
     # Film metadata (OMDb integration)
     re_path(r"^edit/omdb/search/$", omdb_search, name="omdb-search"),
-    re_path(r"^edit/event/id/(?P<event_id>\d+)/film/link/$", link_film, name="link-film"),
-    re_path(r"^edit/event/id/(?P<event_id>\d+)/film/unlink/$", unlink_film, name="unlink-film"),
+    re_path(
+        r"^edit/event/id/(?P<event_id>\d+)/film/link/$",
+        link_film,
+        name="link-film",
+    ),
+    re_path(
+        r"^edit/event/id/(?P<event_id>\d+)/film/unlink/$",
+        unlink_film,
+        name="unlink-film",
+    ),
     re_path(r"^edit/eventtags/", edit_event_tags, name="edit_event_tags"),
     # Edit event roles
     re_path(r"^edit/roles/", edit_roles, name="edit_roles"),
     re_path(r"^edit/rooms/$", edit_rooms, name="edit_rooms"),
-    re_path(r"^edit/rooms/(?P<room_id>\d+)/$", edit_room_detail, name="edit_room_detail"),
+    re_path(
+        r"^edit/rooms/(?P<room_id>\d+)/$",
+        edit_room_detail,
+        name="edit_room_detail",
+    ),
     # Site configuration (Panopticon only)
     re_path(
         r"^edit/site-config/?$",

@@ -48,7 +48,7 @@ class CaptureRetrieverNode(template.Node):
     def __init__(self, capturing_node):
         self._capturing_node = capturing_node
 
-    def render(self, context):
+    def render(self, context):  # noqa: ARG002 -- template Node.render() API
         return self._capturing_node.capture
 
 

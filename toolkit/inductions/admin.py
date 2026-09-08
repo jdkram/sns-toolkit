@@ -52,5 +52,5 @@ class InductionsSettingsAdmin(admin.ModelAdmin):
 
     # Singleton-ish: only one row is ever expected, so hide the list-add link to
     # discourage duplicate settings rows via the admin.
-    def has_add_permission(self, request):
+    def has_add_permission(self, request):  # noqa: ARG002 -- Django admin API
         return not InductionsSettings.objects.exists()

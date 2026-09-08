@@ -1,43 +1,19 @@
-import json
-import datetime
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from toolkit.toolkit_auth.decorators import (
-    feature_required,
-    write_required,
     write_required_strict,
 )
-from django.db import models
 from django.db.models import Case, When, Value, IntegerField
-from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
-from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.http import require_POST
 
-from django.http import HttpResponse, HttpResponseForbidden
 from django.utils import timezone
-from django.db.models import Exists, OuterRef
 
 from ..models import (
-    AreaPhoto,
-    Bulletin,
-    BulletinRead,
-    Collective,
-    ConsumableItem,
-    ExchangeItem,
-    FoundItem,
-    NeedFlag,
-    ProcurementPledge,
-    Supplier,
-    SupplierRecord,
-    RoomNote,
-    DonationItem,
     Job,
-    LoftItem,
-    LoftItemPhoto,
 )
-from toolkit.diary.models import SiteConfiguration, get_site_config
 from .. import forms as lab_forms
+from ._common import _feature_enabled_or_404
 
 
 def _urgency_order():
@@ -50,6 +26,7 @@ def _urgency_order():
 
 
 @login_required
+@_feature_enabled_or_404("jobs_board_enabled")
 def job_list(request):
     open_jobs = (
         Job.objects.filter(resolved=False)
@@ -77,6 +54,7 @@ def job_list(request):
 
 
 @login_required
+@_feature_enabled_or_404("jobs_board_enabled")
 @write_required_strict
 def job_add(request):
     if request.method == "POST":
@@ -95,6 +73,7 @@ def job_add(request):
 
 
 @login_required
+@_feature_enabled_or_404("jobs_board_enabled")
 @write_required_strict
 def job_edit(request, job_id):
     job = get_object_or_404(Job, pk=job_id)
@@ -114,6 +93,7 @@ def job_edit(request, job_id):
 
 
 @login_required
+@_feature_enabled_or_404("jobs_board_enabled")
 @require_POST
 def job_claim(request, job_id):
     job = get_object_or_404(Job, pk=job_id)
@@ -125,6 +105,7 @@ def job_claim(request, job_id):
 
 
 @login_required
+@_feature_enabled_or_404("jobs_board_enabled")
 @require_POST
 def job_unclaim(request, job_id):
     job = get_object_or_404(Job, pk=job_id)
@@ -138,6 +119,7 @@ def job_unclaim(request, job_id):
 
 
 @login_required
+@_feature_enabled_or_404("jobs_board_enabled")
 @require_POST
 def job_resolve(request, job_id):
     job = get_object_or_404(Job, pk=job_id)

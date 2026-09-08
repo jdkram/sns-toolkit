@@ -1,9 +1,32 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-input"
 """Auto-extracted from toolkit/members/volunteer_views.py (chunk 5 of the
-maintainability pass — see MAINTAINABILITY_PASS.md). Verbatim move; no
+maintainability pass, June 2026 — see git history). Verbatim move; no
 behaviour change. Group: reports.
 """
-from ._common import *
+
+from datetime import timedelta
+from django.db.models import (
+    Exists,
+    OuterRef,
+    Prefetch,
+)
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
+from django.views.decorators.http import require_safe
+from toolkit.diary.models import (
+    Role,
+    get_site_config,
+)
+from toolkit.members.models import (
+    TrainingRecord,
+    Volunteer,
+)
+from django.conf import settings
+from django.contrib.auth.decorators import login_required
+from django.urls import reverse
+from django.utils import timezone
+from toolkit.toolkit_auth.decorators import panopticon_required
+
 
 @panopticon_required
 @require_safe
@@ -23,13 +46,17 @@ def view_volunteer_list(request):
             training_type=TrainingRecord.GENERAL_TRAINING
         ).order_by("-training_date")
         volunteers = volunteers.prefetch_related(
-            Prefetch("training_records", queryset=qs, to_attr="general_training")
+            Prefetch(
+                "training_records", queryset=qs, to_attr="general_training"
+            )
         )
 
     if show_retired:
         pass  # show everything
     elif show_dormant:
-        volunteers = volunteers.filter(status__in=[Volunteer.STATUS_ACTIVE, Volunteer.STATUS_DORMANT])
+        volunteers = volunteers.filter(
+            status__in=[Volunteer.STATUS_ACTIVE, Volunteer.STATUS_DORMANT]
+        )
     else:
         volunteers = volunteers.filter(status=Volunteer.STATUS_ACTIVE)
     active_count = sum(1 for v in volunteers if v.is_active)
@@ -84,8 +111,12 @@ def view_volunteer_summary(request):
     dormant_count = volunteers.filter(status=Volunteer.STATUS_DORMANT).count()
 
     now = timezone.now()
-    logged_in_last_30_days = base_qs.filter(user__last_login__gte=now - timedelta(days=30)).count()
-    logged_in_last_365_days = base_qs.filter(user__last_login__gte=now - timedelta(days=365)).count()
+    logged_in_last_30_days = base_qs.filter(
+        user__last_login__gte=now - timedelta(days=30)
+    ).count()
+    logged_in_last_365_days = base_qs.filter(
+        user__last_login__gte=now - timedelta(days=365)
+    ).count()
 
     context = {
         "volunteers": volunteers,
@@ -141,13 +172,17 @@ def view_volunteer_training_records(request):
     gst_enabled = get_site_config().general_training_enabled
 
     # Second data set - all active volunteers with GST records (only when GST is enabled).
-    volunteers = Volunteer.objects.active().order_by("member__name").select_related()
+    volunteers = (
+        Volunteer.objects.active().order_by("member__name").select_related()
+    )
     if gst_enabled:
         qs = TrainingRecord.objects.filter(
             training_type=TrainingRecord.GENERAL_TRAINING
         ).order_by("-training_date")
         volunteers = volunteers.prefetch_related(
-            Prefetch("training_records", queryset=qs, to_attr="general_training")
+            Prefetch(
+                "training_records", queryset=qs, to_attr="general_training"
+            )
         )
 
     context = {
@@ -167,8 +202,7 @@ def view_qualification_report(request):
     qual_data = []
     for qual in qualifications:
         holders = (
-            VolunteerQualification.objects
-            .filter(qualification=qual)
+            VolunteerQualification.objects.filter(qualification=qual)
             .select_related("volunteer__member")
             .order_by("volunteer__member__name")
         )
@@ -176,13 +210,19 @@ def view_qualification_report(request):
             required_qualification=qual,
             qualification_gate__in=[Role.GATE_ADVISORY, Role.GATE_BLOCKING],
         ).order_by("name")
-        qual_data.append({
-            "qualification": qual,
-            "holders": list(holders),
-            "gating_roles": list(gating_roles),
-        })
+        qual_data.append(
+            {
+                "qualification": qual,
+                "holders": list(holders),
+                "gating_roles": list(gating_roles),
+            }
+        )
 
-    return render(request, "volunteer_qualification_report.html", {"qual_data": qual_data})
+    return render(
+        request,
+        "volunteer_qualification_report.html",
+        {"qual_data": qual_data},
+    )
 
 
 @login_required
@@ -209,15 +249,17 @@ def view_volunteer_directory(request):
     return render(
         request,
         "volunteer_directory.html",
-        {"volunteers": volunteers, "query": query, "own_volunteer_pk": own_volunteer_pk},
+        {
+            "volunteers": volunteers,
+            "query": query,
+            "own_volunteer_pk": own_volunteer_pk,
+        },
     )
-
-
 
 
 @panopticon_required
 @require_safe
-def view_volunteer_role_report(request):
+def view_volunteer_role_report(request):  # noqa: ARG001 -- view signature
     # Role assignment was removed; redirect to the qualification report which replaced it.
     # Kept as a panopticon_required view (not a bare RedirectView) so the security
     # contract is preserved: unauthenticated users get a login redirect, non-superuser

@@ -135,11 +135,15 @@ class SectionRootWithLinks(Page):
     ]
     settings_panels = None
 
-    def serve(self, request):
+    def serve(self, request):  # noqa: ARG002 -- Wagtail Page.serve signature
         # For now, don't actually serve anything for this page:
         raise Http404("Page not found")
 
-    def serve_preview(self, request, mode_name):
+    def serve_preview(
+        self,
+        request,  # noqa: ARG002 -- Wagtail Page.serve_preview signature
+        mode_name,  # noqa: ARG002 -- Wagtail Page.serve_preview signature
+    ):
         return HttpResponse(
             b"<html><p>This is not a real page, and does not have "
             b"any content: it's just a collection of links to go in "

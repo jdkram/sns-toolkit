@@ -494,14 +494,14 @@ notifications ("Middle Corridor blocked 14:00–15:00 for exhibition install").
    `is_primary=false, show_column=false`. Add a `show_column` key to the
    toml format and the seed loader.
 
-3. **Diary table (`edit_event_index.html` + `edit_views.py`)** — pass
+3. **Diary table (`edit_event_index.html` + `edit_views/`)** — pass
    `column_rooms` and `other_rooms` lists separately to context. Add an
    "Other" column at the right of the room columns; its cell for a given
    time slot lists all non-column room bookings at that slot as plain text
    (e.g. "Middle Corridor"). New `other_bookings_at` simple_tag in
    `hash_filter.py` (same pattern as `showing_for_room_at`).
 
-4. **Calendar (`edit_views.py` `edit_diary_data` + `calendar_index.js` +
+4. **Calendar (`edit_views/` `edit_diary_data` + `calendar_index.js` +
    `edit_event_calendar_index.html`)** — add a synthetic `{"id": "other",
    "title": "Other rooms"}` resource to the FC resources list. Events for
    non-column room bookings get `resourceIds: ["other"]` and their room name
@@ -510,7 +510,7 @@ notifications ("Middle Corridor blocked 14:00–15:00 for exhibition install").
    rooms; a separate `has_other_rooms` flag triggers the synthetic resource.
 
 **Files touched:** `models.py`, new migration, `rooms.toml`, seed loader,
-`edit_views.py` (two functions), `hash_filter.py`, `edit_event_index.html`,
+`edit_views/` (two functions), `hash_filter.py`, `edit_event_index.html`,
 `edit_event_calendar_index.html`, `calendar_index.js`. (~8 files)
 
 **Not needed:** no change to `RoomBookingForm` — all rooms are already
@@ -2216,7 +2216,7 @@ On rota display (both edit and public view), scan the `showing.rota_notes` text 
 Both rota views now render the event time as a range (`19:30–21:45`).
 Guard is on `showing.event.duration` directly — the `end_time` property
 returns `start` as a silent fallback rather than `None` (needed by the
-calendar JSON in `edit_views.py`), so guarding on the property itself
+calendar JSON in `edit_views/`), so guarding on the property itself
 would silently emit `19:30–19:30` for events without a duration set.
 
 The four operationally meaningful times for a showing, for reference:
@@ -2432,11 +2432,22 @@ Both links should be visually low-key (not CTAs) so they don't distract public v
 
 Migrations: `diary/0075` (Film table + Event FK), `diary/0076` (SiteConfiguration.tmdb_api_key_email).
 
-#### TMDB API
+#### TMDB API — superseded by OMDb, 2026-09-08
+
+**This subsection describes the integration as originally built; it is no longer live.**
+Migration `diary/0083_omdb_replace_tmdb` retired the `tmdb_api_key` field and the app
+switched to OMDb (see `toolkit/diary/omdb.py`, `toolkit/diary/edit_views/film.py`) some
+time before this quality pass, but `toolkit/diary/tmdb.py` itself was left behind as
+dead code — no import anywhere in the app, no test, no settings field. Deleted in
+QUALITY_PASS.md Chunk 8 (deduplicate) rather than given a common interface with
+`omdb.py` as that chunk's plan originally proposed, since there was no live branch
+point left to unify. `Film.tmdb_id` / `tmdb_certificate` / `tmdb_poster_path` /
+`tmdb_fetched_at` remain on the model (see the ER diagram in `docs/SPEC.md`) and stay
+permanently null under OMDb; revisiting that is a data-model decision, out of scope here.
 
 - Free for non-commercial use. Rate limit: 40 requests / 10 seconds; no hard daily cap. Attribution required: "This product uses the TMDB API but is not endorsed or certified by TMDB."
 - `TMDB_API_KEY` environment variable (never committed). `SiteConfiguration.tmdb_api_key_email` records the account contact email.
-- Client module: `toolkit/diary/tmdb.py` using stdlib `urllib.request` only (no new dependency).
+- Client module (removed): `toolkit/diary/tmdb.py`, stdlib `urllib.request` only (no new dependency).
 - Endpoints: `/search/multi` (returns film + TV results); `/movie/{id}?append_to_response=credits,release_dates`; `/tv/{id}?append_to_response=credits,content_ratings`.
 - UK certificate extracted from `release_dates.results` (film) or `content_ratings.results` (TV).
 
@@ -2546,7 +2557,7 @@ One revision record is created per save that changes any of these fields. The re
 
 #### Data model
 
-Add a new model `EventTermsRevision` in `diary/models.py`:
+Add a new model `EventTermsRevision` in `diary/models/event.py`:
 
 ```python
 class EventTermsRevision(models.Model):
@@ -3830,7 +3841,7 @@ Everything that makes sense as a template default: title, description, copy summ
 - Change `row.style.display = "none"` to `row.remove()` in `form_showing.html`. The hidden `oneshot_id_N` / `oneshot_count_0` pattern needs updating: zeroed rows must still be submitted, so either keep them in the DOM with display:none, OR synthesise a hidden zero-count input on submit.
 - Add a warning when `oneshot_count_N < signed_up_count` — requires the view to pass the signed-up-volunteer count per one-shot role to the template (already partially available via `current_count` in `_get_oneshot_roles_for_showing`; the missing piece is distinguishing "slots requested" from "slots filled by a real volunteer").
 
-**Related:** 9.X (one-shot roles — shipped), `_parse_oneshot_roles` in `edit_views.py`.
+**Related:** 9.X (one-shot roles — shipped), `_parse_oneshot_roles` in `edit_views/`.
 
 ---
 

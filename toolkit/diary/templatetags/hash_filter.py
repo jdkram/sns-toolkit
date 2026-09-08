@@ -39,7 +39,11 @@ def other_room_bookings_at(showings, time_slot):
     for showing in showings:
         for rb in showing.visible_room_bookings:
             key = (rb.room_id, showing.pk)
-            if not rb.room.show_column and rb.start == time_slot and key not in seen:
+            if (
+                not rb.room.show_column
+                and rb.start == time_slot
+                and key not in seen
+            ):
                 seen.add(key)
                 result.append((rb, showing))
     return result

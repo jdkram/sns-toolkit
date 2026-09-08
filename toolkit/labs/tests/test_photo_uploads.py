@@ -9,6 +9,7 @@ Files written to /tmp are cleaned up in tearDown.
 The TINY_VALID_JPEG constant is a minimal 1x1-pixel JPEG that passes Django's
 ImageField content validation (which uses Pillow under the hood).
 """
+
 import datetime
 import os
 
@@ -19,7 +20,6 @@ from django.urls import reverse
 from toolkit.diary.models import get_site_config
 from toolkit.labs.models import ExchangeItem, FoundItem
 from .common import LabsTestsMixin
-
 
 # Minimal 1x1-pixel JPEG — passes Pillow's image-format check.
 TINY_VALID_JPEG = bytearray(
@@ -50,6 +50,7 @@ def _cleanup_media_file(field):
 
 # ── Community exchange photo uploads ─────────────────────────────────────────
 
+
 class ExchangePhotoAddTests(LabsTestsMixin, TestCase):
     """Adding an exchange listing with a photo attached."""
 
@@ -67,19 +68,22 @@ class ExchangePhotoAddTests(LabsTestsMixin, TestCase):
     @override_settings(MEDIA_ROOT="/tmp")
     def test_add_item_with_photo_saves_image(self):
         self.client.login(username="volunteer", password="T3stPassword!3")
-        response = self.client.post(reverse("labs-exchange-add"), {
-            "listing_type": ExchangeItem.TYPE_GIVE,
-            "name": "Photo upload test item",
-            "description": "Testing photo upload",
-            "category": ExchangeItem.CATEGORY_OTHER,
-            "condition": ExchangeItem.CONDITION_GOOD,
-            "owner_type": ExchangeItem.OWNER_VOLUNTEER,
-            "owner_volunteer": self.vol.pk,
-            "location_notes": "",
-            "status": ExchangeItem.STATUS_AVAILABLE,
-            "notes": "",
-            "image": _jpeg("exchange-test.jpg"),
-        })
+        response = self.client.post(
+            reverse("labs-exchange-add"),
+            {
+                "listing_type": ExchangeItem.TYPE_GIVE,
+                "name": "Photo upload test item",
+                "description": "Testing photo upload",
+                "category": ExchangeItem.CATEGORY_OTHER,
+                "condition": ExchangeItem.CONDITION_GOOD,
+                "owner_type": ExchangeItem.OWNER_VOLUNTEER,
+                "owner_volunteer": self.vol.pk,
+                "location_notes": "",
+                "status": ExchangeItem.STATUS_AVAILABLE,
+                "notes": "",
+                "image": _jpeg("exchange-test.jpg"),
+            },
+        )
         self.assertEqual(response.status_code, 302)
 
         item = ExchangeItem.objects.get(name="Photo upload test item")
@@ -94,18 +98,21 @@ class ExchangePhotoAddTests(LabsTestsMixin, TestCase):
     @override_settings(MEDIA_ROOT="/tmp")
     def test_add_item_without_photo_succeeds(self):
         self.client.login(username="volunteer", password="T3stPassword!3")
-        response = self.client.post(reverse("labs-exchange-add"), {
-            "listing_type": ExchangeItem.TYPE_GIVE,
-            "name": "No photo item",
-            "description": "",
-            "category": ExchangeItem.CATEGORY_OTHER,
-            "condition": ExchangeItem.CONDITION_GOOD,
-            "owner_type": ExchangeItem.OWNER_VOLUNTEER,
-            "owner_volunteer": self.vol.pk,
-            "location_notes": "",
-            "status": ExchangeItem.STATUS_AVAILABLE,
-            "notes": "",
-        })
+        response = self.client.post(
+            reverse("labs-exchange-add"),
+            {
+                "listing_type": ExchangeItem.TYPE_GIVE,
+                "name": "No photo item",
+                "description": "",
+                "category": ExchangeItem.CATEGORY_OTHER,
+                "condition": ExchangeItem.CONDITION_GOOD,
+                "owner_type": ExchangeItem.OWNER_VOLUNTEER,
+                "owner_volunteer": self.vol.pk,
+                "location_notes": "",
+                "status": ExchangeItem.STATUS_AVAILABLE,
+                "notes": "",
+            },
+        )
         self.assertEqual(response.status_code, 302)
         item = ExchangeItem.objects.get(name="No photo item")
         self.assertFalse(item.image.name)
@@ -113,22 +120,29 @@ class ExchangePhotoAddTests(LabsTestsMixin, TestCase):
     @override_settings(MEDIA_ROOT="/tmp")
     def test_add_item_with_non_image_rejected(self):
         self.client.login(username="volunteer", password="T3stPassword!3")
-        not_an_image = SimpleUploadedFile("test.jpg", b"not image data", content_type="image/jpeg")
-        response = self.client.post(reverse("labs-exchange-add"), {
-            "listing_type": ExchangeItem.TYPE_GIVE,
-            "name": "Bad file item",
-            "description": "",
-            "category": ExchangeItem.CATEGORY_OTHER,
-            "condition": ExchangeItem.CONDITION_GOOD,
-            "owner_type": ExchangeItem.OWNER_VOLUNTEER,
-            "owner_volunteer": self.vol.pk,
-            "location_notes": "",
-            "status": ExchangeItem.STATUS_AVAILABLE,
-            "notes": "",
-            "image": not_an_image,
-        })
+        not_an_image = SimpleUploadedFile(
+            "test.jpg", b"not image data", content_type="image/jpeg"
+        )
+        response = self.client.post(
+            reverse("labs-exchange-add"),
+            {
+                "listing_type": ExchangeItem.TYPE_GIVE,
+                "name": "Bad file item",
+                "description": "",
+                "category": ExchangeItem.CATEGORY_OTHER,
+                "condition": ExchangeItem.CONDITION_GOOD,
+                "owner_type": ExchangeItem.OWNER_VOLUNTEER,
+                "owner_volunteer": self.vol.pk,
+                "location_notes": "",
+                "status": ExchangeItem.STATUS_AVAILABLE,
+                "notes": "",
+                "image": not_an_image,
+            },
+        )
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(ExchangeItem.objects.filter(name="Bad file item").exists())
+        self.assertFalse(
+            ExchangeItem.objects.filter(name="Bad file item").exists()
+        )
 
 
 class ExchangePhotoEditTests(LabsTestsMixin, TestCase):
@@ -183,6 +197,7 @@ class ExchangePhotoEditTests(LabsTestsMixin, TestCase):
 
 # ── Lost & found photo uploads ────────────────────────────────────────────────
 
+
 class FoundItemPhotoTests(LabsTestsMixin, TestCase):
     """Logging a found item with and without an attached photo."""
 
@@ -197,14 +212,17 @@ class FoundItemPhotoTests(LabsTestsMixin, TestCase):
     @override_settings(MEDIA_ROOT="/tmp")
     def test_log_found_item_with_photo(self):
         self.client.login(username="volunteer", password="T3stPassword!3")
-        response = self.client.post(reverse("labs-found-item-log"), {
-            "report_type": FoundItem.TYPE_FOUND,
-            "description": "Blue umbrella",
-            "location_found": "Café",
-            "found_on": datetime.date.today().isoformat(),
-            "logged_by": "Test Volunteer",
-            "photo": _jpeg("laf-test.jpg"),
-        })
+        response = self.client.post(
+            reverse("labs-found-item-log"),
+            {
+                "report_type": FoundItem.TYPE_FOUND,
+                "description": "Blue umbrella",
+                "location_found": "Café",
+                "found_on": datetime.date.today().isoformat(),
+                "logged_by": "Test Volunteer",
+                "photo": _jpeg("laf-test.jpg"),
+            },
+        )
         self.assertEqual(response.status_code, 302)
 
         item = FoundItem.objects.get(description="Blue umbrella")
@@ -219,13 +237,16 @@ class FoundItemPhotoTests(LabsTestsMixin, TestCase):
     @override_settings(MEDIA_ROOT="/tmp")
     def test_log_found_item_without_photo_succeeds(self):
         self.client.login(username="volunteer", password="T3stPassword!3")
-        response = self.client.post(reverse("labs-found-item-log"), {
-            "report_type": FoundItem.TYPE_FOUND,
-            "description": "Red scarf",
-            "location_found": "Cinema",
-            "found_on": datetime.date.today().isoformat(),
-            "logged_by": "Test Volunteer",
-        })
+        response = self.client.post(
+            reverse("labs-found-item-log"),
+            {
+                "report_type": FoundItem.TYPE_FOUND,
+                "description": "Red scarf",
+                "location_found": "Cinema",
+                "found_on": datetime.date.today().isoformat(),
+                "logged_by": "Test Volunteer",
+            },
+        )
         self.assertEqual(response.status_code, 302)
         item = FoundItem.objects.get(description="Red scarf")
         self.assertFalse(item.photo.name)
@@ -234,15 +255,18 @@ class FoundItemPhotoTests(LabsTestsMixin, TestCase):
     def test_log_lost_report_with_photo(self):
         """Reporter can attach a photo of the lost item to aid identification."""
         self.client.login(username="volunteer", password="T3stPassword!3")
-        response = self.client.post(reverse("labs-found-item-log"), {
-            "report_type": FoundItem.TYPE_LOST,
-            "description": "Black leather wallet",
-            "location_found": "Unknown",
-            "found_on": datetime.date.today().isoformat(),
-            "logged_by": "Worried Person",
-            "reporter_contact": "worried@example.com",
-            "photo": _jpeg("wallet.jpg"),
-        })
+        response = self.client.post(
+            reverse("labs-found-item-log"),
+            {
+                "report_type": FoundItem.TYPE_LOST,
+                "description": "Black leather wallet",
+                "location_found": "Unknown",
+                "found_on": datetime.date.today().isoformat(),
+                "logged_by": "Worried Person",
+                "reporter_contact": "worried@example.com",
+                "photo": _jpeg("wallet.jpg"),
+            },
+        )
         self.assertEqual(response.status_code, 302)
         item = FoundItem.objects.get(description="Black leather wallet")
         self._uploaded_files.append(item.photo)
@@ -251,6 +275,7 @@ class FoundItemPhotoTests(LabsTestsMixin, TestCase):
 
 
 # ── Anonymous access ──────────────────────────────────────────────────────────
+
 
 class PhotoUploadAnonTests(LabsTestsMixin, TestCase):
     """Unauthenticated users cannot reach any upload endpoint."""

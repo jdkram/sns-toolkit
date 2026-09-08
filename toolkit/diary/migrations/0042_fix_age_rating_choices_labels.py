@@ -23,16 +23,16 @@ def fix_labels(apps, schema_editor):
     SiteConfiguration = apps.get_model("diary", "SiteConfiguration")
     # Only touch rows still holding the original seeded defaults verbatim, so a
     # venue that's customised this list isn't overwritten.
-    SiteConfiguration.objects.filter(age_rating_choices=_OLD_BBFC_DEFAULTS).update(
-        age_rating_choices=_NEW_BBFC_DEFAULTS
-    )
+    SiteConfiguration.objects.filter(
+        age_rating_choices=_OLD_BBFC_DEFAULTS
+    ).update(age_rating_choices=_NEW_BBFC_DEFAULTS)
 
 
 def revert_labels(apps, schema_editor):
     SiteConfiguration = apps.get_model("diary", "SiteConfiguration")
-    SiteConfiguration.objects.filter(age_rating_choices=_NEW_BBFC_DEFAULTS).update(
-        age_rating_choices=_OLD_BBFC_DEFAULTS
-    )
+    SiteConfiguration.objects.filter(
+        age_rating_choices=_NEW_BBFC_DEFAULTS
+    ).update(age_rating_choices=_OLD_BBFC_DEFAULTS)
 
 
 class Migration(migrations.Migration):

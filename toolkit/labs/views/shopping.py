@@ -1,50 +1,28 @@
-import json
 import datetime
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from toolkit.toolkit_auth.decorators import (
-    feature_required,
-    write_required,
-    write_required_strict,
-)
 from django.db import models
-from django.db.models import Case, When, Value, IntegerField
-from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
-from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.http import require_POST
 
-from django.http import HttpResponse, HttpResponseForbidden
 from django.utils import timezone
-from django.db.models import Exists, OuterRef
 
 from ..models import (
-    AreaPhoto,
-    Bulletin,
-    BulletinRead,
-    Collective,
     ConsumableItem,
-    ExchangeItem,
-    FoundItem,
     NeedFlag,
     ProcurementPledge,
     Supplier,
     SupplierRecord,
-    RoomNote,
-    DonationItem,
-    Job,
-    LoftItem,
-    LoftItemPhoto,
 )
-from toolkit.diary.models import SiteConfiguration, get_site_config
-from .. import forms as lab_forms
 
-from ._common import _user_volunteer
+from ._common import _feature_enabled_or_404, _user_volunteer
 
 # ── Shopping list (consumables) ────────────────────────────────────────────────
 
 
 @login_required
+@_feature_enabled_or_404("shopping_list_enabled")
 def shopping_list(request):
     cutoff = timezone.now() - datetime.timedelta(days=30)
     items = (
@@ -82,6 +60,7 @@ def shopping_list(request):
 
 
 @login_required
+@_feature_enabled_or_404("shopping_list_enabled")
 def shopping_item(request, item_id):
     item = get_object_or_404(ConsumableItem, pk=item_id, active=True)
     suppliers = item.suppliers.all()
@@ -111,6 +90,7 @@ def shopping_item(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("shopping_list_enabled")
 @require_POST
 def shopping_flag(request, item_id):
     item = get_object_or_404(ConsumableItem, pk=item_id, active=True)
@@ -128,6 +108,7 @@ def shopping_flag(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("shopping_list_enabled")
 @require_POST
 def shopping_resolve(request, flag_id):
     flag = get_object_or_404(NeedFlag, pk=flag_id, resolved_at__isnull=True)
@@ -147,6 +128,7 @@ def shopping_resolve(request, flag_id):
 
 
 @login_required
+@_feature_enabled_or_404("shopping_list_enabled")
 @require_POST
 def shopping_pledge(request, flag_id):
     flag = get_object_or_404(NeedFlag, pk=flag_id, resolved_at__isnull=True)
@@ -178,6 +160,7 @@ def shopping_pledge(request, flag_id):
 
 
 @login_required
+@_feature_enabled_or_404("shopping_list_enabled")
 def shopping_item_add(request):
     if request.method == "POST":
         name = request.POST.get("name", "").strip()[:100]
@@ -208,6 +191,7 @@ def shopping_item_add(request):
 
 
 @login_required
+@_feature_enabled_or_404("shopping_list_enabled")
 @require_POST
 def shopping_supplier_add(request, item_id):
     item = get_object_or_404(ConsumableItem, pk=item_id, active=True)
@@ -236,6 +220,7 @@ def shopping_supplier_add(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("shopping_list_enabled")
 @require_POST
 def shopping_supplier_delete(request, supplier_id):
     supplier = get_object_or_404(SupplierRecord, pk=supplier_id)
@@ -246,6 +231,7 @@ def shopping_supplier_delete(request, supplier_id):
 
 
 @login_required
+@_feature_enabled_or_404("shopping_list_enabled")
 @require_POST
 def shopping_pledge_cancel(request, flag_id):
     flag = get_object_or_404(NeedFlag, pk=flag_id, resolved_at__isnull=True)
@@ -262,6 +248,7 @@ def shopping_pledge_cancel(request, flag_id):
 
 
 @login_required
+@_feature_enabled_or_404("shopping_list_enabled")
 def shopping_buy(request):
     """Supplier picker — entry point for someone about to do a shop."""
     open_flags_qs = NeedFlag.objects.filter(resolved_at__isnull=True)
@@ -309,6 +296,7 @@ def shopping_buy(request):
 
 
 @login_required
+@_feature_enabled_or_404("shopping_list_enabled")
 def shopping_buy_supplier(request, supplier_id):
     """The core buyer sheet for a given supplier."""
     supplier = get_object_or_404(Supplier, pk=supplier_id, active=True)
@@ -377,6 +365,7 @@ def shopping_buy_supplier(request, supplier_id):
 
 
 @login_required
+@_feature_enabled_or_404("shopping_list_enabled")
 def shopping_buy_unsorted(request):
     """Enrichment workbench — open needs with no supplier attached yet."""
     items_with_suppliers = SupplierRecord.objects.values_list(
@@ -402,6 +391,7 @@ def shopping_buy_unsorted(request):
 
 
 @login_required
+@_feature_enabled_or_404("shopping_list_enabled")
 @require_POST
 def shopping_item_enrich(request, item_id):
     """Attach a supplier (existing or new) to an item from the unsorted workbench."""
@@ -446,6 +436,7 @@ def shopping_item_enrich(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("shopping_list_enabled")
 @require_POST
 def shopping_buy_add(request, flag_id):
     """Add an item to a supplier's order (create/update pledge with supplier + status=ordered)."""
@@ -482,6 +473,7 @@ def shopping_buy_add(request, flag_id):
 
 
 @login_required
+@_feature_enabled_or_404("shopping_list_enabled")
 @require_POST
 def shopping_out_of_stock(request, flag_id):
     """Mark an item as out of stock at a supplier — keeps the need open."""

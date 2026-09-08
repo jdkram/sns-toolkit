@@ -7,4 +7,5 @@ class AuditConfig(AppConfig):
     name = "toolkit.audit"
 
     def ready(self):
-        from . import signals  # noqa: F401 -- connects the Event pre_delete hook
+        # Side-effect import: connects the Event pre_delete hook.
+        from . import signals  # noqa: F401

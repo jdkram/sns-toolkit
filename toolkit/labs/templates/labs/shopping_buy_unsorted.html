@@ -10,16 +10,10 @@
     padding: 0.7rem 1rem; font-size: 0.88rem; color: #78350f; margin-bottom: 1.25rem;
   }
 
-  .sort-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-  .sort-table th {
-    background: #343a40; color: #fff;
-    padding: 0.45rem 0.65rem; font-size: 0.8rem; font-weight: 600; text-align: left;
-  }
-  .sort-table td { padding: 0.55rem 0.65rem; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
-  .sort-table tr:hover td { background: #f8f9fa; }
+  {% include "labs/_buy_table_css.html" %}
+  .shop-table td { vertical-align: top; }
 
   .item-name-cell { font-weight: 600; }
-  .item-meta { font-size: 0.78rem; color: #6c757d; margin-top: 0.1rem; }
 
   .enrich-form { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: flex-start; }
   .enrich-form select,
@@ -38,10 +32,7 @@
 {% endblock %}
 
 {% block body %}
-<div class="d-flex justify-content-between align-items-baseline mb-2">
-  <h1 class="mb-0">Needs sorting</h1>
-  <a href="{% url "labs-shopping-buy" %}" class="text-muted" style="font-size:0.85rem;">← Supplier picker</a>
-</div>
+{% include "labs/_buy_header.html" with buy_header_title="Needs sorting" buy_header_back_url="labs-shopping-buy" buy_header_back_label="Supplier picker" %}
 
 <div class="unsorted-intro">
   These items have been flagged as needed but no supplier has been attached yet.
@@ -50,7 +41,7 @@
 
 {% if open_flags %}
 <div style="overflow-x:auto;">
-<table class="sort-table">
+<table class="shop-table">
   <thead>
     <tr>
       <th>Item</th>

@@ -9,8 +9,6 @@ describe everything else (catering, decoration, promotion, ...), plus the
 Incoming side (ticket sales).
 """
 
-from decimal import Decimal
-
 from django.db import models
 
 from .site_config import get_site_config
@@ -66,7 +64,9 @@ class EventBudgetLine(models.Model):
         ordering = ["direction", "order", "pk"]
 
     def __str__(self):
-        label = f"{self.category} > {self.item}" if self.item else self.category
+        label = (
+            f"{self.category} > {self.item}" if self.item else self.category
+        )
         return f"{self.event_id}: {label} ({self.direction})"
 
 
@@ -156,7 +156,11 @@ def _derive_estimate(event, category, item, site_config):
             )
     elif category == "Acts/ Performers" and item == "Rider":
         if event.cost_rider_notes:
-            return None, EventBudgetLine.SOURCE_DEAL_TERMS, event.cost_rider_notes
+            return (
+                None,
+                EventBudgetLine.SOURCE_DEAL_TERMS,
+                event.cost_rider_notes,
+            )
     elif category == "Fees" and item == "Late night licence":
         if site_config.late_licence_fee_gbp is not None:
             return (

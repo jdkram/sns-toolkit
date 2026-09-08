@@ -1,0 +1,5 @@
+{# Shared "title + back link" header for the shopping_buy* pages (Chunk 8). #}
+<div class="d-flex justify-content-between align-items-baseline mb-2">
+  <h1 class="mb-0">{{ buy_header_title }}</h1>
+  <a href="{% url buy_header_back_url %}" class="text-muted" style="font-size:0.85rem;">← {{ buy_header_back_label }}</a>
+</div>

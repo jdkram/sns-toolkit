@@ -1,9 +1,10 @@
 """Tests for EventTermsRevision signal and event hub display (task 9.71)."""
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from toolkit.diary.models import Event, EventTermsRevision
+from toolkit.diary.models import Event
 from toolkit.diary.tests.common import DiaryTestsMixin
 
 User = get_user_model()
@@ -80,7 +81,9 @@ class EventTermsRevisionSignalTests(TestCase):
         terms_texts = set(
             self.event.terms_revisions.values_list("terms_text", flat=True)
         )
-        self.assertEqual(terms_texts, {"Original terms text here.", "Second version."})
+        self.assertEqual(
+            terms_texts, {"Original terms text here.", "Second version."}
+        )
 
 
 class EventTermsRevisionViewTests(DiaryTestsMixin, TestCase):
@@ -126,7 +129,9 @@ class EventTermsRevisionViewTests(DiaryTestsMixin, TestCase):
         self.e4.terms = "Updated terms for hub test."
         self.e4.save()
 
-        url = reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk})
+        url = reverse(
+            "edit-event-details-view", kwargs={"event_id": self.e4.pk}
+        )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Change history")
@@ -135,7 +140,9 @@ class EventTermsRevisionViewTests(DiaryTestsMixin, TestCase):
     def test_event_hub_no_history_section_when_no_revisions(self):
         """Events with no revisions should not show the Change history section."""
         # e2 has no terms, so changing its name won't trigger a revision
-        url = reverse("edit-event-details-view", kwargs={"event_id": self.e2.pk})
+        url = reverse(
+            "edit-event-details-view", kwargs={"event_id": self.e2.pk}
+        )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "Change history")

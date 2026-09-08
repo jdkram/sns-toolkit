@@ -24,13 +24,15 @@ at all, superuser-only access) so they keep their own setUp and do not
 call this. Labs layers its own Volunteer+Member fixture on top of these
 users (see labs/tests/common.py:_setup_test_users).
 """
+
 from collections import namedtuple
 
 from django.contrib.auth import models as auth_models
 from django.contrib.contenttypes import models as contenttypes
 
-
-TestUsers = namedtuple("TestUsers", ["admin", "read_only", "no_perm", "rota_editor"])
+TestUsers = namedtuple(
+    "TestUsers", ["admin", "read_only", "no_perm", "rota_editor"]
+)
 
 
 def _create_toolkit_permissions():
@@ -58,7 +60,9 @@ def _create_toolkit_permissions():
     return write_perm, read_perm
 
 
-def create_toolkit_test_users(include_rota_editor=False, is_admin_superuser=True):
+def create_toolkit_test_users(
+    include_rota_editor=False, is_admin_superuser=True
+):
     """Create the standard admin / read_only / no_perm (+ optional rota_editor) users.
 
     Returns a TestUsers namedtuple. The admin user carries both toolkit.write
@@ -73,7 +77,9 @@ def create_toolkit_test_users(include_rota_editor=False, is_admin_superuser=True
     write_perm, read_perm = _create_toolkit_permissions()
 
     admin = auth_models.User.objects.create_user(
-        "admin", "toolkit_admin@localhost", "T3stPassword!",
+        "admin",
+        "toolkit_admin@localhost",
+        "T3stPassword!",
         is_superuser=is_admin_superuser,
     )
     admin.user_permissions.add(write_perm, read_perm)

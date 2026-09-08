@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('members', '0010_exportauditlog_filter_event_ids_and_more'),
+        ("members", "0010_exportauditlog_filter_event_ids_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='volunteer',
-            name='consent_policy_version',
+            model_name="volunteer",
+            name="consent_policy_version",
             field=models.PositiveIntegerField(default=1),
         ),
         migrations.AddField(
-            model_name='volunteer',
-            name='consent_reminder_sent_at',
+            model_name="volunteer",
+            name="consent_reminder_sent_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
     ]

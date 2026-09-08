@@ -23,8 +23,12 @@ class ProgrammingQueueViewTests(DiaryTestsMixin, TestCase):
         super().setUp()
         self.client.login(username="admin", password="T3stPassword!")
         self.draft = _make_queue_event("Draft Event", "draft")
-        self.proposed = _make_queue_event("Proposed Event", "proposed", days_ahead=60)
-        self.returned = _make_queue_event("Returned Event", "rejected", days_ahead=45)
+        self.proposed = _make_queue_event(
+            "Proposed Event", "proposed", days_ahead=60
+        )
+        self.returned = _make_queue_event(
+            "Returned Event", "rejected", days_ahead=45
+        )
         self.active = _make_queue_event("Active Event", "active")
         self.url = reverse("programming-queue")
 
@@ -37,6 +41,7 @@ class ProgrammingQueueViewTests(DiaryTestsMixin, TestCase):
         # admin (superuser) is logged in via setUp — can always access the queue
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "programming_queue.html")
 
     def test_read_only_user_blocked(self):
         # read_only user has toolkit.read but NOT toolkit.write; under the
@@ -58,9 +63,9 @@ class ProgrammingQueueViewTests(DiaryTestsMixin, TestCase):
         self.assertNotContains(response, "Active Event")
 
     def test_empty_queue_shows_success_alert(self):
-        Event.objects.filter(pk__in=[
-            self.draft.pk, self.proposed.pk, self.returned.pk
-        ]).update(programming_status="active")
+        Event.objects.filter(
+            pk__in=[self.draft.pk, self.proposed.pk, self.returned.pk]
+        ).update(programming_status="active")
         response = self.client.get(self.url)
         self.assertContains(response, "queue is empty")
 
@@ -70,15 +75,21 @@ class ProgrammingStatusUpdateTests(DiaryTestsMixin, TestCase):
         super().setUp()
         self.client.login(username="admin", password="T3stPassword!")
         self.event = _make_queue_event("Test Event", "draft")
-        self.url = reverse("update-event-programming-status", kwargs={"event_id": self.event.pk})
+        self.url = reverse(
+            "update-event-programming-status",
+            kwargs={"event_id": self.event.pk},
+        )
         self.queue_url = reverse("programming-queue")
 
     def _post(self, action, notes=""):
-        return self.client.post(self.url, {
-            "action": action,
-            "next": self.queue_url,
-            "notes": notes,
-        })
+        return self.client.post(
+            self.url,
+            {
+                "action": action,
+                "next": self.queue_url,
+                "notes": notes,
+            },
+        )
 
     def test_propose_sets_proposed(self):
         response = self._post("propose")
@@ -98,11 +109,15 @@ class ProgrammingStatusUpdateTests(DiaryTestsMixin, TestCase):
     def test_return_for_changes_sets_rejected(self):
         self.event.programming_status = "proposed"
         self.event.save()
-        response = self._post("return_for_changes", notes="Needs a budget breakdown.")
+        response = self._post(
+            "return_for_changes", notes="Needs a budget breakdown."
+        )
         self.assertRedirects(response, self.queue_url)
         self.event.refresh_from_db()
         self.assertEqual(self.event.programming_status, "rejected")
-        self.assertIn("Needs a budget breakdown.", self.event.programming_notes)
+        self.assertIn(
+            "Needs a budget breakdown.", self.event.programming_notes
+        )
 
     def test_approve_at_meeting_sets_active_with_approval_metadata(self):
         self.event.programming_status = "proposed"
@@ -124,11 +139,16 @@ class ProgrammingStatusUpdateTests(DiaryTestsMixin, TestCase):
     def test_save_notes_appends_without_status_change(self):
         self.event.programming_status = "proposed"
         self.event.save()
-        response = self._post("save_notes", notes="Looks good, pending room confirmation.")
+        response = self._post(
+            "save_notes", notes="Looks good, pending room confirmation."
+        )
         self.assertRedirects(response, self.queue_url)
         self.event.refresh_from_db()
         self.assertEqual(self.event.programming_status, "proposed")
-        self.assertIn("Looks good, pending room confirmation.", self.event.programming_notes)
+        self.assertIn(
+            "Looks good, pending room confirmation.",
+            self.event.programming_notes,
+        )
 
     def test_re_propose_from_returned_stays_in_queue(self):
         """Regression: re-proposing a returned event must keep it in the queue."""
@@ -143,6 +163,13 @@ class ProgrammingStatusUpdateTests(DiaryTestsMixin, TestCase):
 
     def test_invalid_action_returns_error(self):
         response = self._post("not_a_real_action")
+        self.assertRedirects(
+            response,
+            reverse(
+                "edit-event-details-view",
+                kwargs={"event_id": self.event.pk},
+            ),
+        )
         self.event.refresh_from_db()
         self.assertEqual(self.event.programming_status, "draft")
 

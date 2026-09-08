@@ -51,10 +51,17 @@ class MaintenanceTask(models.Model):
     STATUS_OK = "ok"
 
     name = models.CharField(max_length=128)
-    category = models.CharField(max_length=32, choices=CATEGORY_CHOICES, default=CATEGORY_OTHER)
-    frequency = models.CharField(max_length=16, choices=FREQUENCY_CHOICES, default=FREQUENCY_ANNUAL)
+    category = models.CharField(
+        max_length=32, choices=CATEGORY_CHOICES, default=CATEGORY_OTHER
+    )
+    frequency = models.CharField(
+        max_length=16, choices=FREQUENCY_CHOICES, default=FREQUENCY_ANNUAL
+    )
     frequency_notes = models.CharField(
-        max_length=128, blank=True, default="", help_text="For bespoke or unusual patterns."
+        max_length=128,
+        blank=True,
+        default="",
+        help_text="For bespoke or unusual patterns.",
     )
     contractor = models.CharField(
         max_length=128,
@@ -63,13 +70,22 @@ class MaintenanceTask(models.Model):
         help_text="Name of service provider if external; blank for volunteer-delivered tasks.",
     )
     keyholder_required = models.BooleanField(default=False)
-    skills_required = models.TextField(blank=True, default="", help_text="What you need to know or be trained in.")
+    skills_required = models.TextField(
+        blank=True,
+        default="",
+        help_text="What you need to know or be trained in.",
+    )
     time_commitment = models.CharField(
-        max_length=128, blank=True, default="", help_text="e.g. '~2 hours', 'Half a day including travel'."
+        max_length=128,
+        blank=True,
+        default="",
+        help_text="e.g. '~2 hours', 'Half a day including travel'.",
     )
     nextcloud_link = models.URLField(blank=True, default="")
     notes = models.TextField(blank=True, default="")
-    active = models.BooleanField(default=True, help_text="Retire tasks without losing history.")
+    active = models.BooleanField(
+        default=True, help_text="Retire tasks without losing history."
+    )
 
     committed_to = models.ForeignKey(
         "members.Volunteer",
@@ -105,7 +121,11 @@ class MaintenanceTask(models.Model):
         if period is None:
             # Bespoke frequency with no override: nothing to calculate against.
             return None
-        base = latest.completed_date if latest is not None else datetime.date.today()
+        base = (
+            latest.completed_date
+            if latest is not None
+            else datetime.date.today()
+        )
         return base + period
 
     @property
@@ -136,7 +156,9 @@ class MaintenanceTask(models.Model):
 
 
 class MaintenanceRecord(models.Model):
-    task = models.ForeignKey(MaintenanceTask, on_delete=models.CASCADE, related_name="records")
+    task = models.ForeignKey(
+        MaintenanceTask, on_delete=models.CASCADE, related_name="records"
+    )
     completed_date = models.DateField()
     completed_by = models.ForeignKey(
         "members.Volunteer",

@@ -519,7 +519,7 @@
     <form method="post">
       {% csrf_token %}
       <button type="submit" name="delete" value="1" class="btn btn-danger btn-sm"
-              onclick="return confirm('Delete template \'{{ event_template.name }}\'?')">
+              onclick="return confirm('Delete template \'{{ event_template.name|escapejs }}\'?')">
         Delete this template
       </button>
     </form>

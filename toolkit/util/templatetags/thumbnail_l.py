@@ -14,7 +14,9 @@ logger = logging.getLogger(__file__)
 register = Library()
 
 
-def _crop_thumbnail_url(source, crop_x, crop_y, crop_w, crop_h, bar_colour, target_w, target_h):
+def _crop_thumbnail_url(
+    source, crop_x, crop_y, crop_w, crop_h, bar_colour, target_w, target_h
+):
     """
     Generate a PIL-based thumbnail with letterbox bars, then crop.
 
@@ -62,7 +64,10 @@ def _crop_thumbnail_url(source, crop_x, crop_y, crop_w, crop_h, bar_colour, targ
                     if bar_colour:
                         hex_colour = bar_colour.lstrip("#")
                         try:
-                            r, g, b = (int(hex_colour[i: i + 2], 16) for i in (0, 2, 4))
+                            r, g, b = (
+                                int(hex_colour[i : i + 2], 16)
+                                for i in (0, 2, 4)
+                            )
                             fill = (r, g, b, 255)
                         except (ValueError, IndexError):
                             fill = (0, 0, 0, 0)
@@ -112,17 +117,32 @@ def thumbnail_url(source, alias):
             crop_y = getattr(instance, "crop_y", None)
             crop_w = getattr(instance, "crop_w", None)
             crop_h = getattr(instance, "crop_h", None)
-            if None not in (crop_y, crop_w, crop_h) and crop_w > 0 and crop_h > 0:
+            if (
+                None not in (crop_y, crop_w, crop_h)
+                and crop_w > 0
+                and crop_h > 0
+            ):
                 dims = cache.get("thumbnail_crop_dims")
                 if dims is None:
                     from toolkit.diary.models import get_site_config
+
                     cfg = get_site_config()
-                    dims = (cfg.thumbnail_crop_width or 600, cfg.thumbnail_crop_height or 900)
+                    dims = (
+                        cfg.thumbnail_crop_width or 600,
+                        cfg.thumbnail_crop_height or 900,
+                    )
                     cache.set("thumbnail_crop_dims", dims, timeout=60)
                 target_w, target_h = dims
                 bar_colour = getattr(instance, "bar_colour", "") or ""
                 url = _crop_thumbnail_url(
-                    source, crop_x, crop_y, crop_w, crop_h, bar_colour, target_w, target_h
+                    source,
+                    crop_x,
+                    crop_y,
+                    crop_w,
+                    crop_h,
+                    bar_colour,
+                    target_w,
+                    target_h,
                 )
                 if url:
                     return url

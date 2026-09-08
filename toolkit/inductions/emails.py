@@ -8,6 +8,7 @@ password-set URL is built via toolkit.toolkit_auth.password_emails so the
 token + venue lookup is shared with members' volunteer password flow and
 the post-check-in reset flow in inductions/views.
 """
+
 import logging
 
 from django.conf import settings
@@ -123,7 +124,10 @@ def send_welcome_email(request, signup, user):
     )
 
 
-def send_access_needs_ack(request, induction_request):
+def send_access_needs_ack(
+    request,  # noqa: ARG001 -- keeps signature consistent with sibling email helpers
+    induction_request,
+):
     """Acknowledgement email sent when someone submits an access needs request."""
     cfg = get_inductions_settings()
     vars = {
@@ -147,7 +151,9 @@ def send_organiser_notification(induction_request):
     if not cfg.organiser_notification_email:
         return
     venue = _venue()
-    subject = f"[{venue}] New 1:1 induction request from {induction_request.name}"
+    subject = (
+        f"[{venue}] New 1:1 induction request from {induction_request.name}"
+    )
     body = (
         f"A new 1:1 induction request has been submitted.\n\n"
         f"Name: {induction_request.name}\n"
@@ -180,7 +186,9 @@ def send_new_signup_notification(session, signup):
         return
     venue = _venue()
     count = session.signups.count()
-    capacity = f"{count}/{session.max_signups}" if session.max_signups else str(count)
+    capacity = (
+        f"{count}/{session.max_signups}" if session.max_signups else str(count)
+    )
     subject = f"[{venue}] New sign-up: {session.title} ({capacity})"
     body = (
         f"Someone has signed up for {session.title}.\n\n"
@@ -232,7 +240,9 @@ def send_session_full_notification(session):
 
 
 def _login_url():
-    return settings.VENUE.get("siteurl", "").rstrip("/") + reverse("toolkit-index")
+    return settings.VENUE.get("siteurl", "").rstrip("/") + reverse(
+        "toolkit-index"
+    )
 
 
 def build_consent_renewal_email(volunteer):
@@ -246,7 +256,11 @@ def build_consent_renewal_email(volunteer):
     venue = _venue()
     member = volunteer.member
     first_name = member.name.split()[0] if member.name else "there"
-    policy_line = f"\n\nPrivacy policy: {cfg.privacy_policy_url}" if cfg.privacy_policy_url else ""
+    policy_line = (
+        f"\n\nPrivacy policy: {cfg.privacy_policy_url}"
+        if cfg.privacy_policy_url
+        else ""
+    )
     subject = f"[{venue}] Please reconfirm your data consent"
     body = (
         f"Hi {first_name},\n\n"
@@ -269,7 +283,9 @@ def build_policy_change_email(volunteer):
     venue = _venue()
     member = volunteer.member
     first_name = member.name.split()[0] if member.name else "there"
-    policy_line = f"\n\n{cfg.privacy_policy_url}" if cfg.privacy_policy_url else ""
+    policy_line = (
+        f"\n\n{cfg.privacy_policy_url}" if cfg.privacy_policy_url else ""
+    )
     subject = f"[{venue}] Our privacy policy has changed"
     body = (
         f"Hi {first_name},\n\n"
@@ -312,12 +328,20 @@ def notify_policy_change():
                 continue
             try:
                 subject, body = build_policy_change_email(volunteer)
-                EmailMessage(subject, body, _from_email(), [email], connection=connection).send()
+                EmailMessage(
+                    subject,
+                    body,
+                    _from_email(),
+                    [email],
+                    connection=connection,
+                ).send()
                 volunteer.consent_reminder_sent_at = now
                 volunteer.save(update_fields=["consent_reminder_sent_at"])
                 sent += 1
             except Exception:
-                logger.exception(f"Failed to send policy-change notification to volunteer pk={volunteer.pk}")
+                logger.exception(
+                    f"Failed to send policy-change notification to volunteer pk={volunteer.pk}"
+                )
                 skipped += 1
     finally:
         connection.close()

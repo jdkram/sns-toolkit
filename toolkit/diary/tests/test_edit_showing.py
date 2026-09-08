@@ -1,10 +1,5 @@
-import re
-import json
-import os.path
-
 import zoneinfo
-from datetime import datetime, date, time, timedelta
-import tempfile
+from datetime import datetime
 
 from unittest.mock import patch
 
@@ -15,18 +10,10 @@ from django.urls import reverse
 from toolkit.diary.models import (
     Showing,
     Event,
-    EventLink,
-    Role,
-    DiaryIdea,
-    EventTemplate,
-    MediaItem,
-    RotaEntry,
     Room,
     RoomBooking,
-    get_site_config,
 )
 
-import toolkit.diary.edit_prefs
 from toolkit.diary.form_widgets import JQueryDateTimePicker
 
 from .common import DiaryTestsMixin
@@ -164,7 +151,9 @@ class EditShowing(DiaryTestsMixin, TestCase):
 
         # Check showing was updated:
         showing = Showing.objects.get(id=7)
-        self.assertEqual(showing.start, datetime(2013, 8, 15, 18, 30, tzinfo=UTC))
+        self.assertEqual(
+            showing.start, datetime(2013, 8, 15, 18, 30, tzinfo=UTC)
+        )
         self.assertEqual(showing.booked_by, "Yet \u0102nother \u0170ser")
         self.assertEqual(showing.confirmed, True)
         self.assertEqual(showing.hide_in_programme, True)
@@ -255,7 +244,9 @@ class EditShowing(DiaryTestsMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "form_showing.html")
 
-        self.assertFormError(response.context["form"], "start", "Must be in the future")
+        self.assertFormError(
+            response.context["form"], "start", "Must be in the future"
+        )
 
     @patch("django.utils.timezone.now")
     def tests_edit_showing_invalid_date_malformed(self, now_patch):
@@ -336,7 +327,9 @@ class EditShowing(DiaryTestsMixin, TestCase):
 
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e4.id}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e4.id}
+            ),
         )
         self.e4s3.refresh_from_db()
         self.assertEqual(self.e4s3.rota_notes, "Updated rota notes via form.")
@@ -367,7 +360,9 @@ class EditShowing(DiaryTestsMixin, TestCase):
             reverse("edit-event-details-view", kwargs={"event_id": 4}),
         )
         showing = Showing.objects.get(id=7)
-        self.assertEqual(showing.start, datetime(2013, 8, 15, 18, 30, tzinfo=UTC))
+        self.assertEqual(
+            showing.start, datetime(2013, 8, 15, 18, 30, tzinfo=UTC)
+        )
 
 
 class JQueryDateTimePickerWidgetTest(TestCase):
@@ -440,7 +435,9 @@ class DeleteShowing(DiaryTestsMixin, TestCase):
 
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e4.pk}
+            ),
         )
 
 
@@ -450,7 +447,9 @@ class UpdateShowingStatus(DiaryTestsMixin, TestCase):
         self.client.login(username="admin", password="T3stPassword!")
 
     def test_get_not_allowed(self):
-        url = reverse("update-showing-status", kwargs={"showing_id": self.e4s3.pk})
+        url = reverse(
+            "update-showing-status", kwargs={"showing_id": self.e4s3.pk}
+        )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 405)
 
@@ -460,11 +459,15 @@ class UpdateShowingStatus(DiaryTestsMixin, TestCase):
         self.e4s3.confirmed = False
         self.e4s3.save()
 
-        url = reverse("update-showing-status", kwargs={"showing_id": self.e4s3.pk})
+        url = reverse(
+            "update-showing-status", kwargs={"showing_id": self.e4s3.pk}
+        )
         response = self.client.post(url, data={"action": "confirm"})
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e4.pk}
+            ),
         )
         self.e4s3.refresh_from_db()
         self.assertTrue(self.e4s3.confirmed)
@@ -473,11 +476,15 @@ class UpdateShowingStatus(DiaryTestsMixin, TestCase):
     def test_unconfirm(self, now_patch):
         now_patch.return_value = self._fake_now
         # e4s3 starts as confirmed=True
-        url = reverse("update-showing-status", kwargs={"showing_id": self.e4s3.pk})
+        url = reverse(
+            "update-showing-status", kwargs={"showing_id": self.e4s3.pk}
+        )
         response = self.client.post(url, data={"action": "unconfirm"})
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e4.pk}
+            ),
         )
         self.e4s3.refresh_from_db()
         self.assertFalse(self.e4s3.confirmed)
@@ -485,11 +492,15 @@ class UpdateShowingStatus(DiaryTestsMixin, TestCase):
     @patch("django.utils.timezone.now")
     def test_cancel(self, now_patch):
         now_patch.return_value = self._fake_now
-        url = reverse("update-showing-status", kwargs={"showing_id": self.e4s3.pk})
+        url = reverse(
+            "update-showing-status", kwargs={"showing_id": self.e4s3.pk}
+        )
         response = self.client.post(url, data={"action": "cancel"})
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e4.pk}
+            ),
         )
         self.e4s3.refresh_from_db()
         self.assertTrue(self.e4s3.cancelled)
@@ -501,11 +512,15 @@ class UpdateShowingStatus(DiaryTestsMixin, TestCase):
         self.e4s3.cancelled = True
         self.e4s3.save()
 
-        url = reverse("update-showing-status", kwargs={"showing_id": self.e4s3.pk})
+        url = reverse(
+            "update-showing-status", kwargs={"showing_id": self.e4s3.pk}
+        )
         response = self.client.post(url, data={"action": "uncancel"})
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e4.pk}
+            ),
         )
         self.e4s3.refresh_from_db()
         self.assertFalse(self.e4s3.cancelled)
@@ -518,12 +533,16 @@ class UpdateShowingStatus(DiaryTestsMixin, TestCase):
         self.e4s3.confirmed = False
         self.e4s3.save()
 
-        url = reverse("update-showing-status", kwargs={"showing_id": self.e4s3.pk})
+        url = reverse(
+            "update-showing-status", kwargs={"showing_id": self.e4s3.pk}
+        )
         response = self.client.post(url, data={"action": "confirm"})
         # Redirects back to hub but showing should not be confirmed
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e4.pk}
+            ),
         )
         self.e4s3.refresh_from_db()
         self.assertFalse(self.e4s3.confirmed)
@@ -534,11 +553,15 @@ class UpdateShowingStatus(DiaryTestsMixin, TestCase):
         self.assertEqual(self.e7.all_showings_confirmed(), False)
         now_patch.return_value = self._fake_now
 
-        url = reverse("update-showing-status", kwargs={"showing_id": self.e7s1.pk})
+        url = reverse(
+            "update-showing-status", kwargs={"showing_id": self.e7s1.pk}
+        )
         response = self.client.post(url, data={"action": "confirm"})
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e7.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e7.pk}
+            ),
         )
         self.e7s1.refresh_from_db()
         self.assertTrue(self.e7s1.confirmed)
@@ -549,7 +572,9 @@ class UpdateShowingStatus(DiaryTestsMixin, TestCase):
         # e2s1 is in the past (1/4/2013 < 1/6/2013)
         self.assertFalse(self.e2s1.confirmed)
 
-        url = reverse("update-showing-status", kwargs={"showing_id": self.e2s1.pk})
+        url = reverse(
+            "update-showing-status", kwargs={"showing_id": self.e2s1.pk}
+        )
         response = self.client.post(url, data={"action": "confirm"})
         # Still redirects to the hub, but status is unchanged
         self.assertEqual(response.status_code, 302)
@@ -619,16 +644,23 @@ class EditShowingRoomBookingTests(DiaryTestsMixin, TestCase):
             start=self.showing.start,
         )
         self.assertEqual(self.showing.room_bookings.count(), 1)
-        response = self.client.post(self.url, data=self._base_post({
-            "room_bookings-INITIAL_FORMS": "1",
-            "room_bookings-TOTAL_FORMS": "1",
-            "room_bookings-0-id": str(self.showing.room_bookings.first().pk),
-            "room_bookings-0-room": str(self.room_2.pk),
-            "room_bookings-0-start": "09/06/2013 19:00",
-            "room_bookings-0-end": "",
-            "room_bookings-0-notes": "",
-            "room_bookings-0-DELETE": "on",
-        }))
+        response = self.client.post(
+            self.url,
+            data=self._base_post(
+                {
+                    "room_bookings-INITIAL_FORMS": "1",
+                    "room_bookings-TOTAL_FORMS": "1",
+                    "room_bookings-0-id": str(
+                        self.showing.room_bookings.first().pk
+                    ),
+                    "room_bookings-0-room": str(self.room_2.pk),
+                    "room_bookings-0-start": "09/06/2013 19:00",
+                    "room_bookings-0-end": "",
+                    "room_bookings-0-notes": "",
+                    "room_bookings-0-DELETE": "on",
+                }
+            ),
+        )
         self.assertEqual(response.status_code, 302)
         self.assertFalse(self.showing.room_bookings.exists())
 
@@ -641,10 +673,26 @@ class EditShowingRoomBookingTests(DiaryTestsMixin, TestCase):
         self.assertIn("rooms_json", response.context)
 
     @patch("django.utils.timezone.now")
+    def test_rooms_json_is_script_safe(self, now_patch):
+        """A room name containing `</script>` must not be able to break out
+        of the inline <script> block it's rendered into (stored XSS)."""
+        now_patch.return_value = datetime(2013, 1, 1, tzinfo=self.UTC)
+        Room.objects.create(
+            name="</script><script>alert(1)</script>", colour="#123456"
+        )
+        response = self.client.get(self.url)
+        rooms_json = response.context["rooms_json"]
+        self.assertNotIn("</script>", rooms_json)
+        rendered = response.content.decode()
+        self.assertNotIn("</script><script>alert(1)</script>", rendered)
+
+    @patch("django.utils.timezone.now")
     def test_overlapping_booking_shows_clash_warning(self, now_patch):
         now_patch.return_value = datetime(2013, 1, 1, tzinfo=self.UTC)
         # Create a confirmed showing in the same room for an overlapping time
-        other_event = Event.objects.create(name="Other Event", duration="02:00:00")
+        other_event = Event.objects.create(
+            name="Other Event", duration="02:00:00"
+        )
         other_showing = Showing.objects.create(
             event=other_event,
             start=datetime(2013, 6, 9, 18, 0, tzinfo=self.UTC),

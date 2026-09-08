@@ -1,9 +1,7 @@
-import re
-import json
 import os.path
 
 import zoneinfo
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, time, timedelta
 import tempfile
 
 from unittest.mock import patch
@@ -19,17 +17,13 @@ from toolkit.diary.models import (
     EventLink,
     EventTag,
     Role,
-    DiaryIdea,
     EventTemplate,
     MediaItem,
     RotaEntry,
-    Room,
     RoomBooking,
     get_site_config,
 )
 
-import toolkit.diary.edit_prefs
-from toolkit.diary.form_widgets import JQueryDateTimePicker
 
 from .common import DiaryTestsMixin
 
@@ -135,9 +129,15 @@ class AddEventView(DiaryTestsMixin, TestCase):
         self.assertEqual(len(showings), 3)
         # Showings should have been added over 3 days. Time specified was BST,
         # so should be 7pm in UTC:
-        self.assertEqual(showings[0].start, datetime(2013, 6, 2, 19, 0, tzinfo=UTC))
-        self.assertEqual(showings[1].start, datetime(2013, 6, 3, 19, 0, tzinfo=UTC))
-        self.assertEqual(showings[2].start, datetime(2013, 6, 4, 19, 0, tzinfo=UTC))
+        self.assertEqual(
+            showings[0].start, datetime(2013, 6, 2, 19, 0, tzinfo=UTC)
+        )
+        self.assertEqual(
+            showings[1].start, datetime(2013, 6, 3, 19, 0, tzinfo=UTC)
+        )
+        self.assertEqual(
+            showings[2].start, datetime(2013, 6, 4, 19, 0, tzinfo=UTC)
+        )
 
         role_1 = Role.objects.get(id=1)
         for s in showings:
@@ -196,7 +196,11 @@ class AddEventView(DiaryTestsMixin, TestCase):
         self.assertTemplateUsed(response, "form_new_event_and_showing.html")
 
         # Check error was as expected \u2014 non-field error from clean():
-        self.assertFormError(response.context["form"], None, ["The following dates are in the past: 30 May 2013."])
+        self.assertFormError(
+            response.context["form"],
+            None,
+            ["The following dates are in the past: 30 May 2013."],
+        )
 
     @patch("django.utils.timezone.now")
     def test_add_event_missing_fields(self, now_patch):
@@ -271,7 +275,9 @@ class EditDetailView(DiaryTestsMixin, TestCase):
     def test_add_showing(self, now_patch) -> None:
         now_patch.return_value = self._fake_now
 
-        url = reverse("edit-event-details-view", kwargs={"event_id": self.e5.pk})
+        url = reverse(
+            "edit-event-details-view", kwargs={"event_id": self.e5.pk}
+        )
         future_start = self._fake_now + timedelta(days=10)
         data = {
             "start": future_start.strftime("%d/%m/%Y %H:%M"),
@@ -291,7 +297,9 @@ class EditDetailView(DiaryTestsMixin, TestCase):
     def test_add_showing_in_past_fails(self, now_patch) -> None:
         now_patch.return_value = self._fake_now
 
-        url = reverse("edit-event-details-view", kwargs={"event_id": self.e5.pk})
+        url = reverse(
+            "edit-event-details-view", kwargs={"event_id": self.e5.pk}
+        )
         past_start = self._fake_now - timedelta(days=10)
         data = {
             "start": past_start.strftime("%d/%m/%Y %H:%M"),
@@ -310,7 +318,9 @@ class EditDetailView(DiaryTestsMixin, TestCase):
     def test_add_showing_no_booked_by_fails(self, now_patch) -> None:
         now_patch.return_value = self._fake_now
 
-        url = reverse("edit-event-details-view", kwargs={"event_id": self.e5.pk})
+        url = reverse(
+            "edit-event-details-view", kwargs={"event_id": self.e5.pk}
+        )
         future_start = self._fake_now + timedelta(days=10)
         data = {
             "start": future_start.strftime("%d/%m/%Y %H:%M"),
@@ -359,8 +369,11 @@ class EditEventView(DiaryTestsMixin, TestCase):
             'name="private" type="checkbox" />',
             html=True,
         )
-        # Word counter block is present:
-        self.assertContains(response, "word-counter")
+        # Word counter feature's JS is wired up (the "word-counter" div itself
+        # is created client-side by form_event.js, not server-rendered; the
+        # inline <script> that used to make this string assertable was
+        # moved out to a static file in September 2026).
+        self.assertContains(response, "diary/js/form_event.js")
         # Blah. It's probably fine. Ahem.
 
     def test_get_edit_event_form_no_media_legacy_copy(self):
@@ -375,7 +388,9 @@ class EditEventView(DiaryTestsMixin, TestCase):
         self.assertContains(response, "Event two title")
         # newlines -> <br>
         self.assertContains(response, "Event <br>\n two <br>\n copy")
-        self.assertContains(response, "Event two\n copy summary")  # not stripped
+        self.assertContains(
+            response, "Event two\n copy summary"
+        )  # not stripped
         self.assertContains(response, "01:30:00")
         self.assertContains(
             response,
@@ -472,7 +487,9 @@ class EditEventView(DiaryTestsMixin, TestCase):
         )
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e2.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e2.pk}
+            ),
         )
 
         event = Event.objects.get(id=2)
@@ -514,7 +531,9 @@ class EditEventView(DiaryTestsMixin, TestCase):
         )
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e2.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e2.pk}
+            ),
         )
 
         event = Event.objects.get(id=2)
@@ -618,7 +637,9 @@ class EditEventView(DiaryTestsMixin, TestCase):
 
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e2.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e2.pk}
+            ),
         )
 
         event = Event.objects.get(id=2)
@@ -655,7 +676,9 @@ class EditEventView(DiaryTestsMixin, TestCase):
 
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e2.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e2.pk}
+            ),
         )
 
         event = Event.objects.get(id=2)
@@ -698,7 +721,9 @@ class EditEventView(DiaryTestsMixin, TestCase):
             )
             self.assertRedirects(
                 response,
-                reverse("edit-event-details-view", kwargs={"event_id": self.e2.pk}),
+                reverse(
+                    "edit-event-details-view", kwargs={"event_id": self.e2.pk}
+                ),
             )
 
             event = Event.objects.get(id=2)
@@ -779,7 +804,9 @@ class EditEventView(DiaryTestsMixin, TestCase):
             )
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e2.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e2.pk}
+            ),
         )
 
     def test_post_edit_event_too_much_copy_summary(self):
@@ -834,7 +861,9 @@ class EditEventView(DiaryTestsMixin, TestCase):
 
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e2.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e2.pk}
+            ),
         )
 
         event = Event.objects.get(id=2)
@@ -891,7 +920,9 @@ class EditEventView(DiaryTestsMixin, TestCase):
 
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e1.pk}
+            ),
         )
         event = Event.objects.get(id=1)
         self.assertEqual(event.terms, "One two three four five.")
@@ -915,7 +946,9 @@ class EditEventView(DiaryTestsMixin, TestCase):
 
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e1.pk}
+            ),
         )
         event = Event.objects.get(id=1)
         self.assertEqual(event.terms, "Not Required")
@@ -955,13 +988,17 @@ class CloneEventTests(DiaryTestsMixin, TestCase):
         new_event = Event.objects.get(name="Community Kitchen (May)")
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": new_event.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": new_event.pk}
+            ),
         )
         # Scalar fields copied from source
         self.assertEqual(new_event.copy_summary, self.e4.copy_summary)
         self.assertEqual(new_event.copy, self.e4.copy)
         self.assertEqual(new_event.terms, self.e4.terms)
-        self.assertEqual(new_event.programming_notes, self.e4.programming_notes)
+        self.assertEqual(
+            new_event.programming_notes, self.e4.programming_notes
+        )
         self.assertEqual(new_event.film_information, self.e4.film_information)
         self.assertEqual(new_event.pricing, self.e4.pricing)
         self.assertEqual(new_event.pre_title, self.e4.pre_title)
@@ -969,7 +1006,9 @@ class CloneEventTests(DiaryTestsMixin, TestCase):
         self.assertEqual(new_event.outside_hire, self.e4.outside_hire)
         self.assertEqual(new_event.private, self.e4.private)
         # Compare duration via DB-fetched source to ensure both are time objects
-        self.assertEqual(new_event.duration, Event.objects.get(pk=self.e4.pk).duration)
+        self.assertEqual(
+            new_event.duration, Event.objects.get(pk=self.e4.pk).duration
+        )
         self.assertEqual(new_event.template, self.e4.template)
         # Ticket link NOT copied
         self.assertEqual(new_event.ticket_link, "")
@@ -1035,7 +1074,9 @@ class CloneEventTests(DiaryTestsMixin, TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(Event.objects.filter(name="Clone in the past").exists())
+        self.assertFalse(
+            Event.objects.filter(name="Clone in the past").exists()
+        )
 
     @override_settings(MULTIROOM_ENABLED=False)
     @patch("django.utils.timezone.now")
@@ -1144,14 +1185,18 @@ class EventLinkTests(DiaryTestsMixin, TestCase):
     def test_post_creates_link_with_approved_domain(self):
         data = self._mgmt()
         data.update(
-            self._form(0, label="Event notes", url="https://pad.riseup.net/p/sns-test")
+            self._form(
+                0, label="Event notes", url="https://pad.riseup.net/p/sns-test"
+            )
         )
         data.update(self._form(1))
         data.update(self._form(2))
         response = self.client.post(self.url, data)
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e1.pk}
+            ),
         )
         links = list(self.e1.links.all())
         self.assertEqual(len(links), 1)
@@ -1172,7 +1217,9 @@ class EventLinkTests(DiaryTestsMixin, TestCase):
         response = self.client.post(self.url, data)
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e1.pk}
+            ),
         )
         self.assertEqual(self.e1.links.count(), 1)
 
@@ -1180,7 +1227,9 @@ class EventLinkTests(DiaryTestsMixin, TestCase):
         data = self._mgmt()
         data.update(
             self._form(
-                0, label="Crew chat", url="https://chat.whatsapp.com/ABC123xyzLink"
+                0,
+                label="Crew chat",
+                url="https://chat.whatsapp.com/ABC123xyzLink",
             )
         )
         data.update(self._form(1))
@@ -1188,23 +1237,33 @@ class EventLinkTests(DiaryTestsMixin, TestCase):
         response = self.client.post(self.url, data)
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e1.pk}
+            ),
         )
         self.assertEqual(self.e1.links.count(), 1)
 
-    @override_settings(EVENTLINK_EXTRA_ALLOWED_DOMAINS=["nextcloud.xtreamlab.net"])
+    @override_settings(
+        EVENTLINK_EXTRA_ALLOWED_DOMAINS=["nextcloud.xtreamlab.net"]
+    )
     def test_post_extra_allowed_domain_accepted(self):
         """A domain in EVENTLINK_EXTRA_ALLOWED_DOMAINS is accepted."""
         data = self._mgmt()
         data.update(
-            self._form(0, label="Notes", url="https://nextcloud.xtreamlab.net/s/abc123")
+            self._form(
+                0,
+                label="Notes",
+                url="https://nextcloud.xtreamlab.net/s/abc123",
+            )
         )
         data.update(self._form(1))
         data.update(self._form(2))
         response = self.client.post(self.url, data)
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e1.pk}
+            ),
         )
         self.assertEqual(self.e1.links.count(), 1)
 
@@ -1215,19 +1274,25 @@ class EventLinkTests(DiaryTestsMixin, TestCase):
 
         cache.delete(SiteConfiguration._CACHE_KEY)
         config = SiteConfiguration.load()
-        config.eventlink_extra_allowed_domains = "nextcloud.xtreamlab.net\nfiles.example.org"
+        config.eventlink_extra_allowed_domains = (
+            "nextcloud.xtreamlab.net\nfiles.example.org"
+        )
         config.save()
 
         data = self._mgmt()
         data.update(
-            self._form(0, label="Notes", url="https://nextcloud.xtreamlab.net/s/xyz")
+            self._form(
+                0, label="Notes", url="https://nextcloud.xtreamlab.net/s/xyz"
+            )
         )
         data.update(self._form(1))
         data.update(self._form(2))
         response = self.client.post(self.url, data)
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e1.pk}
+            ),
         )
         self.assertEqual(self.e1.links.count(), 1)
 
@@ -1241,7 +1306,11 @@ class EventLinkTests(DiaryTestsMixin, TestCase):
         """A domain not in any whitelist is rejected even if path looks Nextcloud-like."""
         data = self._mgmt()
         data.update(
-            self._form(0, label="Notes", url="https://some.random.host/nextcloud/s/abc")
+            self._form(
+                0,
+                label="Notes",
+                url="https://some.random.host/nextcloud/s/abc",
+            )
         )
         data.update(self._form(1))
         data.update(self._form(2))
@@ -1252,14 +1321,18 @@ class EventLinkTests(DiaryTestsMixin, TestCase):
     def test_post_linktr_ee_accepted(self):
         data = self._mgmt()
         data.update(
-            self._form(0, label="Core docs", url="https://linktr.ee/starandshadow")
+            self._form(
+                0, label="Core docs", url="https://linktr.ee/starandshadow"
+            )
         )
         data.update(self._form(1))
         data.update(self._form(2))
         response = self.client.post(self.url, data)
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e1.pk}
+            ),
         )
         self.assertEqual(self.e1.links.count(), 1)
 
@@ -1267,7 +1340,9 @@ class EventLinkTests(DiaryTestsMixin, TestCase):
 
     def test_post_disallowed_domain_rejected(self):
         data = self._mgmt()
-        data.update(self._form(0, label="Bad link", url="https://example.com/bad"))
+        data.update(
+            self._form(0, label="Bad link", url="https://example.com/bad")
+        )
         data.update(self._form(1))
         data.update(self._form(2))
         response = self.client.post(self.url, data)
@@ -1278,7 +1353,9 @@ class EventLinkTests(DiaryTestsMixin, TestCase):
     def test_post_generic_whatsapp_domain_rejected(self):
         """whatsapp.com (without chat. prefix) must be rejected."""
         data = self._mgmt()
-        data.update(self._form(0, label="WhatsApp", url="https://whatsapp.com/dl/"))
+        data.update(
+            self._form(0, label="WhatsApp", url="https://whatsapp.com/dl/")
+        )
         data.update(self._form(1))
         data.update(self._form(2))
         response = self.client.post(self.url, data)
@@ -1288,7 +1365,9 @@ class EventLinkTests(DiaryTestsMixin, TestCase):
     def test_post_missing_label_rejected(self):
         """A URL without a label must not be saved."""
         data = self._mgmt()
-        data.update(self._form(0, label="", url="https://pad.riseup.net/p/sns-test"))
+        data.update(
+            self._form(0, label="", url="https://pad.riseup.net/p/sns-test")
+        )
         data.update(self._form(1))
         data.update(self._form(2))
         response = self.client.post(self.url, data)
@@ -1306,20 +1385,26 @@ class EventLinkTests(DiaryTestsMixin, TestCase):
         )
         data = self._mgmt(total=3, initial=1)
         data.update(
-            self._form(0, label=link.label, url=link.url, pk=str(link.pk), delete=True)
+            self._form(
+                0, label=link.label, url=link.url, pk=str(link.pk), delete=True
+            )
         )
         data.update(self._form(1))
         data.update(self._form(2))
         response = self.client.post(self.url, data)
         self.assertRedirects(
             response,
-            reverse("edit-event-details-view", kwargs={"event_id": self.e1.pk}),
+            reverse(
+                "edit-event-details-view", kwargs={"event_id": self.e1.pk}
+            ),
         )
         self.assertFalse(EventLink.objects.filter(pk=link.pk).exists())
 
 
 # Far-future tz-aware date so showings are always "future" without patching now.
-_FUTURE = datetime(2099, 6, 1, 19, 0, tzinfo=zoneinfo.ZoneInfo("Europe/London"))
+_FUTURE = datetime(
+    2099, 6, 1, 19, 0, tzinfo=zoneinfo.ZoneInfo("Europe/London")
+)
 
 
 class EventHubCollapseTests(DiaryTestsMixin, TestCase):
@@ -1486,7 +1571,9 @@ class OneShotRoleTests(DiaryTestsMixin, TestCase):
         # roles should never appear in the set of role fields it generates.
         self._make_one_shot("One-Shot Only Role")
         standard_roles = Role.objects.filter(is_one_shot=False)
-        self.assertFalse(standard_roles.filter(name="One-Shot Only Role").exists())
+        self.assertFalse(
+            standard_roles.filter(name="One-Shot Only Role").exists()
+        )
 
     def test_get_oneshot_roles_carries_signed_up_count(self):
         # _get_oneshot_roles_for_showing reports both slot count and signed-up
@@ -1502,9 +1589,13 @@ class OneShotRoleTests(DiaryTestsMixin, TestCase):
         RotaEntry.objects.create(
             role=role, showing=self.e4s3, volunteer=v, name=v.member.name
         )
-        RotaEntry.objects.create(role=role, showing=self.e4s3, volunteer=None, name="")
+        RotaEntry.objects.create(
+            role=role, showing=self.e4s3, volunteer=None, name=""
+        )
 
-        from toolkit.diary.edit_views.showings import _get_oneshot_roles_for_showing
+        from toolkit.diary.edit_views.showings import (
+            _get_oneshot_roles_for_showing,
+        )
 
         rows = _get_oneshot_roles_for_showing(self.e4s3)
         self.assertEqual(len(rows), 1)
@@ -1524,7 +1615,9 @@ class OneShotRoleTests(DiaryTestsMixin, TestCase):
         RotaEntry.objects.create(
             role=role, showing=self.e4s3, volunteer=v, name=v.member.name
         )
-        RotaEntry.objects.create(role=role, showing=self.e4s3, volunteer=None, name="")
+        RotaEntry.objects.create(
+            role=role, showing=self.e4s3, volunteer=None, name=""
+        )
 
         url = reverse("edit-showing", kwargs={"showing_id": self.e4s3.pk})
         resp = self.client.get(url)
@@ -1548,7 +1641,9 @@ class OneShotRoleTests(DiaryTestsMixin, TestCase):
         RotaEntry.objects.create(
             role=role, showing=self.e4s3, volunteer=v, name=v.member.name
         )
-        RotaEntry.objects.create(role=role, showing=self.e4s3, volunteer=None, name="")
+        RotaEntry.objects.create(
+            role=role, showing=self.e4s3, volunteer=None, name=""
+        )
         self.assertEqual(self.e4s3.rotaentry_set.filter(role=role).count(), 2)
 
         url = reverse("edit-showing", kwargs={"showing_id": self.e4s3.pk})
@@ -1776,7 +1871,9 @@ class BudgetLinesTests(DiaryTestsMixin, TestCase):
         line = self.e4.budget_lines.get(
             category="Acts/ Performers", item="Hire fee"
         )
-        self.assertEqual(line.estimate_source, EventBudgetLine.SOURCE_DEAL_TERMS)
+        self.assertEqual(
+            line.estimate_source, EventBudgetLine.SOURCE_DEAL_TERMS
+        )
 
         forms = self._budget_forms_from_event(
             self.e4,
@@ -1854,5 +1951,3 @@ class BudgetLinesTests(DiaryTestsMixin, TestCase):
             float(resp.context["budget_totals"]["estimate_outgoing"]),
             42.50,
         )
-
-

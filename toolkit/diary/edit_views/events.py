@@ -1,76 +1,49 @@
 import json
 import datetime
 import logging
-import csv
-import os
 
 from collections import OrderedDict
 
 from django.http import (
     HttpResponse,
-    Http404,
     HttpResponseRedirect,
-    JsonResponse,
 )
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
-from django.conf import settings
-from django import forms as django_forms
-from django.forms.models import modelformset_factory
 from django.contrib import messages
 from django.views.generic import View
 import django.template
 import django.db
-from django.db.models import Count, Q, Min, Max, Sum
+from django.db.models import Count, Q, Max, Sum
 import django.utils.timezone as timezone
-from django.contrib.auth.decorators import (
-    permission_required,
-    user_passes_test,
-)
 from toolkit.toolkit_auth.decorators import (
-    feature_required,
     write_required,
-    read_required,
 )
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.views.decorators.http import require_POST, require_http_methods
-from django.utils.html import escape, mark_safe
-from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.html import mark_safe
 
 from toolkit.diary.models import (
     Showing,
     Event,
     EventLink,
-    EventTemplateLink,
-    DiaryIdea,
     MediaItem,
     EventTemplate,
     EventTag,
-    Role,
-    RotaEntry,
-    PrintedProgramme,
-    Room,
     RoomBooking,
-    EventTemplateRoom,
     EventBudgetLine,
-    VolunteerEventMark,
     get_site_config,
     sync_budget_lines_for_event,
 )
 import toolkit.diary.forms as diary_forms
 import toolkit.diary.validators as diary_validators
-import toolkit.diary.edit_prefs as edit_prefs
-from toolkit.diary.poster import generate_event_placeholder
-from toolkit.members.models import Qualification, VolunteerQualification
-from toolkit.util.image import adjust_colour
 
 # Shared utility method:
-from toolkit.diary.daterange import get_date_range, safe_json
+from toolkit.diary.daterange import safe_json
+from ._common import _film_json, _get_omdb_api_key
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-from ._common import _film_json, _get_omdb_api_key
 
 
 @write_required
@@ -814,7 +787,8 @@ def _budget_grid_context(event, budget_formset):
     )
     return {
         "budget_categories": [
-            {"name": name, "forms": forms} for name, forms in categories.items()
+            {"name": name, "forms": forms}
+            for name, forms in categories.items()
         ],
         "budget_totals": totals,
     }

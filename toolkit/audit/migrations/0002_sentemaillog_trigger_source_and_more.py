@@ -8,19 +8,29 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('audit', '0001_initial'),
+        ("audit", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='sentemaillog',
-            name='trigger_source',
-            field=models.CharField(blank=True, help_text="What set this send off, e.g. 'Web request', 'Scheduled job: send_volunteer_digest', 'Mailout job #42'", max_length=255),
+            model_name="sentemaillog",
+            name="trigger_source",
+            field=models.CharField(
+                blank=True,
+                help_text="What set this send off, e.g. 'Web request', 'Scheduled job: send_volunteer_digest', 'Mailout job #42'",
+                max_length=255,
+            ),
         ),
         migrations.AddField(
-            model_name='sentemaillog',
-            name='triggered_by',
-            field=models.ForeignKey(blank=True, help_text='The logged-in user whose action caused this send, if any', null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL),
+            model_name="sentemaillog",
+            name="triggered_by",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="The logged-in user whose action caused this send, if any",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

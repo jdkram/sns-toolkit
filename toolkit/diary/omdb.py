@@ -6,6 +6,7 @@ Uses stdlib urllib only — no extra dependencies.
 Free tier: 1,000 requests/day. Get a key at https://www.omdbapi.com/apikey.aspx
 OMDb is suitable for non-commercial use without a commercial licence.
 """
+
 import json
 import logging
 import re
@@ -58,7 +59,9 @@ def _get(params: dict, api_key: str) -> dict:
                 body = {}
             error_text = body.get("Error", "")
             if "request limit" in error_text.lower():
-                raise OmdbRateLimitError(error_text or "Request limit reached") from exc
+                raise OmdbRateLimitError(
+                    error_text or "Request limit reached"
+                ) from exc
             raise OmdbAuthError(error_text or "Invalid API key") from exc
         raise
 
@@ -87,10 +90,13 @@ def verify_api_key(api_key: str) -> None:
     OMDb can't be reached at all — callers should treat that differently from
     either of the above.
     """
-    data = _get({"i": "tt0000001"}, api_key)  # "Carmencita" (1894) — always exists
-    if data.get("Response") != "True" and "invalid api key" in data.get(
-        "Error", ""
-    ).lower():
+    data = _get(
+        {"i": "tt0000001"}, api_key
+    )  # "Carmencita" (1894) — always exists
+    if (
+        data.get("Response") != "True"
+        and "invalid api key" in data.get("Error", "").lower()
+    ):
         raise OmdbAuthError(data.get("Error", "Invalid API key"))
 
 

@@ -1,5 +1,6 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
 """Tests for the audit app: SentEmailLog (9.156) and DeletionLog (9.159)."""
+
 import datetime
 from unittest.mock import patch
 
@@ -42,7 +43,10 @@ class SentEmailLogTests(TestCase):
     def test_failed_send_creates_row_with_error(self):
         with self.assertLogs("toolkit.email", "ERROR"):
             send_mail(
-                "Doomed", "body", "from@example.com", ["to@example.com"],
+                "Doomed",
+                "body",
+                "from@example.com",
+                ["to@example.com"],
                 fail_silently=True,
             )
         log = SentEmailLog.objects.get()
@@ -54,7 +58,10 @@ class SentEmailLogTests(TestCase):
         with summarise_email_batch("[mailout] Big news"):
             for n in range(3):
                 send_mail(
-                    "Big news", "body", "from@example.com", [f"m{n}@example.com"]
+                    "Big news",
+                    "body",
+                    "from@example.com",
+                    [f"m{n}@example.com"],
                 )
         log = SentEmailLog.objects.get()
         self.assertEqual(log.recipients, "(mailout batch: 3 recipients)")
@@ -67,9 +74,7 @@ class SentEmailLogTests(TestCase):
             send_mail("Batch", "body", "from@example.com", ["a@example.com"])
         send_mail("Report", "body", "from@example.com", ["b@example.com"])
         self.assertEqual(SentEmailLog.objects.count(), 2)
-        self.assertTrue(
-            SentEmailLog.objects.filter(subject="Report").exists()
-        )
+        self.assertTrue(SentEmailLog.objects.filter(subject="Report").exists())
 
     def test_record_email_never_raises(self):
         with patch.object(
@@ -95,31 +100,41 @@ class AuditViewTests(MembersTestsMixin, TestCase):
     def test_email_log_page_lists_and_filters(self):
         self.client.login(username="admin", password="T3stPassword!")
         SentEmailLog.objects.create(
-            recipients="good@example.com", subject="Fine", success=True,
+            recipients="good@example.com",
+            subject="Fine",
+            success=True,
             backend="x",
         )
         SentEmailLog.objects.create(
-            recipients="bad@example.com", subject="Broken", success=False,
-            error="boom", backend="x",
+            recipients="bad@example.com",
+            subject="Broken",
+            success=False,
+            error="boom",
+            backend="x",
         )
 
         response = self.client.get(reverse("audit-email-log"))
         self.assertContains(response, "good@example.com")
         self.assertContains(response, "bad@example.com")
 
-        response = self.client.get(reverse("audit-email-log"), {"status": "failed"})
+        response = self.client.get(
+            reverse("audit-email-log"), {"status": "failed"}
+        )
         self.assertNotContains(response, "good@example.com")
         self.assertContains(response, "bad@example.com")
         self.assertContains(response, "boom")
 
-        response = self.client.get(reverse("audit-email-log"), {"search": "Fine"})
+        response = self.client.get(
+            reverse("audit-email-log"), {"search": "Fine"}
+        )
         self.assertContains(response, "good@example.com")
         self.assertNotContains(response, "bad@example.com")
 
     def test_deletion_log_page(self):
         self.client.login(username="admin", password="T3stPassword!")
         DeletionLog.objects.create(
-            model="Showing", object_pk="42",
+            model="Showing",
+            object_pk="42",
             description="Booking for 'Test Film' on 01/01/2030 19:00",
             via=DeletionLog.VIA_EDIT_UI,
         )
@@ -143,7 +158,9 @@ class DeleteShowingAuditTests(DiaryTestsMixin, TestCase):
         showing = Showing.objects.get(id=7)
         event_name = showing.event.name
 
-        with self.assertLogs("toolkit.diary.edit_views.showings", "WARNING") as logs:
+        with self.assertLogs(
+            "toolkit.diary.edit_views.showings", "WARNING"
+        ) as logs:
             self.client.post(
                 reverse("delete-showing", kwargs={"showing_id": 7})
             )
@@ -189,13 +206,21 @@ class PurgeAuditLogsTests(TestCase):
 
     def test_purges_per_retention_settings(self):
         old_email = SentEmailLog.objects.create(
-            recipients="a@example.com", subject="old", success=True, backend="x"
+            recipients="a@example.com",
+            subject="old",
+            success=True,
+            backend="x",
         )
         new_email = SentEmailLog.objects.create(
-            recipients="b@example.com", subject="new", success=True, backend="x"
+            recipients="b@example.com",
+            subject="new",
+            success=True,
+            backend="x",
         )
         old_deletion = DeletionLog.objects.create(
-            model="Showing", object_pk="1", description="old",
+            model="Showing",
+            object_pk="1",
+            description="old",
             via=DeletionLog.VIA_EDIT_UI,
         )
         self._age(old_email, "sent_at", 100)  # > default 90
@@ -205,7 +230,9 @@ class PurgeAuditLogsTests(TestCase):
 
         self.assertFalse(SentEmailLog.objects.filter(pk=old_email.pk).exists())
         self.assertTrue(SentEmailLog.objects.filter(pk=new_email.pk).exists())
-        self.assertFalse(DeletionLog.objects.filter(pk=old_deletion.pk).exists())
+        self.assertFalse(
+            DeletionLog.objects.filter(pk=old_deletion.pk).exists()
+        )
 
     def test_zero_disables_purge(self):
         from toolkit.diary.models import get_site_config
@@ -215,7 +242,10 @@ class PurgeAuditLogsTests(TestCase):
         config.save()
 
         old_email = SentEmailLog.objects.create(
-            recipients="a@example.com", subject="old", success=True, backend="x"
+            recipients="a@example.com",
+            subject="old",
+            success=True,
+            backend="x",
         )
         self._age(old_email, "sent_at", 1000)
         call_command("purge_audit_logs")
@@ -226,11 +256,15 @@ class AnonymiseScrubTests(MembersTestsMixin, TestCase):
     def test_anonymise_scrubs_email_log_recipients(self):
         # vol_1's member email is volon@cube.test (see MembersTestsMixin)
         SentEmailLog.objects.create(
-            recipients="volon@cube.test", subject="Hello", success=True,
+            recipients="volon@cube.test",
+            subject="Hello",
+            success=True,
             backend="x",
         )
         SentEmailLog.objects.create(
-            recipients="other@example.com", subject="Hello", success=True,
+            recipients="other@example.com",
+            subject="Hello",
+            success=True,
             backend="x",
         )
         vol_pk = self.vol_1.pk

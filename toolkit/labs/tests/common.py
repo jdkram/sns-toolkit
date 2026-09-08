@@ -2,11 +2,25 @@
 import django.contrib.auth.models as auth_models
 
 from toolkit.members.models import Member, Volunteer
-from toolkit.labs.models import Bulletin, Collective, DonationItem, Job, RoomNote
+from toolkit.labs.models import (
+    Bulletin,
+    Collective,
+    DonationItem,
+    Job,
+    RoomNote,
+)
 
 
 class LabsTestsMixin:
     def setUp(self):
+        # Per-process cache persists across transaction-rolled-back tests, so
+        # a previous test's SiteConfiguration mutation (e.g. flipping a
+        # labs_*_enabled flag) could leak into this one. Clear it first.
+        # Same guard as DiaryTestsMixin (toolkit/diary/tests/common.py).
+        from django.core.cache import cache
+        from toolkit.diary.models import SiteConfiguration
+
+        cache.delete(SiteConfiguration._CACHE_KEY)
         self._setup_test_users()
         self._setup_test_data()
         return super().setUp()
@@ -23,6 +37,7 @@ class LabsTestsMixin:
         # rejection path. diary and members do mark their admin as superuser
         # (Panopticon tier); the helper defaults to True, labs overrides.
         from toolkit.test_common import create_toolkit_test_users
+
         users = create_toolkit_test_users(is_admin_superuser=False)
         self.user_admin = users.admin
         self.user_ro = users.read_only
@@ -35,14 +50,19 @@ class LabsTestsMixin:
         self.user_vol = auth_models.User.objects.create_user(
             "volunteer", "vol@test.example", "T3stPassword!3"
         )
-        self.vol = Volunteer.objects.create(member=self.mem_vol, user=self.user_vol)
+        self.vol = Volunteer.objects.create(
+            member=self.mem_vol, user=self.user_vol
+        )
 
     def _setup_test_data(self):
         self.col_open = Collective.objects.create(
             name="Film Collective", slug="film", active=True, invite_only=False
         )
         self.col_invite = Collective.objects.create(
-            name="Secret Collective", slug="secret", active=True, invite_only=True
+            name="Secret Collective",
+            slug="secret",
+            active=True,
+            invite_only=True,
         )
         self.col_inactive = Collective.objects.create(
             name="Retired Collective", slug="retired", active=False
@@ -57,18 +77,26 @@ class LabsTestsMixin:
         )
 
         self.don_wanted = DonationItem.objects.create(
-            name="Old Sofa", category="Furniture", status=DonationItem.STATUS_WANTED
+            name="Old Sofa",
+            category="Furniture",
+            status=DonationItem.STATUS_WANTED,
         )
         self.don_not_needed = DonationItem.objects.create(
-            name="VHS Player", category="Electronics", status=DonationItem.STATUS_NOT_NEEDED
+            name="VHS Player",
+            category="Electronics",
+            status=DonationItem.STATUS_NOT_NEEDED,
         )
 
         self.note_cinema = RoomNote.objects.create(
-            room_id="room-cinema", body="Mind the step", updated_by=self.user_admin
+            room_id="room-cinema",
+            body="Mind the step",
+            updated_by=self.user_admin,
         )
 
         self.job_open = Job.objects.create(
-            title="Fix projector", urgency=Job.URGENCY_HIGH, posted_by=self.user_admin
+            title="Fix projector",
+            urgency=Job.URGENCY_HIGH,
+            posted_by=self.user_admin,
         )
         self.job_claimed = Job.objects.create(
             title="Paint walls",
@@ -78,8 +106,13 @@ class LabsTestsMixin:
         )
 
         self.bulletin = Bulletin.objects.create(
-            title="Fire drill Friday", body="Evacuation at 3pm.", author=self.user_admin
+            title="Fire drill Friday",
+            body="Evacuation at 3pm.",
+            author=self.user_admin,
         )
         self.bulletin_pinned = Bulletin.objects.create(
-            title="Important notice", body="Read this.", author=self.user_admin, pinned=True
+            title="Important notice",
+            body="Read this.",
+            author=self.user_admin,
+            pinned=True,
         )

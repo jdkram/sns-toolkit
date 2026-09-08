@@ -1,66 +1,39 @@
 import json
 import datetime
 import logging
-import csv
-import os
 
 from collections import OrderedDict
 
 from django.http import (
     HttpResponse,
-    Http404,
-    HttpResponseRedirect,
-    JsonResponse,
 )
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.conf import settings
-from django import forms as django_forms
-from django.forms.models import modelformset_factory
-from django.contrib import messages
 from django.views.generic import View
 import django.template
 import django.db
-from django.db.models import Count, Q, Min
+from django.db.models import Q
 import django.utils.timezone as timezone
 from django.contrib.auth.decorators import (
     permission_required,
-    user_passes_test,
 )
 from toolkit.toolkit_auth.decorators import (
     feature_required,
-    write_required,
-    read_required,
 )
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from django.views.decorators.http import require_POST, require_http_methods
-from django.utils.html import escape, mark_safe
-from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
+from django.utils.html import escape
 
 from toolkit.diary.models import (
     Showing,
-    Event,
-    EventLink,
-    EventTemplateLink,
-    DiaryIdea,
-    MediaItem,
-    EventTemplate,
-    EventTag,
     Role,
     RotaEntry,
-    PrintedProgramme,
-    Room,
-    RoomBooking,
-    EventTemplateRoom,
     VolunteerEventMark,
     get_site_config,
 )
 import toolkit.diary.forms as diary_forms
-import toolkit.diary.validators as diary_validators
-import toolkit.diary.edit_prefs as edit_prefs
-from toolkit.diary.poster import generate_event_placeholder
-from toolkit.members.models import Qualification, VolunteerQualification
-from toolkit.util.image import adjust_colour
+from toolkit.members.models import VolunteerQualification
 
 # Shared utility method:
 from toolkit.diary.daterange import get_date_range
@@ -138,8 +111,6 @@ class EditRotaView(PermissionRequiredMixin, View):
         today_local_date = datetime.datetime(
             now_local.year, now_local.month, now_local.day, tzinfo=current_tz
         )
-        yesterday_local_date = today_local_date - datetime.timedelta(days=1)
-
         query_days_ahead = request.GET.get("daysahead", None)
         start_date, days_ahead = get_date_range(
             year, month, day, query_days_ahead, default_days_ahead=92
@@ -240,7 +211,15 @@ class EditRotaView(PermissionRequiredMixin, View):
 
         return render(request, "edit_rota.html", context)
 
-    def post(self, request, year=None, day=None, month=None):
+    def post(
+        self,
+        request,
+        year=None,  # noqa: ARG002
+        day=None,  # noqa: ARG002
+        month=None,  # noqa: ARG002
+    ):
+        # URLconf passes year/day/month; POST always operates on the
+        # showing/rota-entry ids in the body instead.
         # Get rota entry
         try:
             entry_id = int(request.POST["id"])

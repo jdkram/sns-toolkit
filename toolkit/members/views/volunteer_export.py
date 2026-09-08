@@ -1,9 +1,23 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-input"
 """Auto-extracted from toolkit/members/volunteer_views.py (chunk 5 of the
-maintainability pass — see MAINTAINABILITY_PASS.md). Verbatim move; no
+maintainability pass, June 2026 — see git history). Verbatim move; no
 behaviour change. Group: export.
 """
-from ._common import *
+
+from datetime import datetime
+from datetime import timedelta
+from django.shortcuts import render
+from django.views.decorators.http import require_safe
+from toolkit.diary.models import RotaEntry
+from toolkit.members.models import (
+    ExportAuditLog,
+    Volunteer,
+)
+from django.conf import settings
+from django.utils import timezone
+from toolkit.toolkit_auth.decorators import panopticon_required
+from toolkit.util.csv_export import csv_response
+from ._common import logger
 from toolkit.diary.models import Event
 
 _UPCOMING_EVENTS_HORIZON_DAYS = 90
@@ -17,7 +31,10 @@ _EXPORT_FIELD_GROUPS = [
             ("Name", lambda v: v.member.name),
             ("Email", lambda v: v.member.email),
             ("Status", lambda v: v.status),
-            ("Collectives", lambda v: ", ".join(c.name for c in v.collectives.all())),
+            (
+                "Collectives",
+                lambda v: ", ".join(c.name for c in v.collectives.all()),
+            ),
         ],
     ),
     (
@@ -61,7 +78,10 @@ _EXPORT_FIELD_GROUPS = [
                     else v.member.created_at.strftime("%d %b %Y")
                 ),
             ),
-            ("Last update", lambda v: v.member.updated_at.strftime("%d %b %Y")),
+            (
+                "Last update",
+                lambda v: v.member.updated_at.strftime("%d %b %Y"),
+            ),
         ],
     ),
 ]
@@ -101,7 +121,9 @@ def _filtered_volunteers(filter_type, event_ids):
     shift_filter = RotaEntry.objects.filter(showing__start__gte=timezone.now())
     if filter_type == ExportAuditLog.FILTER_EVENTS:
         shift_filter = shift_filter.filter(showing__event_id__in=event_ids)
-    volunteer_ids = shift_filter.values_list("volunteer_id", flat=True).distinct()
+    volunteer_ids = shift_filter.values_list(
+        "volunteer_id", flat=True
+    ).distinct()
     return volunteers.filter(pk__in=volunteer_ids)
 
 
@@ -110,17 +132,22 @@ def export_volunteers_as_csv(request):
     """Full export page: filter + field-group selector + PII warning + audit log."""
     if request.method == "POST":
         selected_ids = [
-            gid for gid in _EXPORT_GROUP_IDS
+            gid
+            for gid in _EXPORT_GROUP_IDS
             if request.POST.get(f"group_{gid}")
         ]
         if not selected_ids:
             selected_ids = ["basic"]
 
-        filter_type = request.POST.get("filter_type", ExportAuditLog.FILTER_ALL)
+        filter_type = request.POST.get(
+            "filter_type", ExportAuditLog.FILTER_ALL
+        )
         if filter_type not in dict(ExportAuditLog.FILTER_TYPE_CHOICES):
             filter_type = ExportAuditLog.FILTER_ALL
         event_ids = [
-            int(pk) for pk in request.POST.getlist("filter_event_ids") if pk.isdigit()
+            int(pk)
+            for pk in request.POST.getlist("filter_event_ids")
+            if pk.isdigit()
         ]
         if filter_type != ExportAuditLog.FILTER_EVENTS:
             event_ids = []
@@ -152,35 +179,42 @@ def export_volunteers_as_csv(request):
 
         now = datetime.now().strftime("%d %b %Y %I-%M %p")
         file_name = f"{settings.VENUE['name']} Volunteers {now}.csv"
-        response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = f'attachment; filename="{file_name}"'
-        writer = csv.writer(response)
-        writer.writerow([col[0] for col in columns])
-        for volunteer in rows:
-            writer.writerow([col[1](volunteer) for col in columns])
-        return response
+        return csv_response(
+            file_name,
+            header=[col[0] for col in columns],
+            rows=(
+                [col[1](volunteer) for col in columns] for volunteer in rows
+            ),
+        )
 
     # GET: render the field selection page.
-    return render(request, "volunteer_export.html", {
-        "field_groups": _EXPORT_FIELD_GROUPS,
-        "sensitive_ids": _SENSITIVE_GROUP_IDS,
-        "upcoming_events": _upcoming_confirmed_events(),
-    })
+    return render(
+        request,
+        "volunteer_export.html",
+        {
+            "field_groups": _EXPORT_FIELD_GROUPS,
+            "sensitive_ids": _SENSITIVE_GROUP_IDS,
+            "upcoming_events": _upcoming_confirmed_events(),
+        },
+    )
 
 
 @panopticon_required
 @require_safe
 def export_audit_log(request):
     """Audit log of all volunteer CSV exports."""
-    logs = list(ExportAuditLog.objects.select_related("exported_by").all()[:200])
+    logs = list(
+        ExportAuditLog.objects.select_related("exported_by").all()[:200]
+    )
 
     event_ids = {eid for log in logs for eid in log.filter_event_ids}
-    event_names = dict(Event.objects.filter(pk__in=event_ids).values_list("pk", "name"))
+    event_names = dict(
+        Event.objects.filter(pk__in=event_ids).values_list("pk", "name")
+    )
     for log in logs:
         log.filter_event_names = [
-            event_names.get(eid, f"(deleted event {eid})") for eid in log.filter_event_ids
+            event_names.get(eid, f"(deleted event {eid})")
+            for eid in log.filter_event_ids
         ]
 
     return render(request, "volunteer_export_audit.html", {"logs": logs})
-
-

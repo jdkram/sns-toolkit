@@ -23,5 +23,7 @@ def days_to_human(days):
     if months:
         parts.append(f"{months} month{'s' if months != 1 else ''}")
     if remaining_days:
-        parts.append(f"{remaining_days} day{'s' if remaining_days != 1 else ''}")
+        parts.append(
+            f"{remaining_days} day{'s' if remaining_days != 1 else ''}"
+        )
     return ", ".join(parts) or "0 days"

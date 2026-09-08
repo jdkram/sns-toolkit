@@ -1,43 +1,17 @@
 import json
-import datetime
 
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from toolkit.toolkit_auth.decorators import (
-    feature_required,
-    write_required,
-    write_required_strict,
-)
-from django.db import models
-from django.db.models import Case, When, Value, IntegerField
 from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404, redirect
-from django.views.decorators.http import require_http_methods, require_POST
+from django.shortcuts import render
+from django.views.decorators.http import require_http_methods
 
-from django.http import HttpResponse, HttpResponseForbidden
-from django.utils import timezone
-from django.db.models import Exists, OuterRef
+from toolkit.diary.daterange import safe_json
 
 from ..models import (
     AreaPhoto,
-    Bulletin,
-    BulletinRead,
-    Collective,
-    ConsumableItem,
-    ExchangeItem,
-    FoundItem,
-    NeedFlag,
-    ProcurementPledge,
-    Supplier,
-    SupplierRecord,
     RoomNote,
-    DonationItem,
-    Job,
-    LoftItem,
-    LoftItemPhoto,
 )
-from toolkit.diary.models import SiteConfiguration, get_site_config
-from .. import forms as lab_forms
+from ._common import _feature_enabled_or_404
 from .loft import (
     _LOFT_ZONE_SECTIONS,
     _LOFT_ZONES,
@@ -98,6 +72,7 @@ _ROOM_SECTIONS = [
 
 
 @login_required
+@_feature_enabled_or_404("building_map_enabled")
 def floorplan(request):
     notes = {
         n.room_id: {
@@ -144,16 +119,17 @@ def floorplan(request):
         request,
         "labs/floorplan.html",
         {
-            "notes_json": json.dumps(notes),
-            "area_photos_json": json.dumps(area_photos),
+            "notes_json": safe_json(notes),
+            "area_photos_json": safe_json(area_photos),
             "room_sections": room_sections,
-            "loft_items_json": json.dumps(_serialize_loft_items()),
+            "loft_items_json": safe_json(_serialize_loft_items()),
             "loft_zone_sections": loft_zone_sections,
         },
     )
 
 
 @login_required
+@_feature_enabled_or_404("building_map_enabled")
 @require_http_methods(["GET", "POST"])
 def room_note(request, room_id):
     if request.method == "POST":

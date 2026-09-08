@@ -4,7 +4,6 @@ from django.http import HttpResponseRedirect, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, render
 from django.db.models import Count, Q
 from django.urls import reverse
-from django.contrib.auth.decorators import permission_required  # kept for add_member IP path
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
@@ -15,7 +14,10 @@ from toolkit.members.forms import NewMemberForm, MemberForm
 from toolkit.members.models import Member, Volunteer
 from toolkit.diary.models import get_site_config
 from toolkit.util import compare_constant_time
-from toolkit.toolkit_auth.decorators import ip_or_permission_required, panopticon_required
+from toolkit.toolkit_auth.decorators import (
+    ip_or_permission_required,
+    panopticon_required,
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -130,9 +132,7 @@ def delete_member(request, member_id):
     ):
         # Manually wrap this function in the standard 'permission_required'
         # decorator and call it to get the redirect to the login page:
-        return panopticon_required(delete_member)(
-            request, member_id
-        )
+        return panopticon_required(delete_member)(request, member_id)
         # See comments in edit_member
         # TODO if a punter has already deleted themselves and clicks
         # on their mailout link again, they will get the login page, which
@@ -261,9 +261,7 @@ def edit_member(request, member_id):
     ):
         # Manually wrap this function in the standard 'permission_required'
         # decorator and call it to get the redirect to the login page:
-        return panopticon_required(edit_member)(
-            request, member_id
-        )
+        return panopticon_required(edit_member)(request, member_id)
         # (To elaborate:
         #    permission_required('toolkit.write')
         # is the decorator used elsewhere. Writing:
@@ -322,9 +320,7 @@ def unsubscribe_member(request, member_id):
     ):
         # Manually wrap this function in the standard 'permission_required'
         # decorator and call it to get the redirect to the login page:
-        return panopticon_required(unsubscribe_member)(
-            request, member_id
-        )
+        return panopticon_required(unsubscribe_member)(request, member_id)
 
     member = get_object_or_404(Member, id=member_id)
 
@@ -367,9 +363,7 @@ def unsubscribe_member_right_now(request, member_id):
     if not _check_access_permitted_for_member_key(
         "toolkit.write", request, member_id
     ):
-        return panopticon_required(unsubscribe_member)(
-            request, member_id
-        )
+        return panopticon_required(unsubscribe_member)(request, member_id)
 
     member = get_object_or_404(Member, id=member_id)
 
@@ -396,9 +390,7 @@ def opt_in(request, member_id):
     if not _check_access_permitted_for_member_key(
         "toolkit.write", request, member_id
     ):
-        return panopticon_required(unsubscribe_member)(
-            request, member_id
-        )
+        return panopticon_required(unsubscribe_member)(request, member_id)
 
     member = get_object_or_404(Member, id=member_id)
 

@@ -1,0 +1,360 @@
+/* human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Sonnet 5"]; status: "#ai-input" */
+/* Extracted verbatim from labs/floorplan.html's inline <style> (September 2026 quality pass). */
+
+/* ── Layout ──────────────────────────────────────────────── */
+#floorplan-container {
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #f8f9fa;
+}
+#floorplan-container svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+#floorplan-loading {
+  padding: 2rem;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+/* ── Tab bar ─────────────────────────────────────────────── */
+.map-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #dee2e6;
+  margin-bottom: 1rem;
+}
+.map-tab-btn {
+  padding: 0.45rem 1.1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  cursor: pointer;
+  color: #6c757d;
+  margin-bottom: -2px;
+  transition: color 0.12s, border-color 0.12s;
+}
+.map-tab-btn:hover { color: #212529; }
+.map-tab-btn.active {
+  color: #0d6efd;
+  border-bottom-color: #0d6efd;
+}
+
+/* ── SVG room/zone interaction ───────────────────────────── */
+#floorplan-container svg [id^="room-"],
+#floorplan-container svg [id^="loft-"] {
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+#floorplan-container svg [id^="room-"]:hover,
+#floorplan-container svg [id^="loft-"]:hover {
+  opacity: 0.75;
+}
+#floorplan-container svg [id^="room-"].map-selected,
+#floorplan-container svg [id^="loft-"].map-selected {
+  stroke: #0d6efd;
+  stroke-width: 8px;
+}
+
+/* ── Section headings ────────────────────────────────────── */
+.rooms-section-heading {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6c757d;
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+.rooms-section-heading .section-note-count {
+  font-size: 0.7rem;
+  vertical-align: middle;
+  color: #fff;
+}
+
+/* ── Room cards (ground floor) ───────────────────────────── */
+.room-card {
+  transition: border-color 0.15s, box-shadow 0.15s;
+  height: 100%;
+}
+.room-card.room-selected {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 2px rgba(13,110,253,0.2);
+}
+.room-card.editing { border-color: #0d6efd; }
+.room-card-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+  color: #212529;
+}
+.room-note-text {
+  font-size: 0.82rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+  margin-bottom: 0.4rem;
+  flex: 1;
+}
+.room-note-text.empty { color: #adb5bd; font-style: italic; }
+.room-note-meta { font-size: 0.72rem; color: #adb5bd; margin-top: auto; }
+.room-card-view {
+  display: flex;
+  flex-direction: column;
+  padding: 0.65rem 0.75rem;
+  min-height: 90px;
+}
+.room-card-view .room-edit-btn {
+  align-self: flex-end;
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.45rem;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.room-card:hover .room-edit-btn,
+.room-card.room-selected .room-edit-btn { opacity: 1; }
+.room-card-editor { display: none; padding: 0.65rem 0.75rem; }
+.room-card.editing .room-card-view { display: none; }
+.room-card.editing .room-card-editor { display: block; }
+.room-note-input { font-size: 0.85rem; resize: vertical; }
+.room-save-status { font-size: 0.8rem; }
+.room-save-status.success { color: #198754; }
+.room-save-status.error   { color: #dc3545; }
+
+/* ── Summary bar ─────────────────────────────────────────── */
+#rooms-summary { font-size: 0.82rem; color: #6c757d; margin-bottom: 1rem; }
+
+/* ── Zone cards (loft) ───────────────────────────────────── */
+.zone-card {
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.zone-card.zone-selected {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 2px rgba(13,110,253,0.2);
+}
+.zone-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.75rem 0.4rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+.zone-card-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #212529;
+  margin: 0;
+}
+.zone-section-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  background: #e9ecef;
+  color: #495057;
+}
+.zone-section-badge.raised { background: #fde8c8; color: #5a3820; }
+.zone-section-badge.low    { background: #cce5ff; color: #004085; }
+
+/* Note sub-section */
+.zone-note-section { padding: 0.5rem 0.75rem; border-bottom: 1px solid #f0f0f0; }
+.zone-note-view { display: flex; align-items: flex-start; gap: 0.5rem; }
+.zone-note-body {
+  font-size: 0.82rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  flex: 1;
+  color: #495057;
+}
+.zone-note-body.empty { color: #adb5bd; font-style: italic; }
+.zone-note-edit-btn {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.4rem;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.zone-card:hover .zone-note-edit-btn,
+.zone-card.zone-selected .zone-note-edit-btn { opacity: 1; }
+.zone-note-editor { display: none; margin-top: 0.4rem; }
+.zone-note-input { font-size: 0.82rem; resize: vertical; }
+.zone-note-meta { font-size: 0.68rem; color: #adb5bd; margin-top: 0.2rem; }
+
+/* Items sub-section */
+.zone-items-section { padding: 0.5rem 0.75rem 0.65rem; }
+.zone-items-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6c757d;
+  margin-bottom: 0.4rem;
+}
+.loft-item-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #f8f9fa;
+}
+.loft-item-row:last-child { border-bottom: none; }
+.loft-item-body { flex: 1; min-width: 0; }
+.loft-item-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #212529;
+}
+.loft-item-desc {
+  font-size: 0.78rem;
+  color: #6c757d;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-top: 0.1rem;
+}
+.loft-item-meta { font-size: 0.68rem; color: #adb5bd; margin-top: 0.2rem; }
+.loft-item-photos { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+.loft-photo-thumb {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #e9ecef;
+}
+.loft-photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.loft-photo-delete-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  border: none;
+  border-radius: 2px;
+  font-size: 0.65rem;
+  padding: 0 3px;
+  line-height: 1.5;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.loft-photo-thumb:hover .loft-photo-delete-btn { opacity: 1; }
+.loft-photo-upload-btn {
+  width: 64px;
+  height: 64px;
+  border: 2px dashed #ced4da;
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+  color: #adb5bd;
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.1s, color 0.1s;
+}
+.loft-photo-upload-btn:hover { border-color: #0d6efd; color: #0d6efd; }
+.loft-item-delete-btn {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.4rem;
+  flex-shrink: 0;
+  color: #dc3545;
+  border-color: #dc3545;
+}
+
+/* Add item form */
+.item-add-form {
+  display: none;
+  background: #f8f9fa;
+  border-radius: 4px;
+  padding: 0.6rem;
+  margin-top: 0.5rem;
+}
+.item-add-form .item-name-input { font-size: 0.85rem; }
+.item-add-form .item-desc-input { font-size: 0.82rem; resize: vertical; }
+.item-new-btn {
+  font-size: 0.78rem;
+  margin-top: 0.4rem;
+  padding: 0.2rem 0.6rem;
+}
+.save-status { font-size: 0.75rem; }
+.save-status.success { color: #198754; }
+.save-status.error   { color: #dc3545; }
+
+/* ── Area photos ─────────────────────────────────────────── */
+.area-photo-wrap {
+  position: relative;
+  display: block;
+  margin-top: 0.5rem;
+  width: 100%;
+  cursor: pointer;
+}
+.area-photo-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 3px;
+}
+.area-photo-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(0,0,0,0.45);
+  opacity: 0;
+  transition: opacity 0.1s;
+  border-radius: 3px;
+  pointer-events: none;
+}
+.area-photo-wrap:hover .area-photo-overlay { opacity: 1; }
+.area-photo-action-btn {
+  background: rgba(255,255,255,0.92);
+  border: none;
+  border-radius: 2px;
+  font-size: 0.68rem;
+  padding: 2px 6px;
+  cursor: pointer;
+  color: #212529;
+  font-weight: 500;
+  pointer-events: auto;
+}
+.area-photo-action-btn:hover { background: #fff; }
+.area-photo-upload-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px dashed #ced4da;
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+  color: #adb5bd;
+  font-size: 0.75rem;
+  transition: border-color 0.1s, color 0.1s;
+}
+.area-photo-upload-btn:hover { border-color: #0d6efd; color: #0d6efd; }
+
+/* ── No-JS fallback ──────────────────────────────────────── */
+@media (scripting: none) {
+  .room-card-view .room-edit-btn { opacity: 1; }
+}

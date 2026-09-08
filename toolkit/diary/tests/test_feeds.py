@@ -17,6 +17,7 @@ class FeedTests(DiaryTestsMixin, TestCase):
         url = reverse("view-diary-rss")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
+        self.assertIn("rss", response["Content-Type"])
 
     def test_feed_loads_and_parses(self):
         url = reverse("view-diary-rss")
@@ -58,9 +59,12 @@ class FeedTests(DiaryTestsMixin, TestCase):
         showing = self.e4s3
 
         self.assertEqual(
-            item.find("title").text, "Event four titl\u0113 \u2014 9 June 2013, 17:00"
+            item.find("title").text,
+            "Event four titl\u0113 \u2014 9 June 2013, 17:00",
         )
-        self.assertEqual(item.find("description").text, "\u010copy four summary")
+        self.assertEqual(
+            item.find("description").text, "\u010copy four summary"
+        )
         item_link_path = urllib.parse.urlparse(item.find("link").text).path
         self.assertEqual(
             item_link_path,

@@ -1,48 +1,20 @@
-import json
-import datetime
-
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from toolkit.toolkit_auth.decorators import (
-    feature_required,
-    write_required,
-    write_required_strict,
-)
-from django.db import models
-from django.db.models import Case, When, Value, IntegerField
 from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404, redirect
-from django.views.decorators.http import require_http_methods, require_POST
+from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_POST
 
-from django.http import HttpResponse, HttpResponseForbidden
-from django.utils import timezone
-from django.db.models import Exists, OuterRef
 
 from ..models import (
     AreaPhoto,
-    Bulletin,
-    BulletinRead,
-    Collective,
-    ConsumableItem,
-    ExchangeItem,
-    FoundItem,
-    NeedFlag,
-    ProcurementPledge,
-    Supplier,
-    SupplierRecord,
-    RoomNote,
-    DonationItem,
-    Job,
-    LoftItem,
-    LoftItemPhoto,
 )
-from toolkit.diary.models import SiteConfiguration, get_site_config
 from .. import forms as lab_forms
+from ._common import _feature_enabled_or_404
 
 # ── Area photos (one per room / loft zone) ────────────────────────────────────
 
 
 @login_required
+@_feature_enabled_or_404("building_map_enabled")
 @require_POST
 def area_photo_upload(request, area_id):
     if "image" not in request.FILES:
@@ -71,8 +43,9 @@ def area_photo_upload(request, area_id):
 
 
 @login_required
+@_feature_enabled_or_404("building_map_enabled")
 @require_POST
-def area_photo_delete(request, area_id):
+def area_photo_delete(request, area_id):  # noqa: ARG001 -- `request` unused
     photo = get_object_or_404(AreaPhoto, area_id=area_id)
     photo.image.delete(save=False)
     photo.delete()

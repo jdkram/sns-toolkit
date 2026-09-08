@@ -204,7 +204,9 @@ class PrintedProgrammeQuerySet(QuerySet):
         start_date = datetime.date(start.year, start.month, 1)
         end_date = datetime.date(end.year, end.month, 1)
 
-        return self.filter(start_month__lte=end_date, end_month__gte=start_date)
+        return self.filter(
+            start_month__lte=end_date, end_month__gte=start_date
+        )
 
 
 class PrintedProgramme(models.Model):

@@ -8,7 +8,9 @@ register = template.Library()
 
 
 @register.tag(name="filtermultipleblanklines")
-def do_filter_multiple_blank_lines(parser, token):
+def do_filter_multiple_blank_lines(
+    parser, token  # noqa: ARG001 -- template tag registration API
+):
     """
     Filter out multiple blank lines from output
     """
@@ -41,7 +43,9 @@ class MultiBlankLineFilterNode(template.Node):
 
 
 @register.tag(name="filterblanklines")
-def do_filter_blank_lines(parser, token):
+def do_filter_blank_lines(
+    parser, token  # noqa: ARG001 -- template tag registration API
+):
     """
     Filter out any blank lines from output
     """

@@ -6,18 +6,24 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('diary', '0042_fix_age_rating_choices_labels'),
+        ("diary", "0042_fix_age_rating_choices_labels"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='siteconfiguration',
-            name='deletion_log_retain_days',
-            field=models.PositiveSmallIntegerField(default=365, help_text="Days to keep rows on the recent-deletions page. Purged daily by the 'purge_audit_logs' command. Set to 0 to keep everything."),
+            model_name="siteconfiguration",
+            name="deletion_log_retain_days",
+            field=models.PositiveSmallIntegerField(
+                default=365,
+                help_text="Days to keep rows on the recent-deletions page. Purged daily by the 'purge_audit_logs' command. Set to 0 to keep everything.",
+            ),
         ),
         migrations.AddField(
-            model_name='siteconfiguration',
-            name='email_log_retain_days',
-            field=models.PositiveSmallIntegerField(default=90, help_text="Days to keep rows on the email log page (recipient addresses are personal data, so don't keep them forever). Purged daily by the 'purge_audit_logs' command. Set to 0 to keep everything."),
+            model_name="siteconfiguration",
+            name="email_log_retain_days",
+            field=models.PositiveSmallIntegerField(
+                default=90,
+                help_text="Days to keep rows on the email log page (recipient addresses are personal data, so don't keep them forever). Purged daily by the 'purge_audit_logs' command. Set to 0 to keep everything.",
+            ),
         ),
     ]

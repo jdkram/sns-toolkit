@@ -69,9 +69,7 @@ class PrintedProgrammeNavLinkTests(DiaryTestsMixin, TestCase):
         self._enable_gallery()
         response = self.client.get(reverse("default-view"))
         self.assertContains(response, "Printed programme archive")
-        self.assertContains(
-            response, reverse("printed-programme-archive")
-        )
+        self.assertContains(response, reverse("printed-programme-archive"))
 
 
 class PrintedProgrammeThumbnailGenerationTests(TestCase):

@@ -1,9 +1,26 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-input"
 """Auto-extracted from toolkit/members/volunteer_views.py (chunk 5 of the
-maintainability pass — see MAINTAINABILITY_PASS.md). Verbatim move; no
+maintainability pass, June 2026 — see git history). Verbatim move; no
 behaviour change. Group: self_service.
 """
-from ._common import *
+
+from django.http import HttpResponseRedirect
+from django.shortcuts import (
+    get_object_or_404,
+    render,
+)
+from django.views.decorators.http import (
+    require_POST,
+    require_safe,
+)
+from toolkit.members.models import Volunteer
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.signing import BadSignature, Signer
+from django.urls import reverse
+from django.utils import timezone
+from ._common import _notify_vols_admin_status_change, logger
+
 
 @require_POST
 @login_required
@@ -23,7 +40,9 @@ def reactivate_self(request):
     if volunteer.status == Volunteer.STATUS_DORMANT:
         volunteer.status = Volunteer.STATUS_ACTIVE
         volunteer.save(update_fields=["status"])
-        logger.info("Volunteer pk=%s reactivated themselves from dormant", volunteer.pk)
+        logger.info(
+            "Volunteer pk=%s reactivated themselves from dormant", volunteer.pk
+        )
         _notify_vols_admin_status_change(request, volunteer, now_active=True)
         messages.success(
             request,
@@ -50,9 +69,13 @@ def renew_consent_self(request):
 
     volunteer.member.gdpr_opt_in = timezone.now()
     volunteer.member.save(update_fields=["gdpr_opt_in"])
-    volunteer.consent_policy_version = InductionsSettings.load().privacy_policy_version
+    volunteer.consent_policy_version = (
+        InductionsSettings.load().privacy_policy_version
+    )
     volunteer.consent_reminder_sent_at = None
-    volunteer.save(update_fields=["consent_policy_version", "consent_reminder_sent_at"])
+    volunteer.save(
+        update_fields=["consent_policy_version", "consent_reminder_sent_at"]
+    )
     logger.info("Volunteer pk=%s renewed consent", volunteer.pk)
     messages.success(request, "Thanks — your consent has been reconfirmed.")
     return HttpResponseRedirect(reverse("toolkit-index"))
@@ -70,18 +93,22 @@ def volunteer_digest_unsubscribe(request):
         pk_str, token = raw.split(":", 1)
         pk = int(pk_str)
     except (ValueError, AttributeError):
-        return render(request, "volunteer_digest_unsubscribe.html", {"error": True})
+        return render(
+            request, "volunteer_digest_unsubscribe.html", {"error": True}
+        )
 
     signer = Signer(salt="volunteer-digest-unsubscribe")
     try:
         signer.unsign(f"{pk}:{token}")
     except BadSignature:
-        return render(request, "volunteer_digest_unsubscribe.html", {"error": True})
+        return render(
+            request, "volunteer_digest_unsubscribe.html", {"error": True}
+        )
 
     volunteer = get_object_or_404(Volunteer, pk=pk)
     volunteer.weekly_digest = False
     volunteer.save(update_fields=["weekly_digest"])
 
-    return render(request, "volunteer_digest_unsubscribe.html", {"success": True})
-
-
+    return render(
+        request, "volunteer_digest_unsubscribe.html", {"success": True}
+    )
