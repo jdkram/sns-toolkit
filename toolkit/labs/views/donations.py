@@ -10,8 +10,10 @@ from ..models import (
 )
 from toolkit.diary.models import get_site_config
 from .. import forms as lab_forms
+from ._common import _feature_enabled_or_404
 
 
+@_feature_enabled_or_404("donations_enabled")
 def donation_list(request):
     items = DonationItem.objects.filter(active=True)
     categories = {}
@@ -33,6 +35,7 @@ def donation_list(request):
 
 
 @feature_required("donations_manage")
+@_feature_enabled_or_404("donations_enabled")
 def donation_manage(request):
     items = DonationItem.objects.select_related("last_edited_by").order_by(
         "category", "display_order", "name"

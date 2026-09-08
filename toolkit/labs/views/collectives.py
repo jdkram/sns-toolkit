@@ -10,9 +10,10 @@ from ..models import (
 from toolkit.diary.models import get_site_config
 from .. import forms as lab_forms
 
-from ._common import _user_volunteer
+from ._common import _feature_enabled_or_404, _user_volunteer
 
 
+@_feature_enabled_or_404("collectives_enabled")
 def collectives_public(request):
     from toolkit.diary.models import get_site_config
 
@@ -33,6 +34,7 @@ def collectives_public(request):
 
 
 @login_required
+@_feature_enabled_or_404("collectives_enabled")
 def collectives(request):
     items = (
         Collective.objects.filter(active=True)
@@ -68,6 +70,7 @@ def collectives(request):
 
 
 @login_required
+@_feature_enabled_or_404("collectives_enabled")
 @require_POST
 def collective_join(request, slug):
     collective = get_object_or_404(Collective, slug=slug, active=True)
@@ -88,6 +91,7 @@ def collective_join(request, slug):
 
 
 @login_required
+@_feature_enabled_or_404("collectives_enabled")
 @require_POST
 def collective_leave(request, slug):
     collective = get_object_or_404(Collective, slug=slug, active=True)
@@ -102,6 +106,7 @@ def collective_leave(request, slug):
 
 
 @login_required
+@_feature_enabled_or_404("collectives_enabled")
 def collectives_print(request):
     items = Collective.objects.filter(active=True)
     return render(
@@ -110,6 +115,7 @@ def collectives_print(request):
 
 
 @login_required
+@_feature_enabled_or_404("collectives_enabled")
 @require_http_methods(["GET", "POST"])
 def collective_edit(request, slug):
     collective = get_object_or_404(Collective, slug=slug, active=True)

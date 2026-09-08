@@ -10,11 +10,13 @@ from ..models import (
     FoundItem,
 )
 from .. import forms as lab_forms
+from ._common import _feature_enabled_or_404
 
 # ── Lost & found ──────────────────────────────────────────────────────────────
 
 
 @login_required
+@_feature_enabled_or_404("lost_and_found_enabled")
 def found_item_log(request):
     initial = {}
     name = request.user.get_full_name() or request.user.username
@@ -37,6 +39,7 @@ def found_item_log(request):
 
 
 @login_required
+@_feature_enabled_or_404("lost_and_found_enabled")
 def found_item_list(request):
     tab = request.GET.get("tab", "unclaimed")
     if tab not in ("unclaimed", "claimed", "disposed"):
@@ -58,6 +61,7 @@ def found_item_list(request):
 
 
 @login_required
+@_feature_enabled_or_404("lost_and_found_enabled")
 def found_item_detail(request, item_id):
     item = get_object_or_404(FoundItem, pk=item_id)
     claim_form = lab_forms.FoundItemClaimForm()
@@ -75,6 +79,7 @@ def found_item_detail(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("lost_and_found_enabled")
 @require_POST
 def found_item_claim(request, item_id):
     item = get_object_or_404(
@@ -93,6 +98,7 @@ def found_item_claim(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("lost_and_found_enabled")
 @require_POST
 def found_item_dispose(request, item_id):
     item = get_object_or_404(
@@ -112,6 +118,7 @@ def found_item_dispose(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("lost_and_found_enabled")
 def found_item_label(request, item_id):
     item = get_object_or_404(FoundItem, pk=item_id)
     return render(request, "labs/found_item_label.html", {"item": item})

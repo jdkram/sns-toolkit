@@ -18,8 +18,8 @@ status: "#ai-input"
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
 | Chunks done | 0, 1, 2, 3, 4, 5, 6, 7 (keep all seven `labs` tools) |
-| Next chunk | **10's `labs` portion done** (all four coverage targets at 100%); the originally-scoped items (destructive paths, `toolkit_auth/`, `volunteer_edit.py`, status-code-only tests) still to go, then 8, 9, 11, 12 |
-| Tests | 1,245 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found, +25 exchange tests) |
+| Next chunk | **10's `labs` portion done** (all four coverage targets at 100%, plus a follow-up: all seven `labs` tools now have their own `SiteConfiguration` on/off flag); the originally-scoped items (destructive paths, `toolkit_auth/`, `volunteer_edit.py`, status-code-only tests) still to go, then 8, 9, 11, 12 |
+| Tests | 1,266 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found, +25 exchange, +21 feature-flag-gate tests) |
 | Ruff | 0 findings |
 | Black | clean at 79 |
 | Coverage | 81.5% overall (21,788 statements) — see `docs/QUALITY_BASELINE.md`, not yet re-run since the security fixes |
@@ -41,6 +41,33 @@ Chunk 9's existing note that JS-sink fixes aren't covered by the test suite. The
 `csv_response()` unification in Chunk 8 should still add the same formula-injection guard to
 `members/views/volunteer_export.py` and `diary/edit_views/reports.py` — not done here, out of
 scope for an out-of-band security fix.
+
+**All seven `labs` tools are now individually toggleable via `SiteConfiguration`,** not just
+Exchange (`community_exchange_enabled` already existed — the Chunk 7 decision doc's claim that
+"nothing here is feature-flagged" was wrong on that point, now corrected there). Added
+`collectives_enabled`, `jobs_board_enabled`, `building_map_enabled`, `shopping_list_enabled`,
+`lost_and_found_enabled`, `donations_enabled` (migration `0044`), each defaulting to `True` so
+nothing changes for existing deployments. A shared `_feature_enabled_or_404(flag_name)`
+decorator in `toolkit/labs/views/_common.py` — generalised from `exchange.py`'s original inline
+`if not cfg.community_exchange_enabled: raise Http404` duplicated across 9 views, which now
+uses the decorator too — gates every entry point per tool, and `fragment_navmenu.html` hides
+the corresponding nav link when a flag is off. Fields grouped into
+`SITE_CONFIG_FIELD_GROUPS` per the existing convention; `docs/tasks/` untouched since this is
+infrastructure, not a new feature spec.
+
+**A real test-isolation bug found and fixed while adding these:** `SiteConfiguration`'s
+`get_site_config()` caches the config object for 300s, and `.save()` clears that cache — but
+Django's `TestCase` wraps each test in a transaction it rolls back afterward, and the *cache*
+is not part of that transaction. A test that flips a flag and saves populates the cache with
+the flipped value *during* its own (later-rolled-back) transaction; that cached object survives
+the rollback and leaks into whatever test runs next, since Python's `unittest` loads test
+classes in alphabetical order by name, not file order. `toolkit/diary/tests/common.py` already
+carries the fix (`cache.delete(SiteConfiguration._CACHE_KEY)` in `setUp`) — `toolkit/labs/tests/common.py`
+never got it, so writing the first `labs` test that toggled a flag without also explicitly
+resetting it immediately surfaced the gap (`CollectivesGateTests` broke every
+`CollectivesPublicTests` test that ran after it alphabetically). Fixed by adding the same guard
+to `LabsTestsMixin.setUp()`. Worth knowing before writing any future test that mutates
+`SiteConfiguration` in any app that doesn't already have this guard in its test mixin.
 
 **Resolved, no longer open:** the R14 decision (five views with no ownership check on shared
 objects — `collectives.py`, `area_photos.py`, `loft.py`, `exchange.py`, `jobs.py`) was decided
@@ -173,6 +200,17 @@ those tools but not on `sed` or a heredoc via Bash. It exists to strip a tell of
 which is fine for text the agent writes, but it will also silently rewrite *Jonny's* existing
 prose in any file those tools touch. When making a surgical change to an existing doc, prefer
 `sed`, and check `git diff` for edits you did not intend.
+
+**`SiteConfiguration`'s cache outlives a rolled-back test transaction.** `get_site_config()`
+caches for 300s; `.save()` clears that cache — but the cache isn't part of Django `TestCase`'s
+per-test transaction, so a test that flips a flag and saves populates the cache *during* its
+own transaction, and that cached value survives the rollback into whatever test runs next
+(`unittest` loads test classes alphabetically by name, not file order, so "next" can be a
+world away in the file). `toolkit/diary/tests/common.py` already guards against this
+(`cache.delete(SiteConfiguration._CACHE_KEY)` in `setUp`); any other app's test mixin that
+lets a test mutate `SiteConfiguration` needs the same guard, or a flag-toggling test will
+silently break unrelated tests elsewhere in the same run. Found the hard way adding the labs
+feature-flags (2026-09-08) — `LabsTestsMixin` didn't have it either, until then.
 
 **`opencode run` silently rejects reads outside its working directory** (Chunk 5). It prints
 the rejection to stderr only; stdout and the JSON output show an empty response with no error.

@@ -11,6 +11,7 @@ from ..models import (
     AreaPhoto,
     RoomNote,
 )
+from ._common import _feature_enabled_or_404
 from .loft import (
     _LOFT_ZONE_SECTIONS,
     _LOFT_ZONES,
@@ -71,6 +72,7 @@ _ROOM_SECTIONS = [
 
 
 @login_required
+@_feature_enabled_or_404("building_map_enabled")
 def floorplan(request):
     notes = {
         n.room_id: {
@@ -127,6 +129,7 @@ def floorplan(request):
 
 
 @login_required
+@_feature_enabled_or_404("building_map_enabled")
 @require_http_methods(["GET", "POST"])
 def room_note(request, room_id):
     if request.method == "POST":

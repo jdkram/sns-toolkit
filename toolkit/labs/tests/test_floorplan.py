@@ -10,6 +10,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
+from toolkit.diary.models import get_site_config
 from toolkit.labs.models import AreaPhoto, LoftItem, LoftItemPhoto, RoomNote
 from .common import LabsTestsMixin
 from .test_photo_uploads import TINY_VALID_JPEG, _cleanup_media_file
@@ -17,6 +18,57 @@ from .test_photo_uploads import TINY_VALID_JPEG, _cleanup_media_file
 
 def _jpeg(name="test.jpg"):
     return SimpleUploadedFile(name, TINY_VALID_JPEG, content_type="image/jpeg")
+
+
+class BuildingMapGateTests(LabsTestsMixin, TestCase):
+    """Toggling SiteConfiguration.building_map_enabled off 404s the map,
+    room notes, the loft inventory, and area photos alike — one flag for
+    the whole feature, since the loft and area photos have no separate
+    nav entry of their own."""
+
+    def setUp(self):
+        super().setUp()
+        cfg = get_site_config()
+        cfg.building_map_enabled = False
+        cfg.save()
+        self.client.login(username="volunteer", password="T3stPassword!3")
+
+    def test_floorplan_404s_when_disabled(self):
+        response = self.client.get(reverse("labs-floorplan"))
+        self.assertEqual(response.status_code, 404)
+
+    def test_room_note_404s_when_disabled(self):
+        response = self.client.get(
+            reverse("labs-room-note", kwargs={"room_id": "room-cinema"})
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_loft_item_create_404s_when_disabled(self):
+        response = self.client.post(
+            reverse(
+                "labs-loft-item-create",
+                kwargs={"zone_id": "loft-raised-west"},
+            ),
+            data=json.dumps({"name": "Ladder"}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_area_photo_upload_404s_when_disabled(self):
+        response = self.client.post(
+            reverse(
+                "labs-area-photo-upload", kwargs={"area_id": "room-cinema"}
+            ),
+            data={"image": _jpeg()},
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_enabled_by_default(self):
+        cfg = get_site_config()
+        cfg.building_map_enabled = True
+        cfg.save()
+        response = self.client.get(reverse("labs-floorplan"))
+        self.assertEqual(response.status_code, 200)
 
 
 class FloorplanPageTests(LabsTestsMixin, TestCase):

@@ -11,6 +11,7 @@ from ..models import (
     LoftItemPhoto,
 )
 from .. import forms as lab_forms
+from ._common import _feature_enabled_or_404
 
 _LOFT_ZONES = [
     # (zone_id, display_name, section_key)
@@ -62,6 +63,7 @@ def _serialize_loft_items():
 
 
 @login_required
+@_feature_enabled_or_404("building_map_enabled")
 @require_POST
 def loft_item_create(request, zone_id):
     if zone_id not in _LOFT_ZONE_IDS:
@@ -94,6 +96,7 @@ def loft_item_create(request, zone_id):
 
 
 @login_required
+@_feature_enabled_or_404("building_map_enabled")
 @require_http_methods(["POST", "DELETE"])
 def loft_item(request, item_id):
     item = get_object_or_404(LoftItem, pk=item_id)
@@ -113,6 +116,7 @@ def loft_item(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("building_map_enabled")
 @require_POST
 def loft_item_photo_upload(request, item_id):
     item = get_object_or_404(LoftItem, pk=item_id)
@@ -136,6 +140,7 @@ def loft_item_photo_upload(request, item_id):
 
 
 @login_required
+@_feature_enabled_or_404("building_map_enabled")
 @require_POST
 def loft_photo_delete(request, photo_id):  # noqa: ARG001 -- view signature
     photo = get_object_or_404(LoftItemPhoto, pk=photo_id)

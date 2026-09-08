@@ -2,9 +2,37 @@
 from django.test import TestCase
 from django.urls import reverse
 
+from toolkit.diary.models import get_site_config
 from toolkit.labs.models import DonationItem
 
 from .common import LabsTestsMixin
+
+
+class DonationsGateTests(LabsTestsMixin, TestCase):
+    """Toggling SiteConfiguration.donations_enabled off 404s both the
+    public wishlist and its Panopticon management page."""
+
+    def setUp(self):
+        super().setUp()
+        cfg = get_site_config()
+        cfg.donations_enabled = False
+        cfg.save()
+
+    def test_public_list_404s_when_disabled(self):
+        response = self.client.get(reverse("labs-donations"))
+        self.assertEqual(response.status_code, 404)
+
+    def test_manage_404s_when_disabled(self):
+        self.client.login(username="admin", password="T3stPassword!")
+        response = self.client.get(reverse("labs-donations-manage"))
+        self.assertEqual(response.status_code, 404)
+
+    def test_enabled_by_default(self):
+        cfg = get_site_config()
+        cfg.donations_enabled = True
+        cfg.save()
+        response = self.client.get(reverse("labs-donations"))
+        self.assertEqual(response.status_code, 200)
 
 
 class DonationListTests(LabsTestsMixin, TestCase):

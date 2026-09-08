@@ -10,8 +10,36 @@ import datetime
 from django.test import TestCase
 from django.urls import reverse
 
+from toolkit.diary.models import get_site_config
 from toolkit.labs.models import FoundItem
 from .common import LabsTestsMixin
+
+
+class LostAndFoundGateTests(LabsTestsMixin, TestCase):
+    """Toggling SiteConfiguration.lost_and_found_enabled off 404s the log,
+    the list, and the detail/claim/dispose/label flows alike."""
+
+    def setUp(self):
+        super().setUp()
+        cfg = get_site_config()
+        cfg.lost_and_found_enabled = False
+        cfg.save()
+        self.client.login(username="volunteer", password="T3stPassword!3")
+
+    def test_log_404s_when_disabled(self):
+        response = self.client.get(reverse("labs-found-item-log"))
+        self.assertEqual(response.status_code, 404)
+
+    def test_list_404s_when_disabled(self):
+        response = self.client.get(reverse("labs-found-items"))
+        self.assertEqual(response.status_code, 404)
+
+    def test_enabled_by_default(self):
+        cfg = get_site_config()
+        cfg.lost_and_found_enabled = True
+        cfg.save()
+        response = self.client.get(reverse("labs-found-items"))
+        self.assertEqual(response.status_code, 200)
 
 
 class FoundItemLogFormTests(LabsTestsMixin, TestCase):

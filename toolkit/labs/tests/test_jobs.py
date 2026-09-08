@@ -2,9 +2,36 @@
 from django.test import TestCase
 from django.urls import reverse
 
+from toolkit.diary.models import get_site_config
 from toolkit.labs.models import Job
 
 from .common import LabsTestsMixin
+
+
+class JobsGateTests(LabsTestsMixin, TestCase):
+    """Toggling SiteConfiguration.jobs_board_enabled off 404s the board."""
+
+    def setUp(self):
+        super().setUp()
+        cfg = get_site_config()
+        cfg.jobs_board_enabled = False
+        cfg.save()
+        self.client.login(username="volunteer", password="T3stPassword!3")
+
+    def test_list_404s_when_disabled(self):
+        response = self.client.get(reverse("labs-jobs"))
+        self.assertEqual(response.status_code, 404)
+
+    def test_add_404s_when_disabled(self):
+        response = self.client.get(reverse("labs-job-add"))
+        self.assertEqual(response.status_code, 404)
+
+    def test_enabled_by_default(self):
+        cfg = get_site_config()
+        cfg.jobs_board_enabled = True
+        cfg.save()
+        response = self.client.get(reverse("labs-jobs"))
+        self.assertEqual(response.status_code, 200)
 
 
 class JobListTests(LabsTestsMixin, TestCase):

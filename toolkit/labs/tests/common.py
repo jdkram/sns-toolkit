@@ -13,6 +13,14 @@ from toolkit.labs.models import (
 
 class LabsTestsMixin:
     def setUp(self):
+        # Per-process cache persists across transaction-rolled-back tests, so
+        # a previous test's SiteConfiguration mutation (e.g. flipping a
+        # labs_*_enabled flag) could leak into this one. Clear it first.
+        # Same guard as DiaryTestsMixin (toolkit/diary/tests/common.py).
+        from django.core.cache import cache
+        from toolkit.diary.models import SiteConfiguration
+
+        cache.delete(SiteConfiguration._CACHE_KEY)
         self._setup_test_users()
         self._setup_test_data()
         return super().setUp()

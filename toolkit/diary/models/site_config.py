@@ -475,6 +475,13 @@ class SiteConfiguration(models.Model):
     )
 
     # --- Collectives public page ---
+    collectives_enabled = models.BooleanField(
+        default=True,
+        help_text=(
+            "Enable the collectives directory (/labs/collectives/ and its public page). "
+            "When off, the section is hidden from the nav and 404s if visited directly."
+        ),
+    )
     collectives_intro = models.TextField(
         blank=True,
         default="",
@@ -496,6 +503,13 @@ class SiteConfiguration(models.Model):
     )
 
     # --- Donations page ---
+    donations_enabled = models.BooleanField(
+        default=True,
+        help_text=(
+            "Enable the donations wishlist (/labs/donations/, public, and its Panopticon "
+            "management page). When off, the public page 404s and the nav link is hidden."
+        ),
+    )
     donations_intro = models.TextField(
         blank=True,
         default=(
@@ -563,6 +577,35 @@ class SiteConfiguration(models.Model):
         ),
     )
 
+    # --- Jobs board ---
+    jobs_board_enabled = models.BooleanField(
+        default=True,
+        help_text=(
+            "Enable the ad-hoc jobs board (/labs/jobs/). When off, the section is hidden "
+            "from the nav and 404s if visited directly."
+        ),
+    )
+
+    # --- Building map ---
+    building_map_enabled = models.BooleanField(
+        default=True,
+        help_text=(
+            "Enable the interactive building map (/labs/floorplan/), including the loft "
+            "inventory and area photos. When off, the section is hidden from the nav and "
+            "404s if visited directly."
+        ),
+    )
+
+    # --- Shopping list ---
+    shopping_list_enabled = models.BooleanField(
+        default=True,
+        help_text=(
+            "Enable the shared consumables shopping list and buyer workflow "
+            "(/labs/shopping/). When off, the section is hidden from the nav and 404s if "
+            "visited directly."
+        ),
+    )
+
     # --- Community exchange ---
     community_exchange_enabled = models.BooleanField(
         default=False,
@@ -573,6 +616,13 @@ class SiteConfiguration(models.Model):
     )
 
     # --- Lost & found ---
+    lost_and_found_enabled = models.BooleanField(
+        default=True,
+        help_text=(
+            "Enable the lost & found log (/labs/lost-and-found/). When off, the section "
+            "is hidden from the nav and 404s if visited directly."
+        ),
+    )
     lost_and_found_retain_days = models.PositiveSmallIntegerField(
         default=60,
         help_text=(
@@ -996,8 +1046,11 @@ SITE_CONFIG_FIELD_GROUPS = {
         "late_licence_fee_gbp",
         "vat_rate_pct",
     ],
+    "Jobs board": ["jobs_board_enabled"],
+    "Building map": ["building_map_enabled"],
+    "Shopping list": ["shopping_list_enabled"],
     "Community exchange": ["community_exchange_enabled"],
-    "Lost & found": ["lost_and_found_retain_days"],
+    "Lost & found": ["lost_and_found_enabled", "lost_and_found_retain_days"],
     "Bulletins": [
         "bulletin_default_expiry_days",
         "bulletin_guidance",
@@ -1005,10 +1058,12 @@ SITE_CONFIG_FIELD_GROUPS = {
     ],
     "Event links": ["eventlink_extra_allowed_domains"],
     "Collectives": [
+        "collectives_enabled",
         "collectives_intro",
         "collectives_mailing_list_signup_url",
     ],
     "Donations page": [
+        "donations_enabled",
         "donations_intro",
         "show_donations_in_public_nav",
     ],

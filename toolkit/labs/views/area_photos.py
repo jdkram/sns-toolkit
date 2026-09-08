@@ -8,11 +8,13 @@ from ..models import (
     AreaPhoto,
 )
 from .. import forms as lab_forms
+from ._common import _feature_enabled_or_404
 
 # ── Area photos (one per room / loft zone) ────────────────────────────────────
 
 
 @login_required
+@_feature_enabled_or_404("building_map_enabled")
 @require_POST
 def area_photo_upload(request, area_id):
     if "image" not in request.FILES:
@@ -41,6 +43,7 @@ def area_photo_upload(request, area_id):
 
 
 @login_required
+@_feature_enabled_or_404("building_map_enabled")
 @require_POST
 def area_photo_delete(request, area_id):  # noqa: ARG001 -- view signature
     photo = get_object_or_404(AreaPhoto, area_id=area_id)

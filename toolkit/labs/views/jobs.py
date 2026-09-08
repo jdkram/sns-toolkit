@@ -13,6 +13,7 @@ from ..models import (
     Job,
 )
 from .. import forms as lab_forms
+from ._common import _feature_enabled_or_404
 
 
 def _urgency_order():
@@ -25,6 +26,7 @@ def _urgency_order():
 
 
 @login_required
+@_feature_enabled_or_404("jobs_board_enabled")
 def job_list(request):
     open_jobs = (
         Job.objects.filter(resolved=False)
@@ -52,6 +54,7 @@ def job_list(request):
 
 
 @login_required
+@_feature_enabled_or_404("jobs_board_enabled")
 @write_required_strict
 def job_add(request):
     if request.method == "POST":
@@ -70,6 +73,7 @@ def job_add(request):
 
 
 @login_required
+@_feature_enabled_or_404("jobs_board_enabled")
 @write_required_strict
 def job_edit(request, job_id):
     job = get_object_or_404(Job, pk=job_id)
@@ -89,6 +93,7 @@ def job_edit(request, job_id):
 
 
 @login_required
+@_feature_enabled_or_404("jobs_board_enabled")
 @require_POST
 def job_claim(request, job_id):
     job = get_object_or_404(Job, pk=job_id)
@@ -100,6 +105,7 @@ def job_claim(request, job_id):
 
 
 @login_required
+@_feature_enabled_or_404("jobs_board_enabled")
 @require_POST
 def job_unclaim(request, job_id):
     job = get_object_or_404(Job, pk=job_id)
@@ -113,6 +119,7 @@ def job_unclaim(request, job_id):
 
 
 @login_required
+@_feature_enabled_or_404("jobs_board_enabled")
 @require_POST
 def job_resolve(request, job_id):
     job = get_object_or_404(Job, pk=job_id)

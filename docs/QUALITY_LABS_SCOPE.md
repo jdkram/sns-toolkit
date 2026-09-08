@@ -16,10 +16,19 @@ being used.
 depended on by, what deleting it would cost, and what keeping it commits to. No recommendation
 column — that's the conversation this document is for, not something to pre-empt.
 
-**Nothing here is gated by a feature flag.** All eight are always-on; there's no
-`settings_starandshadow.py` switch to flip off one tool without touching code. Cutting one
-means deleting views/templates/models/migrations and the one nav link in
-`fragment_navmenu.html`, not toggling a flag.
+**Correction, 2026-09-08:** this section originally claimed nothing here was feature-flagged.
+That was wrong — `exchange.py` already gated every view on `SiteConfiguration.community_exchange_enabled`
+(default off), which is exactly what a "feature flag" means here. The claim held for the other
+six, though, and per Jonny's follow-up decision below, no longer does: all seven now have their
+own on/off `SiteConfiguration` boolean (`collectives_enabled`, `jobs_board_enabled`,
+`building_map_enabled`, `shopping_list_enabled`, `lost_and_found_enabled`,
+`donations_enabled`, `community_exchange_enabled`), each defaulting to `True` so nothing changes
+for existing deployments until someone flips one off. A shared `_feature_enabled_or_404(flag_name)`
+decorator in `toolkit/labs/views/_common.py` (generalised from exchange.py's original inline
+pattern, which now uses it too) 404s the view and hides the corresponding nav entry in
+`fragment_navmenu.html` when its flag is off. Cutting a tool from `master` later is still a real
+deletion (views/templates/models/migrations) — the flag is about hiding a kept tool per
+deployment, not a substitute for actually removing one.
 
 **Decided 2026-09-08 (Jonny): keep all seven.** This development fork is deliberately
 "everything plus the kitchen sink" — features are expected to be cherry-picked into `master`

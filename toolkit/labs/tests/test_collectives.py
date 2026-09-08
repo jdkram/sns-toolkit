@@ -6,7 +6,7 @@ from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 
-
+from toolkit.diary.models import get_site_config
 from .common import LabsTestsMixin
 
 # Add star_and_shadow_templates to TEMPLATES so the public collectives view
@@ -48,6 +48,44 @@ class CollectivesPublicTests(LabsTestsMixin, TestCase):
         self.col_open.save()
         response = self._get_public()
         self.assertNotContains(response, self.col_open.name)
+
+
+class CollectivesGateTests(LabsTestsMixin, TestCase):
+    """Toggling SiteConfiguration.collectives_enabled off 404s every
+    collectives view, public and internal alike."""
+
+    def setUp(self):
+        super().setUp()
+        cfg = get_site_config()
+        cfg.collectives_enabled = False
+        cfg.save()
+
+    def test_public_page_404s_when_disabled(self):
+        with self.settings(TEMPLATES=_SS_TEMPLATES):
+            response = self.client.get(reverse("labs-collectives-public"))
+        self.assertEqual(response.status_code, 404)
+
+    def test_internal_list_404s_when_disabled(self):
+        self.client.login(username="admin", password="T3stPassword!")
+        response = self.client.get(reverse("labs-collectives"))
+        self.assertEqual(response.status_code, 404)
+
+    def test_edit_404s_when_disabled(self):
+        self.client.login(username="admin", password="T3stPassword!")
+        response = self.client.get(
+            reverse(
+                "labs-collective-edit", kwargs={"slug": self.col_open.slug}
+            )
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_enabled_by_default(self):
+        cfg = get_site_config()
+        cfg.collectives_enabled = True
+        cfg.save()
+        self.client.login(username="admin", password="T3stPassword!")
+        response = self.client.get(reverse("labs-collectives"))
+        self.assertEqual(response.status_code, 200)
 
 
 class CollectivesInternalTests(LabsTestsMixin, TestCase):
