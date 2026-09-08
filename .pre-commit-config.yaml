@@ -1,7 +1,7 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Opus 5"]; status: "#ai-input"
 #
 # Runs ruff and black on staged files before each commit. Config for both
-# lives in pyproject.toml; see QUALITY_PASS.md for why this exists.
+# lives in pyproject.toml.
 #
 # Install once per checkout: pip install pre-commit && pre-commit install
 repos:

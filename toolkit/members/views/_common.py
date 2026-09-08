@@ -2,11 +2,12 @@
 """
 Shared helpers for the volunteer views subpackage.
 
-volunteer_views.py was split per-feature in commit <this> — see
-MAINTAINABILITY_PASS.md chunk 5. Each submodule imports what it actually
-uses directly from here (`logger`, `_render_admin_email`,
-`_notify_vols_admin_status_change`) and from the real source modules —
-no wildcard import (see QUALITY_PASS.md, Chunk 11).
+volunteer_views.py was split per-feature in June 2026. Each submodule
+imports what it actually uses directly from here (`logger`,
+`_render_admin_email`, `_notify_vols_admin_status_change`) and from the
+real source modules. No wildcard import: this file used to be a
+`from ._common import *` re-export hub, which hid where every symbol came
+from, and was un-starred in September 2026.
 """
 
 import logging

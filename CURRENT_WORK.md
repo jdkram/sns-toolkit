@@ -2,8 +2,8 @@
 
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
-**Last updated:** 2026-09-02
-**Last major change:** Bug AT — batch of diary/calendar/rota UI fixes (month-heading clipping, room hide/show, rota filter panel restructure, Vacancies filter removed). 2026-09-01: Logging & email observability workstream complete repo-side: Bug AQ, 9.154, 9.156, 9.159 shipped; repo side of 9.155/9.157/9.158 done (see section 3c). Only the freyja server-side steps remain. 2026-07-15: email log trigger attribution + backend explainer (9.156b), plus a full security/robustness review of the email pipeline — 2 small fixes landed, throttling spec 9.161 added.
+**Last updated:** 2026-09-08
+**Last major change:** 2026-09-08: quality pass complete and merged (ruff/black/CI gates, 230 new tests, 7 security fixes, god-module splits, inline JS extraction; see the Quality pass section below). Before that, Bug AT — batch of diary/calendar/rota UI fixes (month-heading clipping, room hide/show, rota filter panel restructure, Vacancies filter removed). 2026-09-01: Logging & email observability workstream complete repo-side: Bug AQ, 9.154, 9.156, 9.159 shipped; repo side of 9.155/9.157/9.158 done (see section 3c). Only the freyja server-side steps remain. 2026-07-15: email log trigger attribution + backend explainer (9.156b), plus a full security/robustness review of the email pipeline — 2 small fixes landed, throttling spec 9.161 added.
 **Current phase:** Phase 4 ongoing
 **See also:** [TASKS.md](docs/TASKS.md) (design rationale & feature specs) · [REWRITE_STRATEGY.md](docs/REWRITE_STRATEGY.md) (tech notes and migration guide)
 
@@ -68,43 +68,45 @@ The tradeoff in one line: Ben's branch is small and maintained by someone else; 
 
 ---
 
-## Quality pass (`chore/quality-pass-2026-09`)
+## Quality pass (`chore/quality-pass-2026-09`) ✅ complete 2026-09-08
 
-Tracking file: [QUALITY_PASS.md](QUALITY_PASS.md). Chunks 0-7 and 10 all done. All security
-findings from Chunks 5-6 are now fixed (was: one unfixed stored-XSS in
-`inductions/manage/session_detail.html` — see QUALITY_PASS.md's state block for the full list and
-regression test names; that one still wants a manual browser check, per Chunk 9's note). 1,359
-tests passing. Next: Chunk 11 (un-star `members/views/`'s wildcard imports, split
-`diary/forms.py` and `inductions/views.py`, finish the `member_views.py` split June left
-half-done) — then Chunks 8, 9, 12.
+Full record, including the measured before/after and the chunk-by-chunk log, is archived at
+[docs/ARCHIVE/QUALITY_PASS_2026_09.md](docs/ARCHIVE/QUALITY_PASS_2026_09.md). The lasting
+outputs live elsewhere: the code standard in [docs/QUALITY_RUBRIC.md](docs/QUALITY_RUBRIC.md),
+the tool config in `pyproject.toml`, the gates in `.github/workflows/ci.yml` and
+`.pre-commit-config.yaml`, and the standing rules in CLAUDE.md's "Tooling and gates" section.
 
 Prompted by a worry that quality had drifted unmeasured across ~2,180 mostly AI-assisted
 commits. The June maintainability pass was Claude reviewing Claude; its own refactor shipped
-885 unused imports and a star-import hub that went unnoticed for two and a half months,
-because this repo had no linter. So this pass puts deterministic tooling underneath the model
-layer, and routes the judgement work to a different model (MiniMax M3, ~$0.80 total).
+892 unused imports and a star-import hub that went unnoticed for two and a half months,
+because this repo had no linter. So this pass put deterministic tooling underneath the model
+layer, and routed the judgement work to a different model (MiniMax M3 and Kimi K2, $1.69 total).
 
-| Chunk | Status | Notes |
+What changed, in one table:
+
+| | Before | After |
 |---|---|---|
-| 0 Set up | ✅ 2026-09-07 | `pyproject.toml` pins black + ruff at line-length 79; both plus `coverage` added to the image. E501 disabled with the measurement behind that decision recorded in the config. |
-| 1 Mechanical fixes | ✅ 2026-09-07 | 892 unused imports/variables removed (823 deletions, 48 files); black reformat at 79 (142 files). Ruff 998 → 110 findings. |
-| 2 The gates | ✅ 2026-09-08 | 110 ruff findings triaged (fixed, inline-noqa'd with a reason, or config-ignored by pattern) — one was a real test bug, now fixed. `.pre-commit-config.yaml` + `.github/workflows/ci.yml` added. Ruff 110 → 0. |
-| 3 Docs drift | ✅ 2026-09-08 | Fixed the ~9 that were real drift (ONBOARDING.md, SPEC.md — June's split left them pointing at deleted monolith files); added `operations`/`audit` to the onboarding tour; replaced stale black-only prose with the actual ruff/black/coverage commands. The rest of the original 20 turned out to be `docs/tasks/*.md` feature specs referencing not-yet-built paths on purpose. |
-| 4 Baseline | ✅ 2026-09-08 | [`docs/QUALITY_BASELINE.md`](docs/QUALITY_BASELINE.md): 81.5% overall coverage, per-app LOC/coverage/complexity. Found `toolkit_auth`/`content` coverage is entirely incidental (zero dedicated test files) — feeds Chunk 10. |
-| 5 MiniMax sweep | ✅ 2026-09-08 | 68 files (scope came out larger than the ~40 estimate), $1.30 total, 0 errors. Surfaced a real, unfixed stored-XSS vector in `inductions/session_detail.html` (public signup name/email fields → unescaped `innerHTML` on the manage page) — needs its own fix, not batched into a later chunk. |
-| 6 Rubric | ✅ 2026-09-08 | `docs/QUALITY_RUBRIC.md`, synthesised from the MiniMax sweep plus an out-of-band Kimi K2 security sweep (4 more confirmed vulns, fixed same session). |
-| 7 Feature scope | ✅ 2026-09-08 | `docs/QUALITY_LABS_SCOPE.md`. Decided: keep all seven `labs` mini-tools — this fork is deliberately everything-plus-kitchen-sink, cherry-picked into `master` later. |
-| 8 Deduplicate | ⬜ | Duplicated volunteer helper, three CSV exporters, two ICS generators. |
-| 9 Extract inline JS | ⬜ | 7,535 lines of JS live inside templates. Largest single item; no previous pass touched it. |
-| 10 Tests | ✅ 2026-09-08 | All four `labs` coverage targets to 100%; destructive bulk actions (`bulk_anonymise_volunteers`/`bulk_delete_never_onboarded`) 54%→99%; `toolkit_auth` backends+decorators 79%/98%→100%; `volunteer_edit.py` 63%→97%; 31 weak status-code-only assertions strengthened. A cheap MiniMax spot-review of the new tests caught a real pluralisation bug in the confirm-phrase views, now fixed. |
-| 11 Un-star + split | ⬜ | `members/views/` star-import hub, `diary/forms.py`, `inductions/views.py`. |
-| 12 Confirm | ⬜ | Re-measure, small second sweep. |
+| Ruff findings | 998 (no linter configured) | 0, enforced by CI and pre-commit |
+| Tests | 1,129 | 1,359 |
+| Coverage | 81.5% | 85.5% |
+| Security findings | 7 stored-XSS / open-redirect / CSV-injection vectors, unknown | all fixed, 6 with regression tests |
+| Star-import hub (`members/views/_common.py`) | 542 untraceable symbol refs | gone; every import explicit |
+| God modules | `diary/forms.py`, `inductions/views.py`, `member_views.py` | split into packages by feature |
+| Inline JS in templates | 7,535 lines; four scripts over 700 lines each | those four extracted to `static/`, browser-verified |
+| Duplicated helpers | 2× volunteer lookup, 3× CSV export, 2× ICS builder | `toolkit/util/{volunteers,csv_export,ics}.py` (ICS unification fixed a real BST-offset bug) |
+| `labs` mini-tools | one feature flag (Exchange) | all seven toggleable in Site Settings (migration `0044`) |
+
+Left open, all recorded in [known-issues.md](docs/tasks/known-issues.md): Bugs AV–AY (a broken
+Bootstrap modal on the induction session page, two small pre-existing view bugs, and five
+verified sweep findings), plus a note that the new `__init__.py` re-export layers are indirection
+for a single consumer. Complexity is gated at 20 as a ratchet; 18 functions still exceed the
+honest target of 12, and `seed_dev_data.handle` (101) is excluded outright.
 
 ---
 
 ## Maintainability pass (`chore/maintainability-pass`)
 
-Tracking file: [MAINTAINABILITY_PASS.md](MAINTAINABILITY_PASS.md). Chunks 1-5 done 2026-06-26.
+Tracking file (archived): [docs/ARCHIVE/MAINTAINABILITY_PASS_2026_06.md](docs/ARCHIVE/MAINTAINABILITY_PASS_2026_06.md). All chunks done 2026-06-28.
 
 | Chunk | Status | Notes |
 |---|---|---|
@@ -294,7 +296,7 @@ Tracking file: [MAINTAINABILITY_PASS.md](MAINTAINABILITY_PASS.md). Chunks 1-5 do
 | ~~**9.96**~~ | ~~**Labs app tests — zero coverage (31 endpoints)**~~ | ✅ 2026-05-25 | `toolkit/labs/tests/` created: `common.py` (LabsTestsMixin), `test_security.py` (auth/perm for all endpoints), `test_collectives.py`, `test_bulletins.py`, `test_jobs.py`, `test_donations.py`. Also fixed naive datetime in `job_resolve` view. 108 new tests; 664 total, all passing. |
 | ~~**9.97**~~ | ~~**Members model tests — thicken coverage**~~ | ✅ 2026-05-25 | Added `TestMemberModel` (mailout_key auto-gen, uniqueness, no-overwrite on resave; `mailout_recipients()` boundary cases) and `TestVolunteerStatusModel` (status/active sync) to `toolkit/members/tests/test_models.py`. |
 | ~~**9.98**~~ | ~~**Split `test_edit_views.py` (2,807 lines)**~~ | ✅ 2026-05-25 | Split into `test_edit_views.py` (342 lines), `test_edit_event.py` (1,290 lines), `test_edit_showing.py` (682 lines), `test_edit_misc.py` (661 lines). All 664 tests pass. No production code changes. |
-| ~~9.100~~ | ~~Role qualification gates (MVP)~~ | ✅ 2026-05-31 | Panopticons define named **Qualifications** (e.g. "Bar") at Meta › Roles, then grant them per-volunteer on the profile page. Each role can require a qualification with a **gate**: Off / Advisory (warns but allows sign-up via a browser alert) / Blocking (refuses with HTTP 403). Panopticons always bypass. Gate reads from `VolunteerQualification`, deliberately separate from `TrainingRecord`. **Design decision (2026-05-31):** kept both models rather than consolidating — `TrainingRecord` is critical for General Safety Training (the "Safety trained" date), which has no overlap with role clearances. Only the role-specific TrainingRecord subset overlapped; we simply stop creating those. Verb softened "award"→"grant/record"; fields `granted_on`/`granted_by`. No live-data conversion needed. Migrations: members 0022/0023, diary 0052. |
+| ~~9.100~~ | ~~Role qualification gates (MVP)~~ | ✅ 2026-05-31 | Panopticons define named **Qualifications** (e.g. "Bar") at Meta › Roles, then grant them per-volunteer on the profile page. Each role can require a qualification with a **gate**: Off / Advisory (warns but allows sign-up via a browser alert) / Blocking (refuses with HTTP 403). Panopticons always bypass. Gate reads from `VolunteerQualification`, deliberately separate from `TrainingRecord`. **Design decision (2026-05-31):** kept both models rather than consolidating — `TrainingRecord` is load-bearing for General Safety Training (the "Safety trained" date), which has no overlap with role clearances. Only the role-specific TrainingRecord subset overlapped; we simply stop creating those. Verb softened "award"→"grant/record"; fields `granted_on`/`granted_by`. No live-data conversion needed. Migrations: members 0022/0023, diary 0052. |
 | ~~9.102~~ | ~~Replace Masonry.js with CSS Grid on programme index~~ | ✅ 2026-06-03 | Masonry.js + imagesloaded removed from `base_public.html`; all Masonry init/layout code stripped from `site-common.js` and `programme.js`; `programme.css` rewritten to use `display:grid` + `grid-template-columns` at each breakpoint (1→2→3→4 cols); images use `width:100%` + `aspect-ratio:2/3` + `object-fit:cover` for uniform portrait cards; nth-child "featured wide card" rules removed. |
 | ~~9.108~~ | ~~TicketSource setup guide in event creation flow~~ | ✅ 2026-06-10 | Collapsible "How to set up TicketSource" checklist injected after `ticket_link` field in event edit form. 5-step numbered guide (pricing tier, seating plan, title conventions, URL copy). `film_programming_guide_url` key added to VENUE dict (empty by default; set in venue settings for a link to the full guide). |
 | ~~9.109~~ | ~~"Mark as confirmed" as satisfying end-of-creation action~~ | ✅ 2026-06-10 | Green "Everything looks good — ready to go live?" banner replaces the completeness bar when all checks pass but showings are still unconfirmed. For single-occurrence events, includes an inline Confirm button. For series, points to the existing "Confirm all" button. |

@@ -6,7 +6,7 @@ status: "#ai-input"
 
 # Quality baseline — 2026-09-08 (before), re-measured 2026-09-08 (after)
 
-The before-picture for the quality pass tracked in [QUALITY_PASS.md](../QUALITY_PASS.md), and
+The before-picture for the quality pass tracked in [QUALITY_PASS.md](QUALITY_PASS_2026_09.md), and
 the after-picture from Chunk 12. Both are dated and should be read as snapshots, not as living
 documents — the "before" table is as of commit `19e65fc3`, the "after" table as of `4691d28c`.
 

@@ -1,7 +1,7 @@
 // human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Sonnet 5"]; status: "#ai-input"
 // Extracted from edit_rota.html's second inline <script> block (the UI/filtering/
 // keyboard-navigation code -- not the rota-editing AJAX logic, which was already in
-// diary/js/edit_rota.js before this pass) (QUALITY_PASS.md Chunk 9).
+// diary/js/edit_rota.js before this pass) (September 2026 quality pass).
 //
 // Several {% if can_mark_events %} / {% if current_volunteer_pk %} blocks guarded
 // entire declarations (ROTA_MARKS, setShowingMark, etc.). Rather than wrap those in a

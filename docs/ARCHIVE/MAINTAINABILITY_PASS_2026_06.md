@@ -1,7 +1,11 @@
-# Maintainability Pass Plan
+# Maintainability Pass Plan (June 2026, archived)
 
-> **Status:** in progress on branch `chore/maintainability-pass`, branched from `sns_2026_overhaul` at `6d9cf776`.
-> **Last updated:** 2026-06-28
+> **Status:** complete. All chunks merged into `sns_2026_overhaul` by 2026-06-28. Kept as the
+> record of what was done and why; the commit history is the authoritative version. The
+> shortcuts this pass took (copy-pasted import headers, the `members/views/_common.py`
+> star-import hub) were undone by the September 2026 quality pass, see
+> [QUALITY_PASS_2026_09.md](QUALITY_PASS_2026_09.md).
+> **Last updated:** 2026-06-28 (archived 2026-09-08)
 > **Source review:** fresh-eyes code review dispatched 2026-06-26 (four parallel deep reads of diary, members+auth, labs+inductions+mailer, settings+scripts+docs+tests).
 > **Resume by:** reading this file top-to-bottom — each chunk has status + scope + commit guidance. Check `git log chore/maintainability-pass` to see which chunks have shipped.
 

@@ -370,9 +370,9 @@ class EditEventView(DiaryTestsMixin, TestCase):
             html=True,
         )
         # Word counter feature's JS is wired up (the "word-counter" div itself
-        # is created client-side by form_event.js, not server-rendered --
-        # QUALITY_PASS.md Chunk 9 moved the inline <script> that used to make
-        # this string assertable out to a static file).
+        # is created client-side by form_event.js, not server-rendered; the
+        # inline <script> that used to make this string assertable was
+        # moved out to a static file in September 2026).
         self.assertContains(response, "diary/js/form_event.js")
         # Blah. It's probably fine. Ahem.
 

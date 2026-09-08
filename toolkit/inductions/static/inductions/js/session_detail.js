@@ -1,6 +1,6 @@
 // human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Sonnet 5"]; status: "#ai-input"
-// Extracted from inductions/manage/session_detail.html's inline <script> (QUALITY_PASS.md
-// Chunk 9). Wrapped as a factory function (options object, following mailout.js's precedent
+// Extracted from inductions/manage/session_detail.html's inline <script> (September 2026
+// quality pass). Wrapped as a factory function (options object, following mailout.js's precedent
 // for a many-argument setup call) rather than a bare top-level script, since this page's
 // template-side {% if user.is_superuser %} branches inside the JS had to become a runtime
 // `opts.isSuperuser` check, and the two hand-built "manage/<slug>/signups/<id>/..." URLs
@@ -293,8 +293,8 @@ function sessionDetail(opts) {
   });
 
   /* ── Inline edit (panopticon) ── */
-  // Wrapped in try/catch: a broken bootstrap.Modal() here (pre-existing, see
-  // QUALITY_PASS.md Chunk 9's session_detail.html write-up) must not take out
+  // Wrapped in try/catch: a broken bootstrap.Modal() here (pre-existing; see
+  // docs/tasks/known-issues.md, Bug AV) must not take out
   // everything textually below it -- cap editor, room counter, keyboard nav,
   // walk-in registration, table sorting, remove-signup all still need to work.
   if (isSuperuser) { try {

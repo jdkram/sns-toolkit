@@ -1,7 +1,7 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]
 """
-inductions/views.py was split into this package (Chunk 11 of the quality
-pass — see QUALITY_PASS.md). Each submodule owns one feature area; no
+inductions/views.py was split into this package in September 2026. Each
+submodule owns one feature area; no
 `_common.py` re-export hub, no shared import header — every submodule
 imports only what it uses. This __init__ re-exports every view function
 by name so `urls.py`'s `views.<name>` attribute access, and the two test

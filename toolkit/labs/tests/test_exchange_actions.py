@@ -1,7 +1,7 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Sonnet 5"]; status: "#ai-written"
 """Coverage for community exchange's state-transition actions
 (mark_on_loan/mark_returned/mark_all_gone/mark_missing) — the gap
-docs/QUALITY_LABS_SCOPE.md identified as where a shared-item-lifecycle bug
+docs/ARCHIVE/QUALITY_LABS_SCOPE_2026_09.md identified as where a shared-item-lifecycle bug
 would actually live. Chunk 10 of the quality pass, fourth and final labs
 target."""
 

@@ -63,9 +63,9 @@ screenshots/
 # --- Local review notes (not yet for publication) ---
 docs/REVIEW_2026_OVERHAUL.md
 
-# --- Raw external-model review output (quality pass Chunk 5) ---
-# Un-curated MiniMax M3 output, kept on disk so it survives to the Chunk 6
-# session that synthesises it, but never committed. See QUALITY_PASS.md.
+# --- Raw external-model review output (September 2026 quality pass) ---
+# Un-curated MiniMax/Kimi review output, kept on disk but never committed.
+# The curated result is docs/QUALITY_RUBRIC.md.
 docs/QUALITY_PASS_RAW/
 
 # --- Local testing checklists (not committed) ---

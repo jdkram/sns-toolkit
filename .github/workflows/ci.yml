@@ -1,6 +1,6 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Opus 5"]; status: "#ai-input"
 #
-# See QUALITY_PASS.md for why this exists: a June 2026 refactor shipped
+# Why this exists: a June 2026 refactor shipped
 # 885 unused imports and a star-import hub that went unnoticed for two and
 # a half months because nothing checked. This is the check.
 #

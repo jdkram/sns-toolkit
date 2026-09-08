@@ -1,5 +1,5 @@
 // human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Sonnet 5"]; status: "#ai-input"
-// Extracted verbatim from labs/floorplan.html's inline <script> (QUALITY_PASS.md Chunk 9).
+// Extracted verbatim from labs/floorplan.html's inline <script> (September 2026 quality pass).
 // Wrapped as a factory function per the edit_rota.js precedent: the template still renders
 // the data (notes/items/photos JSON, CSRF token, URL templates) but hands them in as
 // arguments rather than interpolating them into the script body itself.

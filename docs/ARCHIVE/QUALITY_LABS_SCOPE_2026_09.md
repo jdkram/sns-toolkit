@@ -6,7 +6,7 @@ status: "#ai-input"
 
 # Labs feature scope — decision document
 
-Chunk 7 of the [quality pass](../QUALITY_PASS.md). Not a proposal to delete anything — a
+Chunk 7 of the [quality pass](QUALITY_PASS_2026_09.md). Not a proposal to delete anything — a
 factual inventory to make the keep/cut conversation informed, one tool at a time. Nothing here
 is deployed with live users yet, so there is no usage signal to lean on; this is a values
 question about what Jonny wants to commit to maintaining, not a data question about what's

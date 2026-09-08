@@ -2,7 +2,7 @@
 """Coverage for the shopping-list add/supplier-management endpoints and the
 whole buyer workflow (shopping_buy*, shopping_item_enrich, shopping_buy_add,
 shopping_out_of_stock) — the untested two-thirds of shopping.py flagged in
-docs/QUALITY_BASELINE.md ("3 of 13 endpoints tested") and Chunk 10 of the
+docs/ARCHIVE/QUALITY_BASELINE_2026_09.md ("3 of 13 endpoints tested") and Chunk 10 of the
 quality pass."""
 
 from django.test import TestCase

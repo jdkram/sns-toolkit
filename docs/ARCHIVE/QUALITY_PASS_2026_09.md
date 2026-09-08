@@ -4,13 +4,23 @@ ai-contributors: ["Claude Opus 5", "Claude Sonnet 5"]
 status: "#ai-input"
 ---
 
-# Quality Pass Plan
+# Quality Pass Plan (September 2026, archived)
 
-> **Status:** in progress on branch `chore/quality-pass-2026-09`, branched from
-> `sns_2026_overhaul` at `ccbb3d6a`.
+> **Status:** complete. All twelve chunks done on branch `chore/quality-pass-2026-09`
+> (branched from `sns_2026_overhaul` at `ccbb3d6a`), browser-verified, and merged back.
+> This file is the working log as it stood at the close of the pass, kept for the measured
+> findings and the reasoning behind each decision; the commit history is the authoritative
+> record of what changed. Its lasting outputs live elsewhere: `pyproject.toml`, the CI and
+> pre-commit gates, [`docs/QUALITY_RUBRIC.md`](../QUALITY_RUBRIC.md), and the "Tooling and
+> gates" section of `CLAUDE.md`. Open items it left behind are Bugs AV–AY in
+> [`docs/tasks/known-issues.md`](../tasks/known-issues.md).
+>
+> Two notes in the state block below were overtaken before the merge: the manual browser
+> check of `session_detail.html` was done on 2026-09-08 (see Chunk 9's follow-up section),
+> and the CSV formula guard reached all three exports in Chunk 8. On 2026-09-08 that guard
+> was also narrowed so `+44…` phone numbers export verbatim, after an independent review of
+> the finished branch caught the regression.
 > **Last updated:** 2026-09-08
-> **Resume by:** reading this file top-to-bottom, then checking
-> `git log --oneline chore/quality-pass-2026-09` to see which chunks actually shipped.
 
 ### State at the end of the last session (2026-09-08)
 
@@ -148,7 +158,7 @@ The concern that prompted it: the branch is ~49k lines of Python and ~30k lines 
 across ~2,180 commits, most of it AI-assisted, and nobody has measured whether the quality
 holds or whether a human could maintain it unaided.
 
-A maintainability pass already ran in June 2026 ([MAINTAINABILITY_PASS.md](MAINTAINABILITY_PASS.md),
+A maintainability pass already ran in June 2026 ([MAINTAINABILITY_PASS_2026_06.md](MAINTAINABILITY_PASS_2026_06.md),
 11 chunks, all merged). It was Claude reviewing Claude, and its own refactor is the best
 argument for doing this differently. Splitting `edit_views.py` and `volunteer_views.py` into
 packages, it reached for two shortcuts:
@@ -236,7 +246,7 @@ it: re-export shims (`members/views/__init__.py`, guarded in `pyproject.toml`) a
 imports (`audit/apps.py:11`, which registers signal handlers). Check before running `--fix`
 across new territory, not after.
 
-**A user hook rewrites the phrase "critical" to "critical" on Write/Edit.** It fires on
+**A user hook rewrites the phrase "load-bearing" to "critical" on Write/Edit.** It fires on
 those tools but not on `sed` or a heredoc via Bash. It exists to strip a tell of AI authorship,
 which is fine for text the agent writes, but it will also silently rewrite *Jonny's* existing
 prose in any file those tools touch. When making a surgical change to an existing doc, prefer
@@ -496,7 +506,7 @@ changes — doc-only, so unsurprising, but checked rather than assumed.
 
 ### Chunk 4: Baseline — DONE 2026-09-08
 
-Wrote [`docs/QUALITY_BASELINE.md`](docs/QUALITY_BASELINE.md): per-app Python/template LOC,
+Wrote [`docs/QUALITY_BASELINE.md`](QUALITY_BASELINE_2026_09.md): per-app Python/template LOC,
 statement coverage, and worst cyclomatic complexity, plus ruff/black status and the reused
 (not re-measured) template-debt table from this file's Measured Findings section.
 
@@ -589,7 +599,7 @@ total is nowhere near where a flat monthly fee would pay for itself.
 
 ### Chunk 6: Synthesise a rubric — DONE 2026-09-08
 
-Wrote [`docs/QUALITY_RUBRIC.md`](docs/QUALITY_RUBRIC.md) from all 68 MiniMax Chunk 5 reviews,
+Wrote [`docs/QUALITY_RUBRIC.md`](../QUALITY_RUBRIC.md) from all 68 MiniMax Chunk 5 reviews,
 deduplicated against `docs/REVIEW_2026_OVERHAUL.md`'s still-open maintainability findings
 (permission-table drift, `SiteConfiguration` triple-bookkeeping).
 
@@ -679,7 +689,7 @@ narrower security brief didn't ask for it explicitly, and mostly didn't do it un
 
 ### Chunk 7: Feature scope — DONE 2026-09-08
 
-[`docs/QUALITY_LABS_SCOPE.md`](docs/QUALITY_LABS_SCOPE.md) is the decision document: per tool
+[`docs/QUALITY_LABS_SCOPE.md`](QUALITY_LABS_SCOPE_2026_09.md) is the decision document: per tool
 (seven mini-tools — bulletins excluded, see the doc's rationale), its size, test coverage,
 dependencies, what removing it would cost and what keeping it commits to.
 

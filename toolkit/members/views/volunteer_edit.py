@@ -1,6 +1,6 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-input"
 """Auto-extracted from toolkit/members/volunteer_views.py (chunk 5 of the
-maintainability pass — see MAINTAINABILITY_PASS.md). Verbatim move; no
+maintainability pass, June 2026 — see git history). Verbatim move; no
 behaviour change. Group: edit.
 """
 

@@ -6,8 +6,9 @@ status: "#ai-input"
 
 # Quality rubric
 
-A checkable standard for this codebase, synthesised in Chunk 6 of
-[QUALITY_PASS.md](../QUALITY_PASS.md) from two sources:
+A checkable standard for this codebase, synthesised during the September 2026 quality
+pass (archived record: [ARCHIVE/QUALITY_PASS_2026_09.md](ARCHIVE/QUALITY_PASS_2026_09.md))
+from three sources:
 
 - The MiniMax M3 sweep (Chunk 5) — 68 files, deduplicated down to patterns that
   recurred in three or more files, plus one-off findings severe enough to name
@@ -37,11 +38,12 @@ A checkable standard for this codebase, synthesised in Chunk 6 of
   severity ratings across five structurally identical instances in the same sweep.
   Treat its findings list as reliable, its priority ordering as not.
 
-**How to use this:** Chunks 8–11 (dedup, template extraction, tests, un-starring
-`members/views/`) should check new and touched code against the rules below rather
-than re-paying for external review per file. When a rule and the code disagree, fix
-the code, not the rule — unless the disagreement reveals the rule was wrong, in which
-case fix this file and say why in the commit.
+**How to use this:** check new and touched code against the rules below rather than
+re-paying for external review per file. When a rule and the code disagree, fix the
+code, not the rule — unless the disagreement reveals the rule was wrong, in which case
+fix this file and say why in the commit. The "Unfixed findings" list at the foot is
+historical; anything from it still open is tracked as a bug in
+[tasks/known-issues.md](tasks/known-issues.md) (Bugs AV–AY), which is the list to update.
 
 ---
 
@@ -267,10 +269,14 @@ context. Don't let a future pass re-flag them:
 
 ---
 
-## Unfixed findings, ranked
+## Unfixed findings, ranked (historical, as of 2026-09-08)
 
-Findings severe enough to fix directly rather than fold into a rubric rule. None
-touched by this chunk — Chunk 6 is synthesis only.
+Findings severe enough to fix directly rather than fold into a rubric rule. Status
+at the close of the pass: the seven security items are fixed; item 12 now has its
+regression test (`test_misconfigured_vols_admin_address_skips_email_not_save`);
+item 13 was done by the dedup work; item 14 was decided, not a bug; item 15 was a
+misreading (the suppressed argument is `request`, and the noqa is correct). Items 7
+to 11 remain open as Bug AY in `tasks/known-issues.md`.
 
 ### Security findings — fixed 2026-09-08, out of band from the normal chunk cadence
 
@@ -378,7 +384,7 @@ as new.
 10. **`labs/views/loft.py` and `labs/views/area_photos.py` have zero test
     coverage**, confirmed by grep — four JSON endpoints (create/update/
     photo-upload/photo-delete) entirely unverified. Sharpens the general
-    labs-undertested finding in `docs/QUALITY_BASELINE.md` to the specific gap.
+    labs-undertested finding in `docs/ARCHIVE/QUALITY_BASELINE_2026_09.md` to the specific gap.
 
 ---
 

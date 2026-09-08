@@ -1,9 +1,9 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Sonnet 5"]; status: "#ai-input"
 """Shared volunteer-lookup helper.
 
-Promoted from toolkit/labs/views/_common.py per QUALITY_PASS.md Chunk 8 —
-toolkit/operations/views/maintenance.py carried a byte-for-byte duplicate
-of the same function.
+Promoted from toolkit/labs/views/_common.py in September 2026, when
+toolkit/operations/views/maintenance.py was found carrying a byte-for-byte
+duplicate of the same function.
 """
 
 

@@ -1,5 +1,5 @@
 // human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Sonnet 5"]; status: "#ai-input"
-// Extracted from form_event.html's two inline <script> blocks (QUALITY_PASS.md Chunk 9).
+// Extracted from form_event.html's two inline <script> blocks (September 2026 quality pass).
 // Wrapped as a factory function taking an options object (following session_detail.js's
 // precedent, given how many values are threaded through from the template): four
 // {% if %}-gated IIFEs (structured cost terms, ticket-link guidance, tag-description

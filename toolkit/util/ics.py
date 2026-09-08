@@ -1,8 +1,8 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Sonnet 5"]; status: "#ai-input"
 """Shared iCalendar (RFC 5545) VCALENDAR/VEVENT builder.
 
-QUALITY_PASS.md Chunk 8: unifies toolkit/diary/calendar_links.py's
-build_ics with toolkit/inductions/views/public.py's calendar_ics, which
+Unifies toolkit/diary/calendar_links.py's build_ics with
+toolkit/inductions/views/public.py's calendar_ics (September 2026), which
 had diverged in two ways worth noting rather than silently fixing:
 
 - diary's version escaped SUMMARY/DESCRIPTION/LOCATION per RFC 5545;

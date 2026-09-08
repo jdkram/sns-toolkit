@@ -2,7 +2,7 @@
 """Functional coverage for lost & found's browse/claim/dispose/label flows.
 test_photo_uploads.py already covers the logging form's photo handling;
 everything else here was untested (Chunk 10 of the quality pass —
-docs/QUALITY_BASELINE.md measured this at ~0% outside the photo-upload
+docs/ARCHIVE/QUALITY_BASELINE_2026_09.md measured this at ~0% outside the photo-upload
 paths)."""
 
 import datetime

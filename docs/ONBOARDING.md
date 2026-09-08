@@ -169,6 +169,7 @@ The source code is bind-mounted into the container, so the running container alw
 | Python files (views, models, forms…) | Nothing — Django reloads automatically |
 | Templates (`.html`) | Nothing — debug mode disables template caching |
 | CSS or JS (static files) | Nothing — the dev server serves static files directly from source |
+| A **new** `static/` directory in an app that had none | `docker compose restart toolkit` — the static finder lists apps with a `static/` dir once at startup, so new ones 404 until restarted |
 | New Python dependency | `docker compose up --build -d` (must rebuild) |
 | Dockerfile or `tk_run.sh` | `docker compose up --build -d` (must rebuild) |
 
@@ -503,7 +504,10 @@ docker compose exec toolkit /venv/bin/coverage report -m
 **Pre-commit and CI:** `.pre-commit-config.yaml` runs ruff and black on staged files —
 install once per checkout with `pip install pre-commit && pre-commit install`. The same two
 checks, plus the full test suite, run in GitHub Actions on every push and pull request
-(`.github/workflows/ci.yml`). See [QUALITY_PASS.md](../QUALITY_PASS.md) for why these exist.
+(`.github/workflows/ci.yml`). These were added in September 2026 after a refactor shipped
+hundreds of unused imports unnoticed; the checkable code standard that came out of the same
+pass is [QUALITY_RUBRIC.md](QUALITY_RUBRIC.md), and the full record is in
+[ARCHIVE/QUALITY_PASS_2026_09.md](ARCHIVE/QUALITY_PASS_2026_09.md).
 
 ---
 
