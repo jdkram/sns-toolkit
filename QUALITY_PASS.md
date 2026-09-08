@@ -55,6 +55,7 @@ model is still worth considering occasionally — just not as the default.
 Commits so far, newest first:
 
 ```
+a835716d  docs(quality): resolve R14 (shared-resource access stays open), set MiniMax as default model
 4fe4c50a  docs(quality): synthesise Chunk 6 rubric, run Kimi security sweep, flag 4 new XSS/CSVi findings
 08a87fb8  docs(quality): record the Chunk 5 MiniMax sweep and an XSS finding
 bd202cd6  docs(quality): write the Chunk 4 coverage/complexity baseline
