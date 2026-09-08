@@ -85,7 +85,18 @@ model is still worth considering occasionally — just not as the default.
 Commits so far, newest first:
 
 ```
+8bf26460  test(labs): add "strange user" edge-case coverage, fix a real login-signal crash
+16f7527b  feat(labs): make every labs mini-tool toggleable via SiteConfiguration
+7eca2501  test(quality): close the exchange.py coverage gap, all four labs targets done
+cd068462  test(quality): close the lost_found.py coverage gap (Chunk 10, third target)
+70fb63ae  test(quality): close the shopping.py coverage gap (Chunk 10, second target)
+238dd150  feat(quality): record the Chunk 7 decision, close the building-map coverage gap
+71c68490  docs(quality): write the Chunk 7 labs feature-scope decision document
+393b08d6  docs(quality): fold the session_detail.html XSS fix into Chunk 9's browser-check note
+239af162  fix(security): patch the 6 findings flagged by the Chunk 5/6 review sweeps
+99946c72  docs(quality): update resume commit log with the R14 resolution commit
 a835716d  docs(quality): resolve R14 (shared-resource access stays open), set MiniMax as default model
+8810a7fd  docs(quality): fix placeholder commit hash in the resume log
 4fe4c50a  docs(quality): synthesise Chunk 6 rubric, run Kimi security sweep, flag 4 new XSS/CSVi findings
 08a87fb8  docs(quality): record the Chunk 5 MiniMax sweep and an XSS finding
 bd202cd6  docs(quality): write the Chunk 4 coverage/complexity baseline
