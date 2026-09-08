@@ -18,8 +18,8 @@ status: "#ai-input"
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
 | Chunks done | 0, 1, 2, 3, 4, 5, 6, 7 (keep all seven `labs` tools) |
-| Next chunk | **10's `labs` portion done** (all four coverage targets at 100%, a follow-up making all seven `labs` tools individually toggleable, and a follow-up-to-the-follow-up covering "strange user" edge cases); the originally-scoped items (destructive paths, `volunteer_edit.py`'s gaps, status-code-only tests) still to go, then 8, 9, 11, 12 |
-| Tests | 1,284 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found, +25 exchange, +21 feature-flag-gate, +18 edge-case-user tests) |
+| Next chunk | **10 in progress**: `labs` portion done (all four coverage targets at 100%, toggleability follow-up, edge-case follow-up), destructive paths (`bulk_anonymise_volunteers`/`bulk_delete_never_onboarded`) now done too; still to go: `toolkit_auth/backends.py` + permission decorators, `volunteer_edit.py`'s gaps, status-code-only tests — then 8, 9, 11, 12 |
+| Tests | 1,317 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found, +25 exchange, +21 feature-flag-gate, +18 edge-case-user, +33 destructive-path tests) |
 | Ruff | 0 findings |
 | Black | clean at 79 |
 | Coverage | 81.5% overall (21,788 statements) — see `docs/QUALITY_BASELINE.md`, not yet re-run since the security fixes |
@@ -744,8 +744,20 @@ work above. Three categories, one new file each:
 
 1,284 tests passing (was 1,245 before this follow-up).
 
+**Destructive paths — done 2026-09-08.** New `toolkit/members/tests/test_pool_bulk_actions.py`
+(33 tests) covers `bulk_anonymise_volunteers` and `bulk_delete_never_onboarded` end to end: both
+steps of each two-step select→confirm flow, the typed-phrase mismatch guard, the delete/anonymise
+split in the delete flow (clean candidates hard-deleted, ones with rota or last-gasp history
+falling back to anonymise), the portrait-file cleanup branch, and the non-superuser/GET-redirect
+guards on both. Picked up a few cheap adjacent gaps in the same file while there:
+`admin_restore_volunteer`'s no-op-with-warning branch (calling it on an Active volunteer),
+`last_gasp_email`'s and `bulk_last_gasp_email`'s disabled-flag branches, and
+`auto_dormancy_apply`'s "no thresholds configured" branch. `volunteer_pool_admin.py`: 54% → **99%**
+(one line, 727, is dead code — the `action` variable is always normalised to `"compose"` or
+`"send"` before that fallback `return` could ever run, so left uncovered rather than contorting a
+test to hit unreachable code). 1,317 tests passing (was 1,284).
+
 Then the items originally scoped for this chunk, in the original order — not yet started:
-destructive paths (`bulk_anonymise_volunteers`, `bulk_delete_never_onboarded`),
 `toolkit_auth/backends.py` and the permission decorators (still untested beyond the one signal
 handler above), `volunteer_edit.py`'s gaps, then strengthening the 102 status-code-only tests
 to assert on state rather than just HTTP 200.
