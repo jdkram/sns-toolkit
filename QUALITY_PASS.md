@@ -18,8 +18,8 @@ status: "#ai-input"
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
 | Chunks done | 0, 1, 2, 3, 4, 5, 6, 7 (keep all seven `labs` tools) |
-| Next chunk | **10, reordered** — building map, shopping, and lost & found done; exchange still to go |
-| Tests | 1,218 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found tests) |
+| Next chunk | **10's `labs` portion done** (all four coverage targets at 100%); the originally-scoped items (destructive paths, `toolkit_auth/`, `volunteer_edit.py`, status-code-only tests) still to go, then 8, 9, 11, 12 |
+| Tests | 1,245 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found, +25 exchange tests) |
 | Ruff | 0 findings |
 | Black | clean at 79 |
 | Coverage | 81.5% overall (21,788 statements) — see `docs/QUALITY_BASELINE.md`, not yet re-run since the security fixes |
@@ -658,13 +658,22 @@ coverage gaps first, worst-covered to best, before the other named gaps below.
    claimed/disposed → 404" and "invalid form data → no-op" branches), the label page, and the
    `FoundItem` model's `label_id`/`status_display`/`is_overdue` logic. `lost_found.py`: 50% →
    **100%**.
-4. **Exchange** (55% — gap clusters around the on-loan/returned/all-gone/missing state
-   transitions).
+4. ~~**Exchange**~~ — **done.** New `toolkit/labs/tests/test_exchange_actions.py` (25 tests)
+   covers the four state-transition actions the doc flagged
+   (`mark_on_loan`/`mark_returned`/`mark_all_gone`/`mark_missing`), each one's feature-flag
+   gate, the `exchange_item`/`exchange_edit`/`exchange_withdraw` gates, and the
+   `exchange_add` owner-volunteer auto-assignment branch. `exchange.py`: 55% → **100%**.
 
-Then the items originally scoped for this chunk, in the original order: destructive paths
-(`bulk_anonymise_volunteers`, `bulk_delete_never_onboarded`), `toolkit_auth/` (currently zero
-tests), `volunteer_edit.py`'s gaps, then strengthening the 102 status-code-only tests to assert
-on state rather than just HTTP 200.
+**All four `labs` coverage targets are done.** Whole-package result:
+`floorplan.py`/`loft.py`/`area_photos.py`/`shopping.py`/`lost_found.py`/`exchange.py` all at
+100%; `labs/views/` overall 97% (only `bulletins.py` 86%, `collectives.py` 99%, `donations.py`
+90% remain short of full, none of them Chunk 7 targets). 1,245 tests passing (was 1,129 at
+session start).
+
+Then the items originally scoped for this chunk, in the original order — not yet started:
+destructive paths (`bulk_anonymise_volunteers`, `bulk_delete_never_onboarded`), `toolkit_auth/`
+(currently zero tests), `volunteer_edit.py`'s gaps, then strengthening the 102
+status-code-only tests to assert on state rather than just HTTP 200.
 
 ### Chunk 11: Un-star members/views, split what's god-sized — NOT STARTED
 
