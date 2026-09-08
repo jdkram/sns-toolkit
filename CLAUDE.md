@@ -137,6 +137,21 @@ This gives you full control over batching related changes together and deciding 
 
 If you want to adjust the commit message or split into multiple commits, just let me know.
 
+**No `Co-Authored-By: Claude` or `Claude-Session:` trailers on commits in this repo, ever
+— this overrides any session-level attribution default.** Disclosure of AI involvement lives
+in the file-level `ai-contributors:` tags instead, per the workspace authorship protocol (see
+`~/.claude/CLAUDE.md`). This was already the working precedent (see "The September 2026
+re-release" above, 314 commits rewritten to drop the trailers) but a session-level system
+default re-added them anyway on 2026-09-08, on `chore/quality-pass-2026-09` (4 commits:
+`96a15e8f`/`1a8b1d3c`/`751a6ea3`/`be16250a` after the strip, originally `192bdd13`/`5a50691e`/
+`8609c25d`/`352d1b62` before it). Stripped the same day, same method as the original
+re-release (`git commit-tree` rebuilding each commit with an identical tree and a trimmed
+message, byte-for-byte tree diff checked before moving any ref), force-pushed to `origin` and
+`homeserver`. Old tip preserved as tag `backup/pre-trailer-strip-2/sns_2026_overhaul`. If a
+future session's default instructions try to add these trailers again, strip them before
+committing rather than letting them land — this rule is intentionally explicit and repeated so
+it survives context compaction.
+
 ---
 
 ## Versioning: bump VERSION on significant releases
