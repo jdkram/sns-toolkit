@@ -17,9 +17,9 @@ status: "#ai-input"
 | | |
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
-| Chunks done | 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12 |
-| Next chunk | **9** — extract inline JS/CSS, the only one left |
-| Tests | 1,359 passing (unchanged by Chunk 8 — a dedup chunk moves code, it doesn't add coverage; was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found, +25 exchange, +21 feature-flag-gate, +18 edge-case-user, +33 destructive-path, +24 toolkit_auth, +18 volunteer_edit tests; the status-code-only strengthening pass and Chunk 11's package splits added no new tests) |
+| Chunks done | 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 — all chunks complete |
+| Next chunk | none — the plan's chunk list is exhausted |
+| Tests | 1,359 passing (unchanged by Chunks 8 and 9 — both move code rather than add coverage; was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found, +25 exchange, +21 feature-flag-gate, +18 edge-case-user, +33 destructive-path, +24 toolkit_auth, +18 volunteer_edit tests; the status-code-only strengthening pass and Chunk 11's package splits added no new tests) |
 | Ruff | 0 findings |
 | Black | clean at 79 |
 | Coverage | 85.5% overall (23,631 statements), up from 81.5% baseline — see `docs/QUALITY_BASELINE.md` for the full before/after |
@@ -732,7 +732,7 @@ each page keeping its own `td { vertical-align }` override since those genuinely
 two beyond ordinary page skeleton, so it's untouched — forcing an include there would have been
 inventing duplication to satisfy the plan rather than removing real duplication.
 
-### Chunk 9: Extract inline JS and CSS — IN PROGRESS (started 2026-09-08)
+### Chunk 9: Extract inline JS and CSS — DONE 2026-09-08
 
 The largest single win, and the one no previous pass touched. **Likely two sessions on its
 own** — one template per commit, stop cleanly between them.
@@ -823,11 +823,49 @@ own** — one template per commit, stop cleanly between them.
    worth prioritising: the break-even calculator, the crop tool and letterbox-bars colour
    picker/swatches, the OMDb film search-and-link flow, the poster generator, the cost-type
    field-swapping, and the tag-pill tooltips.
-4. `edit_rota.html` — last. Its 894-line `<style>` block and template-interpolated JS need the
-   most care, and it's also where the "factory function + inline call" pattern this chunk now
-   follows already lives — mostly a matter of confirming nothing there needs to change.
+4. ~~`edit_rota.html`~~ — **done 2026-09-08.** The premise that "the factory function pattern
+   already lives here, mostly a matter of confirming nothing needs to change" turned out to be
+   half right: `edit_rota.js`'s `edit_rota(jQuery, ...)` call (rota-editing AJAX — signups,
+   notes, clear-email prompts) was indeed already externalised and needed no changes. But a
+   *second*, undocumented, ~1,030-line inline `<script>` sat directly after it in the same
+   `{% block script %}` — the page's UI layer (filter panel, tag/role filters, the nav rail,
+   badge preferences, keyboard shortcuts, the role sign-up picker) — that QUALITY_PASS.md's plan
+   hadn't accounted for, plus the 894-line `<style>` block. Moved the CSS verbatim to
+   `diary/static/diary/css/edit_rota.css`, and the second script to a new
+   `diary/static/diary/js/edit_rota_ui.js`, exported as `editRotaUI(opts)` — a second, separate
+   factory alongside the existing `edit_rota(...)` call rather than merging the two, since they
+   were always independent concerns communicating only via a `rota:entry-changed` jQuery custom
+   event, with no shared state.
+   Six `{% if can_mark_events %}` / `{% if current_volunteer_pk %}` conditionals threaded through
+   this script, one of them (`ROTA_MARKS`/`setShowingMark`/etc., ~60 lines) wrapping several
+   `function` *declarations*. Wrapping declarations like that in a runtime `if` would have been
+   a real bug under `"use strict"`, where a function declaration inside a block is block-scoped
+   and invisible outside it — but a `typeof setShowingMark === "function"` check later in the
+   same script, in the keyboard-shortcut handler, needs `setShowingMark` visible whether or not
+   `can_mark_events` is true. Converted those three functions to `var name = function(...) {...}`
+   expressions instead: `var` still hoists to the factory's outer scope even from inside an `if`
+   block, so `typeof setShowingMark` correctly resolves to `"undefined"` when the mark feature is
+   off, exactly matching the original behaviour where the whole block was never emitted by
+   Django at all. The other five simpler conditionals (guarding single statements or a
+   dynamically-built jQuery selector string) converted directly to `opts.canMarkEvents` /
+   `opts.currentVolunteerPk` JS-side checks. Confirmed via `edit_views/rota.py` that
+   `rota_marks_json` and `current_volunteer_pk` are always present in context regardless of
+   `can_mark_events` (`"{}"` and `""` respectively when the viewing user has no linked
+   `Volunteer`), so none of this needed the `{% if %}...{% else %}null{% endif %}`
+   options-literal guard that `form_event.html` needed for its two absent-on-one-path JSON blobs.
+   Verified: `node --check` on both new JS files; full `toolkit.diary.tests` (516/516) and the
+   whole-project suite (1,359/1,359 — unchanged from Chunk 9's start, as expected for a pure
+   extraction) both pass; three throwaway Client-based smoke tests (not committed) confirmed the
+   new static refs render with no leftover inline `<style>`/`<script>` content, and that
+   `canMarkEvents`/`currentVolunteerPk` correctly render `false`/`""` for a rota-permission user
+   with no linked `Volunteer` and `true`/non-empty for one with a `Volunteer` record created in
+   the test. No live browser click-through this session (extension not connected) — worth a
+   manual pass over: the filter panel and tag/role filters, the month nav rail, badge visibility
+   toggles (localStorage-backed), the keyboard shortcuts (`j`/`k` navigation, `s`/`1`/`2`/`0`
+   marks, `r` role sign-up picker, `?` help modal), and the event-mark star/shadow toggle for a
+   user with a linked `Volunteer`.
 
-Tests will not cover `edit_rota.html`. See the browser verification note below.
+All four templates in this chunk are now done. **Chunk 9 status: DONE 2026-09-08.**
 
 ### Chunk 10: Tests — DONE 2026-09-08
 
