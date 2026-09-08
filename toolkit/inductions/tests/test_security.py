@@ -9,7 +9,11 @@ the feature is enabled, and 404 when it is switched off.
 from django.test import TestCase
 from django.urls import reverse
 
-from toolkit.inductions.models import InductionRequest, InductionsSettings
+from toolkit.inductions.models import (
+    InductionRequest,
+    InductionSignup,
+    InductionsSettings,
+)
 from toolkit.inductions.tests.common import InductionsTestsMixin
 
 
@@ -145,3 +149,21 @@ class PublicEndpointGating(InductionsTestsMixin, TestCase):
             ).status_code,
             404,
         )
+
+
+class ExportCsvFormulaInjection(InductionsTestsMixin, TestCase):
+    """A checked-in name starting with =/+/-/@ must not survive into the CSV
+    as a live spreadsheet formula (formula injection via export)."""
+
+    def test_leading_formula_characters_are_neutralised(self):
+        self.signup.name = "=cmd|'/bin/calc'!A0"
+        self.signup.status = InductionSignup.STATUS_CHECKED_IN
+        self.signup.save()
+
+        self.login_admin()
+        response = self.client.get(
+            reverse("inductions:manage_export_csv", args=[self.session.slug])
+        )
+        content = response.content.decode()
+        self.assertNotIn("\n=cmd", content)
+        self.assertIn("\t=cmd", content)

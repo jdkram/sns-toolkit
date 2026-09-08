@@ -10,6 +10,7 @@ from django.urls import reverse
 from toolkit.diary.models import (
     Showing,
     Event,
+    Room,
     RoomBooking,
 )
 
@@ -670,6 +671,20 @@ class EditShowingRoomBookingTests(DiaryTestsMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("room_booking_formset", response.context)
         self.assertIn("rooms_json", response.context)
+
+    @patch("django.utils.timezone.now")
+    def test_rooms_json_is_script_safe(self, now_patch):
+        """A room name containing `</script>` must not be able to break out
+        of the inline <script> block it's rendered into (stored XSS)."""
+        now_patch.return_value = datetime(2013, 1, 1, tzinfo=self.UTC)
+        Room.objects.create(
+            name="</script><script>alert(1)</script>", colour="#123456"
+        )
+        response = self.client.get(self.url)
+        rooms_json = response.context["rooms_json"]
+        self.assertNotIn("</script>", rooms_json)
+        rendered = response.content.decode()
+        self.assertNotIn("</script><script>alert(1)</script>", rendered)
 
     @patch("django.utils.timezone.now")
     def test_overlapping_booking_shows_clash_warning(self, now_patch):

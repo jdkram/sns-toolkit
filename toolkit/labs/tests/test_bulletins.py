@@ -253,3 +253,26 @@ class BulletinReadTests(LabsTestsMixin, TestCase):
             ).count(),
             1,
         )
+
+    def test_read_all_ignores_off_site_referer(self):
+        """An attacker-controlled HTTP_REFERER must not become the redirect
+        target (open redirect)."""
+        url = reverse("labs-bulletins-read-all")
+        response = self.client.post(
+            url, HTTP_REFERER="https://evil.example/phish"
+        )
+        self.assertNotIn("evil.example", response.url)
+
+    def test_bulletin_read_ignores_off_site_referer(self):
+        url = reverse(
+            "labs-bulletin-read", kwargs={"bulletin_id": self.bulletin.pk}
+        )
+        response = self.client.post(
+            url, HTTP_REFERER="https://evil.example/phish"
+        )
+        self.assertNotIn("evil.example", response.url)
+
+    def test_read_all_honours_same_site_referer(self):
+        url = reverse("labs-bulletins-read-all")
+        response = self.client.post(url, HTTP_REFERER="/labs/bulletins/")
+        self.assertEqual(response.url, "/labs/bulletins/")

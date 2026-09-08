@@ -1096,6 +1096,23 @@ class TestBulkRecordTraining(MembersTestsMixin, TestCase):
             {v.pk for v in volunteers},
         )
 
+    def test_qualification_name_is_html_escaped_not_js_escaped(self):
+        """The confirm-modal body used to embed the qualification name via
+        `|escapejs` inside a string later assigned through .innerHTML —
+        escapejs doesn't strip `<`/`>`, so a name containing a script tag
+        would execute (stored XSS). The name must now only ever reach the
+        page HTML-escaped, read back into JS via textContent instead."""
+        from toolkit.members.models import Qualification
+
+        qual = Qualification.objects.create(name="<script>alert(1)</script>")
+        response = self.client.get(
+            reverse("bulk-record")
+            + f"?mode=qualification&qualification_id={qual.pk}"
+        )
+        rendered = response.content.decode()
+        self.assertNotIn("<script>alert(1)</script>", rendered)
+        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", rendered)
+
     def test_qualification_grant_skips_existing_holders(self):
         from toolkit.members.models import (
             Qualification,

@@ -20,6 +20,7 @@ from toolkit.diary.models import (
     get_site_config,
 )
 from toolkit.audit.models import DeletionLog, log_deletion
+from toolkit.diary.daterange import safe_json
 import toolkit.diary.forms as diary_forms
 
 # Shared utility method:
@@ -211,10 +212,8 @@ def edit_showing(request, showing_id=None):
 
 def _rooms_json():
     """Return a JSON-serialisable list of room dicts for the booking map JS."""
-    import json
-
     rooms = Room.objects.all().values("id", "name", "colour", "map_slug")
-    return json.dumps(list(rooms))
+    return safe_json(list(rooms))
 
 
 @write_required

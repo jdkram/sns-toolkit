@@ -272,47 +272,51 @@ context. Don't let a future pass re-flag them:
 Findings severe enough to fix directly rather than fold into a rubric rule. None
 touched by this chunk — Chunk 6 is synthesis only.
 
-### Needs its own out-of-band fix (security), not the normal chunk cadence
+### Security findings — fixed 2026-09-08, out of band from the normal chunk cadence
 
-1. **Stored XSS, `inductions/manage/session_detail.html`** — already documented in
-   QUALITY_PASS.md's Chunk 5 section and flagged to Jonny directly (2026-09-08).
-   Still open. Not repeated in full here; see that entry.
-2. **Open redirect via `HTTP_REFERER`, `labs/views/bulletins.py:199,213`** — new,
-   found by this synthesis. `request.META.get("HTTP_REFERER")` goes straight into
-   `redirect()` with no `url_has_allowed_host_and_scheme` check. Same vulnerability
-   class as `diary/edit_views.py:2609`, which `REVIEW_2026_OVERHAUL.md` flagged and
-   which is already fixed — this second instance was missed by that review because
-   it's in `labs`, not `diary`. Low severity in the same way the fixed one was
-   (authenticated volunteers only), but it's the same one-line fix
-   (`url_has_allowed_host_and_scheme`) and shouldn't wait for Chunk 8.
-3. **Stored XSS, `diary/templates/form_showing.html:20`** — `_rooms_json()`
-   (`diary/edit_views/showings.py:212`) uses plain `json.dumps()`, embedded via
-   `{{ rooms_json|safe }}` inside a `&lt;script&gt;` block. Room names are
-   programmer/panopticon-editable, and this is the exact anti-pattern
-   `daterange.py`'s `safe_json()` helper already exists to prevent — this call site
-   just doesn't use it. See rubric rule R13.
-4. **Stored XSS, `members/templates/volunteer_bulk_record.html:198`** —
-   `{{ selected_qual.name|escapejs }}` is embedded in an HTML string literal that's
-   later assigned via `.innerHTML =` (line 138). `escapejs` doesn't escape
-   `&lt;`/`&gt;`/`&amp;`, so a qualification name containing a script tag survives into
-   the DOM. Same root cause as R13 — the wrong filter for the actual sink.
-5. **JS-context XSS, `diary/templates/edit_event_template_detail.html:522`** —
-   `onclick="return confirm('Delete template \'{{ event_template.name }}\'?')"` has
-   no `|escapejs`. Django's default HTML-escaping isn't sufficient here: the browser
-   HTML-decodes the attribute value before treating it as JS source, so an escaped
-   `'` still breaks out of the string once decoded.
-6. **CSV formula injection, `inductions/views.py:488`
-   (`manage_export_csv`)** — volunteer-supplied `first_name`/`last_name` written raw
-   via `csv.writer`, no guard against a leading `=`/`+`/`-`/`@` (Excel/Sheets
-   formula-execution-on-open). The same hand-rolled CSV pattern exists in
-   `members/views/volunteer_export.py` and `diary/edit_views/reports.py` — already
-   tracked as duplication in this file's Measured Findings section — so check all
-   three for the same gap when Chunk 8 unifies them into a shared `csv_response()`
-   helper, not just this one.
+All six below are now fixed, with regression tests, on `chore/quality-pass-2026-09`
+(1,136 tests passing, up from 1,129; ruff/black clean). Kept here for the record —
+struck through rather than deleted so a future pass doesn't re-flag the same shape
+as new.
 
-Items 3-6 are new confirmed findings from the Kimi sweep (2026-09-08), same severity
-class as items 1-2 — not fixed yet, need the same direct flag rather than waiting
-for the normal chunk cadence.
+1. ~~**Stored XSS, `inductions/manage/session_detail.html`**~~ — **fixed.** Added
+   an `escapeHtml()` JS helper and applied it to every server-response field
+   (`item.username`, `d.name`, `d.existing_email`, `d.existing_username`,
+   `e.name`/`e.error`, `data.desired_username`, `data.name`, `data.email`,
+   `data.preview_username`, `data.signed_up_at`) reaching `.innerHTML` in this
+   file. No automated test — this is a pure client-side JS sink with no Django
+   test client coverage; needs a manual browser check per Chunk 9's existing
+   "tests will not cover this" note.
+2. ~~**Open redirect via `HTTP_REFERER`, `labs/views/bulletins.py:199,213`**~~ —
+   **fixed.** Added `_redirect_to_referer()`, using
+   `url_has_allowed_host_and_scheme` the same way `diary/edit_views/site_config.py`
+   already does, falling back to `toolkit-index` for an off-site or missing
+   referer. Regression tests in `labs/tests/test_bulletins.py`
+   (`test_read_all_ignores_off_site_referer`,
+   `test_bulletin_read_ignores_off_site_referer`,
+   `test_read_all_honours_same_site_referer`).
+3. ~~**Stored XSS, `diary/templates/form_showing.html:20`**~~ — **fixed.**
+   `_rooms_json()` now calls `daterange.safe_json()` instead of raw
+   `json.dumps()`. Regression test:
+   `diary/tests/test_edit_showing.py::EditShowingRoomBookingTests::test_rooms_json_is_script_safe`.
+4. ~~**Stored XSS, `members/templates/volunteer_bulk_record.html:198`**~~ —
+   **fixed.** Removed the `|escapejs`-into-`innerHTML` anti-pattern; the
+   qualification name is now rendered once, HTML-escaped, into a
+   `<strong id="award-qual-name">` element, and the confirm-modal JS reads it
+   back via `textContent` and the existing client-side `esc()` helper.
+   Regression test:
+   `members/tests/test_volunteers.py::TestBulkRecordTraining::test_qualification_name_is_html_escaped_not_js_escaped`.
+5. ~~**JS-context XSS, `diary/templates/edit_event_template_detail.html:522`**~~ —
+   **fixed.** Added the missing `|escapejs` to `event_template.name` in the
+   `onclick="confirm(...)"` attribute. Regression test:
+   `diary/tests/test_edit_misc.py::TemplateDeleteConfirmEscapingTests::test_template_name_with_quote_is_js_escaped`.
+6. ~~**CSV formula injection, `inductions/views.py:488` (`manage_export_csv`)**~~
+   — **fixed** for this call site: added `_csv_formula_guard()`, prefixing a
+   leading `=`/`+`/`-`/`@` with a tab. Regression test:
+   `inductions/tests/test_security.py::ExportCsvFormulaInjection`. The other two
+   hand-rolled CSV exports (`members/views/volunteer_export.py`,
+   `diary/edit_views/reports.py`) still need the same guard — left for Chunk 8's
+   `csv_response()` unification as originally scoped, not fixed here.
 
 ### Real bugs, worth a fix when the relevant file is next touched (Chunk 8 or 11, not urgent enough to interrupt)
 

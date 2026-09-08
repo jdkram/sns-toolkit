@@ -11,6 +11,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 
 from django.http import HttpResponse, HttpResponseForbidden
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.db.models import Exists, OuterRef
 
 from ..models import (
@@ -19,6 +20,15 @@ from ..models import (
 )
 from toolkit.diary.models import SiteConfiguration, get_site_config
 from .. import forms as lab_forms
+
+
+def _redirect_to_referer(request):
+    referer = request.META.get("HTTP_REFERER")
+    if referer and url_has_allowed_host_and_scheme(
+        referer, allowed_hosts={request.get_host()}
+    ):
+        return redirect(referer)
+    return redirect("toolkit-index")
 
 
 def _user_can_post_bulletin(user):
@@ -196,7 +206,7 @@ def bulletin_read_all(request):
                 if b not in existing
             ]
         )
-    return redirect(request.META.get("HTTP_REFERER") or "toolkit-index")
+    return _redirect_to_referer(request)
 
 
 @login_required
@@ -210,7 +220,7 @@ def bulletin_read(request, bulletin_id):
         or request.headers.get("X-Requested-With") == "XMLHttpRequest"
     ):
         return HttpResponse(status=204)
-    return redirect(request.META.get("HTTP_REFERER") or "toolkit-index")
+    return _redirect_to_referer(request)
 
 
 @login_required

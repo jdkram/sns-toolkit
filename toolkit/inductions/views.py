@@ -595,6 +595,14 @@ def manage_no_show(request, slug, signup_id):  # noqa: ARG001 -- view signature
     return JsonResponse({"ok": True, "new_status": "no_show"})
 
 
+def _csv_formula_guard(value):
+    """Prefix a leading `=`/`+`/`-`/`@` with a tab so spreadsheet apps treat
+    the cell as text rather than executing it as a formula on open."""
+    if value and value[0] in ("=", "+", "-", "@"):
+        return "\t" + value
+    return value
+
+
 @panopticon_required
 def manage_export_csv(request, slug):  # noqa: ARG001 -- view signature
     """Download a Simplelists-ready CSV of checked-in attendees."""
@@ -609,7 +617,13 @@ def manage_export_csv(request, slug):  # noqa: ARG001 -- view signature
     )
     writer = csv.writer(response)
     for s in checked_in:
-        writer.writerow([s.first_name, s.last_name, s.email])
+        writer.writerow(
+            [
+                _csv_formula_guard(s.first_name),
+                _csv_formula_guard(s.last_name),
+                s.email,
+            ]
+        )
     return response
 
 

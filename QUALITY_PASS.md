@@ -19,25 +19,28 @@ status: "#ai-input"
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
 | Chunks done | 0, 1, 2, 3, 4, 5, 6 |
 | Next chunk | **7 (feature scope, needs Jonny)** |
-| Tests | 1,129 passing |
+| Tests | 1,136 passing (was 1,129 — +7 from the security-fix regression tests below) |
 | Ruff | 0 findings |
 | Black | clean at 79 |
-| Coverage | 81.5% overall (21,788 statements) — see `docs/QUALITY_BASELINE.md` |
+| Coverage | 81.5% overall (21,788 statements) — see `docs/QUALITY_BASELINE.md`, not yet re-run since the security fixes |
 | CI | `.github/workflows/ci.yml` + `.pre-commit-config.yaml` in place, not yet exercised by a real PR |
 
-**⚠️ Six unfixed security findings, need attention independent of the Chunk 7-11 cadence:**
-a stored-XSS vector in `toolkit/inductions/templates/inductions/manage/session_detail.html`
-(Chunk 5); an open redirect via unvalidated `HTTP_REFERER` in
-`toolkit/labs/views/bulletins.py:199,213` (Chunk 6) — same vulnerability class as the one
-`REVIEW_2026_OVERHAUL.md` already found and fixed elsewhere, missed there because it's in `labs`
-not `diary`; and, from a follow-up Kimi K2 Thinking security sweep the same day, three more
-confirmed XSS variants (`diary/templates/form_showing.html:20`,
-`members/templates/volunteer_bulk_record.html:198`,
-`diary/templates/edit_event_template_detail.html:522` — all the same root cause, an escape
-filter mismatched to its actual sink, now rubric rule R13) and a CSV formula-injection gap in
-`inductions/views.py:488` (`manage_export_csv`). See `docs/QUALITY_RUBRIC.md`'s "Unfixed
-findings" section for all six, in ranked order. None fixed yet; flagged to Jonny directly the
-sessions they were found, separate from this file, in case it isn't read again for a while.
+**All six previously-unfixed security findings are now fixed** (out of band from the
+Chunk 7-11 cadence, as flagged): the stored-XSS vector in
+`toolkit/inductions/templates/inductions/manage/session_detail.html` (Chunk 5); the open
+redirect via unvalidated `HTTP_REFERER` in `toolkit/labs/views/bulletins.py` (Chunk 6); the
+three further XSS variants from the Kimi sweep (`diary/templates/form_showing.html`,
+`members/templates/volunteer_bulk_record.html`,
+`diary/templates/edit_event_template_detail.html` — rubric rule R13); and the CSV
+formula-injection gap in `inductions/views.py` (`manage_export_csv`). All six carry regression
+tests now (1,136 total, up from 1,129) except the session_detail.html fix, which is a pure
+client-side JS sink with no Django-test-client coverage — see `docs/QUALITY_RUBRIC.md`'s
+"Unfixed findings" section (now struck through) for the fix detail and test names per item.
+**Still needs a manual browser check** of the session_detail.html induction signup flow, per
+Chunk 9's existing note that JS-sink fixes aren't covered by the test suite. The
+`csv_response()` unification in Chunk 8 should still add the same formula-injection guard to
+`members/views/volunteer_export.py` and `diary/edit_views/reports.py` — not done here, out of
+scope for an out-of-band security fix.
 
 **Resolved, no longer open:** the R14 decision (five views with no ownership check on shared
 objects — `collectives.py`, `area_photos.py`, `loft.py`, `exchange.py`, `jobs.py`) was decided

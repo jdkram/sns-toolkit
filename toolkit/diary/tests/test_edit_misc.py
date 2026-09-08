@@ -1033,6 +1033,29 @@ class EventTemplateFormLayoutTests(DiaryTestsMixin, TestCase):
         self.assertEqual(str(self.tmpl1.cost_flat_fee_gbp), "150.00")
 
 
+class TemplateDeleteConfirmEscapingTests(DiaryTestsMixin, TestCase):
+    """The delete button's `onclick="confirm(...)"` embeds the template name
+    as a JS string literal inside an HTML attribute. A name containing a
+    single quote must not be able to break out of that literal once the
+    browser HTML-decodes the attribute (JS-context XSS)."""
+
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="admin", password="T3stPassword!")
+
+    def test_template_name_with_quote_is_js_escaped(self):
+        self.tmpl1.name = "Evil');alert(1);('"
+        self.tmpl1.save()
+
+        url = reverse(
+            "edit_event_template_detail", kwargs={"template_id": self.tmpl1.pk}
+        )
+        response = self.client.get(url)
+        rendered = response.content.decode()
+        self.assertNotIn("confirm('Delete template 'Evil'", rendered)
+        self.assertIn("Evil\\u0027)", rendered)
+
+
 class TemplateExportImportTests(DiaryTestsMixin, TestCase):
     def setUp(self):
         super().setUp()

@@ -310,6 +310,15 @@ var EDIT_URL_PATTERN = "{% url 'inductions:manage_edit_signup' slug=session.slug
 var NO_SHOW_URL_PATTERN = "{% url 'inductions:manage_no_show' slug=session.slug signup_id=0 %}";
 var SET_CAP_URL = "{% url 'inductions:manage_session_set_cap' slug=session.slug %}";
 
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /* ── Attendance checkboxes ── */
 document.querySelectorAll('.attendance-cb[data-mark-url]').forEach(function(cb) {
   cb.addEventListener('change', function() {
@@ -424,7 +433,7 @@ if (createAccountsBtn) createAccountsBtn.addEventListener('click', function() {
         var editBtn = document.querySelector('.edit-btn[data-signup-id="' + signupId + '"]');
         if (editBtn) editBtn.style.display = 'none';
         var usernameCell = document.getElementById('username-' + signupId);
-        if (usernameCell && item.username) usernameCell.innerHTML = '<code>' + item.username + '</code>';
+        if (usernameCell && item.username) usernameCell.innerHTML = '<code>' + escapeHtml(item.username) + '</code>';
       });
     }
 
@@ -434,17 +443,17 @@ if (createAccountsBtn) createAccountsBtn.addEventListener('click', function() {
     }
     if (data.errors && data.errors.length) {
       msg += '<div class="alert alert-danger py-2 mb-2"><strong>Errors for ' + data.errors.length + ' person(s):</strong><ul class="mb-0 mt-1">';
-      data.errors.forEach(function(e) { msg += '<li>' + e.name + ': ' + e.error + '</li>'; });
+      data.errors.forEach(function(e) { msg += '<li>' + escapeHtml(e.name) + ': ' + escapeHtml(e.error) + '</li>'; });
       msg += '</ul></div>';
     }
     if (data.duplicates && data.duplicates.length) {
       msg += '<div class="alert alert-warning py-2 mb-0"><strong>Possible duplicates, action required:</strong>';
       data.duplicates.forEach(function(d) {
         var matchDesc = d.match_type === 'email'
-          ? 'email match: ' + d.existing_email
-          : 'name match: ' + d.existing_username;
+          ? 'email match: ' + escapeHtml(d.existing_email)
+          : 'name match: ' + escapeHtml(d.existing_username);
         msg += '<div class="mt-2 border-top pt-2">';
-        msg += '<strong>' + d.name + '</strong>: existing account found (' + matchDesc + ', username: <code>' + d.existing_username + '</code>)<br>';
+        msg += '<strong>' + escapeHtml(d.name) + '</strong>: existing account found (' + matchDesc + ', username: <code>' + escapeHtml(d.existing_username) + '</code>)<br>';
         msg += '<button class="btn btn-sm btn-outline-secondary mt-1 me-1 link-existing-btn" '
              + 'data-signup-id="' + d.signup_id + '" '
              + 'data-volunteer-id="' + d.existing_volunteer_id + '" '
@@ -506,7 +515,7 @@ if (createAccountsBtn) createAccountsBtn.addEventListener('click', function() {
             if (cb) { cb.disabled = true; }
             var accountCell = document.getElementById('account-' + signupId);
             if (accountCell) accountCell.innerHTML = '<span class="badge bg-success">Account created</span>';
-            fBtn.closest('div.mt-2').innerHTML = '<span class="text-success">✓ New account created: <code>' + item.username + '</code>.</span>';
+            fBtn.closest('div.mt-2').innerHTML = '<span class="text-success">✓ New account created: <code>' + escapeHtml(item.username) + '</code>.</span>';
           } else {
             fBtn.disabled = false; fBtn.textContent = 'Create new account anyway';
             var errMsg = (resp.errors && resp.errors.length) ? resp.errors[0].error : 'Unknown error';
@@ -624,10 +633,10 @@ document.getElementById('edit-save-btn').addEventListener('click', function() {
       var uCell = document.getElementById('username-' + signupId);
       if (uCell) {
         if (data.desired_username) {
-          uCell.innerHTML = '<span class="text-muted small"><code>' + data.desired_username + '</code><br><small>(pending)</small></span>';
+          uCell.innerHTML = '<span class="text-muted small"><code>' + escapeHtml(data.desired_username) + '</code><br><small>(pending)</small></span>';
         } else {
           var previewName = document.getElementById('name-' + signupId).childNodes[0].textContent.trim();
-          uCell.innerHTML = '<span class="text-muted small"><code>' + _slugPreview(previewName) + '</code><br><small>(preview)</small></span>';
+          uCell.innerHTML = '<span class="text-muted small"><code>' + escapeHtml(_slugPreview(previewName)) + '</code><br><small>(preview)</small></span>';
         }
       }
       editModal.hide();
@@ -804,14 +813,14 @@ if (walkinAddBtn) {
           ' id="cb-' + data.signup_id + '" data-signup-id="' + data.signup_id + '"' +
           ' data-mark-url="' + markUrl + '">' +
         '</td>' +
-        '<td id="name-' + data.signup_id + '" class="align-middle">' + data.name +
+        '<td id="name-' + data.signup_id + '" class="align-middle">' + escapeHtml(data.name) +
           '{% if user.is_superuser %}<button type="button" class="btn btn-link btn-sm p-0 ms-1 edit-btn"' +
           ' data-signup-id="' + data.signup_id + '" data-desired-username=""' +
           ' title="Edit name/email/username" style="color:#6c757d;">✏</button>{% endif %}</td>' +
-        '<td id="email-' + data.signup_id + '" class="align-middle">' + (data.email || '—') + '</td>' +
+        '<td id="email-' + data.signup_id + '" class="align-middle">' + escapeHtml(data.email || '—') + '</td>' +
         '<td id="username-' + data.signup_id + '" class="align-middle">' +
-          '<span class="text-muted small"><code>' + data.preview_username + '</code></span></td>' +
-        '<td class="align-middle text-nowrap">' + data.signed_up_at + '</td>' +
+          '<span class="text-muted small"><code>' + escapeHtml(data.preview_username) + '</code></span></td>' +
+        '<td class="align-middle text-nowrap">' + escapeHtml(data.signed_up_at) + '</td>' +
         '<td id="status-' + data.signup_id + '" class="align-middle">' +
           '<span class="badge bg-warning text-dark">Pending</span></td>' +
         '<td id="account-' + data.signup_id + '" class="align-middle">' +
