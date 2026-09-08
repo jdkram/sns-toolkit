@@ -18,16 +18,10 @@
   .shop-banner--pickup   { background: #edf7f0; color: #0a5233; border: 1px solid #b2dfca; }
   .shop-banner--either   { background: #f8f9fa; color: #495057; border: 1px solid #dee2e6; }
 
-  .buy-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-  .buy-table th {
-    background: #343a40; color: #fff;
-    padding: 0.45rem 0.65rem; font-size: 0.8rem; font-weight: 600; text-align: left;
-  }
-  .buy-table td { padding: 0.55rem 0.65rem; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
-  .buy-table tr:hover td { background: #f8f9fa; }
+  {% include "labs/_buy_table_css.html" %}
+  .shop-table td { vertical-align: middle; }
 
   .item-name { font-weight: 600; }
-  .item-meta { font-size: 0.78rem; color: #6c757d; margin-top: 0.15rem; }
 
   .status-col { min-width: 8rem; }
   .pledge-this  { border-left: 3px solid #0d6efd; }
@@ -52,10 +46,7 @@
 {% endblock %}
 
 {% block body %}
-<div class="d-flex justify-content-between align-items-baseline mb-2">
-  <h1 class="mb-0">{{ supplier.name }}</h1>
-  <a href="{% url "labs-shopping-buy" %}" class="text-muted" style="font-size:0.85rem;">← All suppliers</a>
-</div>
+{% include "labs/_buy_header.html" with buy_header_title=supplier.name buy_header_back_url="labs-shopping-buy" buy_header_back_label="All suppliers" %}
 
 {% if supplier.fulfilment_type == "delivery" %}
 <div class="shop-banner shop-banner--delivery">
@@ -79,7 +70,7 @@
 
 {% if rows %}
 <div style="overflow-x:auto;">
-<table class="buy-table">
+<table class="shop-table">
   <thead>
     <tr>
       <th>Item</th>

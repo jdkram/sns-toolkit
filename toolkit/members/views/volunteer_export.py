@@ -6,8 +6,6 @@ behaviour change. Group: export.
 
 from datetime import datetime
 from datetime import timedelta
-import csv
-from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_safe
 from toolkit.diary.models import RotaEntry
@@ -18,6 +16,7 @@ from toolkit.members.models import (
 from django.conf import settings
 from django.utils import timezone
 from toolkit.toolkit_auth.decorators import panopticon_required
+from toolkit.util.csv_export import csv_response
 from ._common import logger
 from toolkit.diary.models import Event
 
@@ -180,13 +179,13 @@ def export_volunteers_as_csv(request):
 
         now = datetime.now().strftime("%d %b %Y %I-%M %p")
         file_name = f"{settings.VENUE['name']} Volunteers {now}.csv"
-        response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = f'attachment; filename="{file_name}"'
-        writer = csv.writer(response)
-        writer.writerow([col[0] for col in columns])
-        for volunteer in rows:
-            writer.writerow([col[1](volunteer) for col in columns])
-        return response
+        return csv_response(
+            file_name,
+            header=[col[0] for col in columns],
+            rows=(
+                [col[1](volunteer) for col in columns] for volunteer in rows
+            ),
+        )
 
     # GET: render the field selection page.
     return render(

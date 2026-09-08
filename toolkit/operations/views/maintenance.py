@@ -7,14 +7,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from toolkit.toolkit_auth.decorators import write_required_strict
+from toolkit.util.volunteers import user_volunteer as _user_volunteer
 
 from .. import forms as operations_forms
 from ..models import MaintenanceTask
-
-
-def _user_volunteer(user):
-    """Return user.volunteer if the user has an associated Volunteer row, else None."""
-    return user.volunteer if hasattr(user, "volunteer") else None
 
 
 @login_required

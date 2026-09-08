@@ -1,6 +1,5 @@
 import datetime
 import logging
-import csv
 
 
 from django.http import (
@@ -12,6 +11,7 @@ from django.db.models import Q
 from toolkit.toolkit_auth.decorators import (
     feature_required,
 )
+from toolkit.util.csv_export import csv_response
 
 from toolkit.diary.models import (
     Showing,
@@ -43,25 +43,19 @@ def view_terms_report_csv(
         .select_related()
     )
 
-    response = HttpResponse(
-        content_type="text/csv; charset=utf-8",
-        headers={
-            "Content-Disposition": f'attachment; filename="terms-{start_date.date().isoformat()}.csv"'
-        },
-    )
-    writer = csv.writer(response)
-    writer.writerow(["date", "time", "title", "terms"])
-    for showing in showings:
-        writer.writerow(
+    return csv_response(
+        f"terms-{start_date.date().isoformat()}.csv",
+        header=["date", "time", "title", "terms"],
+        rows=(
             [
                 showing.start.date().isoformat(),
                 showing.start.time().isoformat(timespec="minutes"),
                 showing.event.name,
                 showing.event.terms,
             ]
-        )
-
-    return response
+            for showing in showings
+        ),
+    )
 
 
 @feature_required("diary_reports")

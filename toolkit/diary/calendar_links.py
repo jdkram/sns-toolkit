@@ -16,6 +16,8 @@ from urllib.parse import urlencode
 
 from django.conf import settings
 
+from toolkit.util.ics import build_vevent
+
 
 def _utc_compact(dt):
     """Format a tz-aware datetime as basic UTC iCalendar form: YYYYMMDDTHHMMSSZ."""
@@ -31,20 +33,6 @@ def _utc():
     import datetime as _dt
 
     return _dt.timezone.utc
-
-
-def _ics_escape(text):
-    """Escape per RFC 5545: backslash, semicolon, comma, newline."""
-    if text is None:
-        return ""
-    return (
-        str(text)
-        .replace("\\", "\\\\")
-        .replace(";", "\\;")
-        .replace(",", "\\,")
-        .replace("\r\n", "\\n")
-        .replace("\n", "\\n")
-    )
 
 
 def _venue_location():
@@ -91,18 +79,7 @@ def _public_url(request, showing):
 
 
 def build_ics(showing, request=None, dtstamp=None):
-    """
-    Hand-rolled single-event iCalendar payload (RFC 5545).
-
-    No external dep — one VEVENT is trivial. Lines are CRLF-terminated as
-    the spec requires; long lines are not folded (clients tolerate this
-    and our content rarely exceeds 75 octets in practice).
-    """
-    import datetime as _dt
-
-    if dtstamp is None:
-        dtstamp = _dt.datetime.now(tz=_utc())
-
+    """Single-event iCalendar payload (RFC 5545) for one showing."""
     venue = getattr(settings, "VENUE", {}) or {}
     host = (
         request.get_host()
@@ -114,29 +91,19 @@ def build_ics(showing, request=None, dtstamp=None):
             .rstrip("/")
         )
     )
-    prodid = f"-//{venue.get('longname', 'Toolkit')}//Toolkit//EN"
-    uid = f"showing-{showing.pk}@{host}"
     public_url = _public_url(request, showing)
 
-    lines = [
-        "BEGIN:VCALENDAR",
-        "VERSION:2.0",
-        f"PRODID:{_ics_escape(prodid)}",
-        "CALSCALE:GREGORIAN",
-        "METHOD:PUBLISH",
-        "BEGIN:VEVENT",
-        f"UID:{uid}",
-        f"DTSTAMP:{_utc_compact(dtstamp)}",
-        f"DTSTART:{_utc_compact(showing.start)}",
-        f"DTEND:{_utc_compact(showing.end_time)}",
-        f"SUMMARY:{_ics_escape(_summary(showing))}",
-        f"DESCRIPTION:{_ics_escape(_description(showing, public_url))}",
-        f"LOCATION:{_ics_escape(_venue_location())}",
-    ]
-    if public_url:
-        lines.append(f"URL:{public_url}")
-    lines += ["END:VEVENT", "END:VCALENDAR"]
-    return "\r\n".join(lines) + "\r\n"
+    return build_vevent(
+        uid=f"showing-{showing.pk}@{host}",
+        dtstart=showing.start,
+        dtend=showing.end_time,
+        summary=_summary(showing),
+        location=_venue_location(),
+        dtstamp=dtstamp,
+        description=_description(showing, public_url),
+        url=public_url or None,
+        prodid=f"-//{venue.get('longname', 'Toolkit')}//Toolkit//EN",
+    )
 
 
 def google_calendar_url(showing, request=None):

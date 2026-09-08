@@ -2432,11 +2432,22 @@ Both links should be visually low-key (not CTAs) so they don't distract public v
 
 Migrations: `diary/0075` (Film table + Event FK), `diary/0076` (SiteConfiguration.tmdb_api_key_email).
 
-#### TMDB API
+#### TMDB API — superseded by OMDb, 2026-09-08
+
+**This subsection describes the integration as originally built; it is no longer live.**
+Migration `diary/0083_omdb_replace_tmdb` retired the `tmdb_api_key` field and the app
+switched to OMDb (see `toolkit/diary/omdb.py`, `toolkit/diary/edit_views/film.py`) some
+time before this quality pass, but `toolkit/diary/tmdb.py` itself was left behind as
+dead code — no import anywhere in the app, no test, no settings field. Deleted in
+QUALITY_PASS.md Chunk 8 (deduplicate) rather than given a common interface with
+`omdb.py` as that chunk's plan originally proposed, since there was no live branch
+point left to unify. `Film.tmdb_id` / `tmdb_certificate` / `tmdb_poster_path` /
+`tmdb_fetched_at` remain on the model (see the ER diagram in `docs/SPEC.md`) and stay
+permanently null under OMDb; revisiting that is a data-model decision, out of scope here.
 
 - Free for non-commercial use. Rate limit: 40 requests / 10 seconds; no hard daily cap. Attribution required: "This product uses the TMDB API but is not endorsed or certified by TMDB."
 - `TMDB_API_KEY` environment variable (never committed). `SiteConfiguration.tmdb_api_key_email` records the account contact email.
-- Client module: `toolkit/diary/tmdb.py` using stdlib `urllib.request` only (no new dependency).
+- Client module (removed): `toolkit/diary/tmdb.py`, stdlib `urllib.request` only (no new dependency).
 - Endpoints: `/search/multi` (returns film + TV results); `/movie/{id}?append_to_response=credits,release_dates`; `/tv/{id}?append_to_response=credits,content_ratings`.
 - UK certificate extracted from `release_dates.results` (film) or `content_ratings.results` (TV).
 

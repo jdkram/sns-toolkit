@@ -1,11 +1,12 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
 import logging
-from datetime import datetime
 
 from django.conf import settings
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+
+from toolkit.util.ics import build_vevent
 
 from ..emails import (
     send_access_needs_ack,
@@ -96,32 +97,17 @@ def calendar_ics(request, slug):
     _check_enabled()
     session = get_object_or_404(InductionSession, slug=slug)
     venue = settings.VENUE.get("longname", settings.VENUE.get("name", ""))
-    now = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
-    start = session.date.strftime("%Y%m%dT%H%M%S")
-    # Assume 2-hour induction if no end time
+    # Assume 2-hour induction if no end time.
     end_dt = session.date + timezone.timedelta(hours=2)
-    end = end_dt.strftime("%Y%m%dT%H%M%S")
-    uid = f"induction-{session.slug}@{request.get_host()}"
-    summary = f"{session.title} — {venue} Induction"
-    location = session.location or venue
 
-    ics_lines = [
-        "BEGIN:VCALENDAR",
-        "VERSION:2.0",
-        "PRODID:-//Cube Toolkit//Inductions//EN",
-        "CALSCALE:GREGORIAN",
-        "METHOD:PUBLISH",
-        "BEGIN:VEVENT",
-        f"UID:{uid}",
-        f"DTSTAMP:{now}",
-        f"DTSTART;TZID=Europe/London:{start}",
-        f"DTEND;TZID=Europe/London:{end}",
-        f"SUMMARY:{summary}",
-        f"LOCATION:{location}",
-        "END:VEVENT",
-        "END:VCALENDAR",
-    ]
-    content = "\r\n".join(ics_lines) + "\r\n"
+    content = build_vevent(
+        uid=f"induction-{session.slug}@{request.get_host()}",
+        dtstart=session.date,
+        dtend=end_dt,
+        summary=f"{session.title} — {venue} Induction",
+        location=session.location or venue,
+        prodid="-//Cube Toolkit//Inductions//EN",
+    )
     return HttpResponse(content, content_type="text/calendar; charset=utf-8")
 
 

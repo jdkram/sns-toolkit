@@ -17,9 +17,9 @@ status: "#ai-input"
 | | |
 |---|---|
 | Branch | `chore/quality-pass-2026-09`, working tree clean |
-| Chunks done | 0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12 |
-| Next chunk | **8** — deduplicate (or 9, extract inline JS/CSS — either is fair game; both were skipped, not descoped) |
-| Tests | 1,359 passing (was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found, +25 exchange, +21 feature-flag-gate, +18 edge-case-user, +33 destructive-path, +24 toolkit_auth, +18 volunteer_edit tests; the status-code-only strengthening pass and Chunk 11's package splits added no new tests) |
+| Chunks done | 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12 |
+| Next chunk | **9** — extract inline JS/CSS, the only one left |
+| Tests | 1,359 passing (unchanged by Chunk 8 — a dedup chunk moves code, it doesn't add coverage; was 1,129 at session start — +7 security-fix regressions, +29 building-map, +34 shopping, +19 lost & found, +25 exchange, +21 feature-flag-gate, +18 edge-case-user, +33 destructive-path, +24 toolkit_auth, +18 volunteer_edit tests; the status-code-only strengthening pass and Chunk 11's package splits added no new tests) |
 | Ruff | 0 findings |
 | Black | clean at 79 |
 | Coverage | 85.5% overall (23,631 statements), up from 81.5% baseline — see `docs/QUALITY_BASELINE.md` for the full before/after |
@@ -673,11 +673,64 @@ a cherry-pick decision while still mostly unverified. Worst to best: the buildin
 (34-37%), Shopping (42%), Lost & Found (~0% outside photo upload), Exchange (55%) — see Chunk
 10 below.
 
-### Chunk 8: Deduplicate — NOT STARTED
+### Chunk 8: Deduplicate — DONE 2026-09-08
 
-Promote `_user_volunteer` to `toolkit/util`. Shared `csv_response()` helper for the three
-hand-rolled exports. Unify the two ICS generators. Give `tmdb.py` / `omdb.py` a common interface
-so callers stop branching. Add `{% include %}` to the three `shopping_buy*.html` variants.
+All five items done, one adjusted on inspection. 1239 tests still pass (same count as before —
+no coverage lost or gained here, this chunk moves code rather than adding to it); `ruff` and
+`black` both clean.
+
+**`_user_volunteer` → `toolkit/util/volunteers.py`** as `user_volunteer`. It was a byte-for-byte
+duplicate between `labs/views/_common.py` and `operations/views/maintenance.py`. `labs/_common.py`
+re-exports it under its old private name so the six labs submodules that import
+`_user_volunteer` from `._common` didn't need touching.
+
+**`csv_response()` in `toolkit/util/csv_export.py`**, replacing the hand-rolled
+`HttpResponse`/`csv.writer` pairs in `members/views/volunteer_export.py`,
+`inductions/views/export.py` and `diary/edit_views/reports.py`. This closes the gap the Chunk 6
+write-up flagged (line 41-43 above): only the inductions export guarded against formula
+injection (a leading `=`/`+`/`-`/`@` executed as a formula by the spreadsheet app that opens the
+file); the other two exported member-supplied free text — names, notes, full postal addresses —
+with no guard at all. `csv_response()` applies the guard to every cell unconditionally, so all
+three exports now have it.
+
+**ICS generators unified** into `toolkit/util/ics.py`'s `build_vevent()`, called by both
+`diary/calendar_links.py`'s `build_ics` (showings) and `inductions/views/public.py`'s
+`calendar_ics` (induction sessions). Unifying surfaced a real latent bug in the inductions one,
+not just duplication: it built `DTSTART;TZID=Europe/London` from `session.date.strftime()`
+directly, unescaped. But `USE_TZ=True` is the project default (nothing overrides it), so
+`session.date` is timezone-aware and `.strftime()` on an aware datetime prints whatever tzinfo
+it currently carries — UTC, not Europe/London — so the emitted time was quietly wrong by an
+hour for any session during BST, despite the label claiming otherwise. It also skipped the
+RFC 5545 escaping the diary version had, so a session title with a comma or semicolon produced
+a malformed `.ics` file. The shared `build_vevent()` always emits absolute UTC (`Z` form, no
+TZID) and always escapes, so both bugs are gone by construction rather than needing per-call-site
+fixes. No existing test asserted the old TZID string, so nothing needed updating for the fix.
+
+**`tmdb.py`/`omdb.py`: deleted `tmdb.py` rather than giving it a common interface with `omdb.py`,
+deviating from this chunk's original plan.** Checked first, since "unify two API clients" implied
+there were two live branch points to unify: `tmdb.py` turned out to be fully dead code. Migration
+`diary/0083_omdb_replace_tmdb` (itself now squashed away, visible only via the field
+add/remove pair inside `0036_v2.py`) retired `SiteConfiguration.tmdb_api_key` when the app moved
+to OMDb; `toolkit/diary/edit_views/film.py` only ever imports from `omdb.py`. `tmdb.py` had zero
+importers anywhere in the app or its tests — a leftover from before the OMDb switch, not a live
+alternative path callers branch on. Deleted outright (`grep`-verified no references first) rather
+than built a common interface for a branch that doesn't exist. `docs/tasks/events-and-rota.md`'s
+9.66 write-up still described TMDB as the live integration; added a correction note there rather
+than rewriting the historical spec. `Film.tmdb_id`/`tmdb_certificate`/`tmdb_poster_path`/
+`tmdb_fetched_at` remain on the model and stay permanently null under OMDb — a data-model
+question, left alone.
+
+**`shopping_buy*.html`: lighter dedup than planned, because the actual overlap was lighter than
+assumed.** The three pages are largely independent (a supplier-picker card grid, a per-supplier
+order table, an unsorted-items sorting table) — there was no block of literally repeated markup
+across all three to `{% include %}` wholesale. What did repeat verbatim: the "title + back link"
+header on the two table pages, and their table CSS skeleton (`width`/`border-collapse`/`th`
+styling/hover, plus `.item-meta`). Extracted both into `labs/_buy_header.html` and
+`labs/_buy_table_css.html`; `.buy-table`/`.sort-table` unified to one `.shop-table` class, with
+each page keeping its own `td { vertical-align }` override since those genuinely differed
+(`middle` vs `top`). The picker page (`shopping_buy.html`) has nothing in common with the other
+two beyond ordinary page skeleton, so it's untouched — forcing an include there would have been
+inventing duplication to satisfy the plan rather than removing real duplication.
 
 ### Chunk 9: Extract inline JS and CSS — NOT STARTED
 
