@@ -782,10 +782,27 @@ cents and reliably returns a written report.
 
 1,317 tests passing (was 1,284).
 
-Then the items originally scoped for this chunk, in the original order — not yet started:
-`toolkit_auth/backends.py` and the permission decorators (still untested beyond the one signal
-handler above), `volunteer_edit.py`'s gaps, then strengthening the 102 status-code-only tests
-to assert on state rather than just HTTP 200.
+**`toolkit_auth/backends.py` and the permission decorators — done 2026-09-08.** Both already had
+incidental coverage from every other app's tests exercising them on the way to something else
+(79% and 98% respectively at session start), which is exactly the gap Chunk 4 flagged: high
+numbers, nothing asserting on the module's *own* contract. New `test_backends.py` (6 tests) hits
+`EmailOrUsernameBackend.authenticate`'s username path, the case-insensitive email fallback, wrong
+password, unknown user, an inactive user (blocked via `user_can_authenticate`), and the
+duplicate-email `MultipleObjectsReturned` case — Django's `User.email` has no uniqueness
+constraint, so two accounts can share one, and the fallback correctly refuses to guess rather than
+picking one. New `test_decorators.py` (18 tests) exercises `write_required`, `read_required`,
+`write_required_strict`, `panopticon_required`, `feature_required` and
+`ip_or_permission_required` directly via `RequestFactory`, each across anonymous/no-perm/has-perm,
+checking both the gate itself and the `request.view_access_level` badge value it sets on success.
+One assumption checked and corrected while writing these: `ip_or_permission_required`'s non-IP
+fallback wraps Django's own `permission_required`, which without `raise_exception=True` **redirects
+to login rather than raising `PermissionDenied`**, even for an authenticated user with no
+permission — the first draft assumed a 403 and the test failed, confirming the real behaviour
+before pinning it. `backends.py`: 79% → 100%; `decorators.py`: 98% → 100%. 1,341 tests passing (was
+1,317).
+
+Then the remaining items originally scoped for this chunk, in order: `volunteer_edit.py`'s gaps,
+then strengthening the 102 status-code-only tests to assert on state rather than just HTTP 200.
 
 ### Chunk 11: Un-star members/views, split what's god-sized — NOT STARTED
 
