@@ -16,12 +16,14 @@ rather than waiting for a triage cadence that doesn't exist yet for this pass. R
 `docs/QUALITY_PASS_RAW/chunk_qp2_reviews/` (gitignored), index at
 `docs/QUALITY_PASS_RAW/chunk_qp2_index.md`.
 
-**Not done, deliberately deferred:** the Tier-1 Kimi K2 Thinking second opinion this plan
-originally scoped. The MiniMax pass alone surfaced enough (11 real findings, 2 flagged for
-operational verification, 1 false positive caught and corrected before it was acted on) that
-running a second model wasn't the best use of the remaining session time tonight. Worth
-picking up separately if Tier-1 (auth/mailer) warrants a second look — see the rubric's
-existing note on Kimi's noisy severity ratings before treating it as urgent.
+**Not done, decided against rather than deferred (2026-09-09):** the Tier-1 Kimi K2
+Thinking second opinion this plan originally scoped. Decided not to run Kimi going forward
+at all — its token/cost premium over MiniMax isn't worth the quality delta in practice.
+Instead, re-read the 12 Tier 1 files' existing MiniMax reviews against the synthesis: found
+9 further real findings the first pass had missed (rubric items 11–19, `known-issues.md`
+Bug AY items 6–14) at no extra API cost. The MiniMax pass in total surfaced 20 real findings
+across Tier 1–3, 2 flagged for operational verification, and 1 false positive caught and
+corrected before it was acted on.
 
 Written up after CI (added by the first quality pass) failed on its very first real run — not
 on new code, but on `mailout_views.py`, a file dating to Ben Motz's original Cube Microplex

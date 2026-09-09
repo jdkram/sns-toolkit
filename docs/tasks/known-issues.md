@@ -204,6 +204,18 @@ Each is small on its own; grouped so they are not lost. Fix when the relevant fi
 4. `_passes_level` in `diary/models/site_config.py`: an unrecognised `PERMISSION_LEVEL_CHOICES` string falls through to `user.is_superuser`. Should fail closed.
 5. `labs/views/floorplan.py` and `loft.py` build URLs by string-replacing a sentinel (`/0/`, `/ROOM_ID/`) into a `reverse()`d path, matched on the JS side. A URL converter change breaks this with no error anywhere. Same pattern in `inductions/js/session_detail.js`.
 
+Added 2026-09-09, from a closer re-read of the Tier 1 (auth/mailer) files' existing MiniMax reviews — no new sweep, just findings the first synthesis pass missed:
+
+6. `mailer/models.py:74` — `progress_pct` can report 101% (unconditional `+1` on the final batch), normally masked by `do_complete` but visible if a job dies before that runs.
+7. `mailer/sender.py` (~113, ~204) — a member with a missing/blank `mailout_key` gets a broken unsubscribe/edit link on every mailout, with no guard against it.
+8. `mailer/mailerd.py`'s `run()` loop has no exception handling around `run_job()` — any transient send failure (SMTP timeout, DNS) kills the whole daemon, not just that job.
+9. `mailer/views.py` — `jobs_list` and `jobs_table` disagree on default job visibility (failed jobs shown by default on one, hidden on the other), so the polling refresh can silently change what a user sees.
+10. `diary/mailout_views.py:134` — the POST-invalid branch of `mailout` omits `days_ahead`/`copy_days_ahead` from the render context that the GET branch provides, so a failed-validation resubmit is missing that data.
+11. `members/forms.py`'s `VolunteerForm.clean_collectives` re-adds deactivated invite-only collectives on every profile save (missing the `active=True` filter the new-selection path has).
+12. `members/forms.py`'s `TrainingRecordForm.__init__` narrows `training_type` choices to the current site-config flag, so a volunteer's existing record of a since-disabled type can't be safely re-saved through this form.
+13. `members/models.py`'s `Volunteer.save()` portrait cleanup uses `os.unlink()` directly instead of the storage API — fine on local filesystem, silently wrong the moment storage moves to S3/GCS.
+14. `members/models.py`'s `Volunteer.save()` toggles `user.is_active` in a write separate from the volunteer save, outside `transaction.atomic()` — a crash between the two can leave suspend state and login state disagreeing.
+
 Structural, not a bug: the `members/views/`, `diary/forms/` and `inductions/views/` packages each re-export every name through `__init__.py` for a single consumer (`urls.py`). An independent review flagged this as indirection without a public API. Reasonable to collapse to direct submodule imports in `urls.py` at some point; not urgent.
 
 ---

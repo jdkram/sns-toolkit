@@ -46,6 +46,16 @@ from three sources:
   `docs/QUALITY_PASS_RAW/chunk_qp2_reviews/`, index at
   `docs/QUALITY_PASS_RAW/chunk_qp2_index.md`. Adds R15–R16 below and a second
   "Unfixed findings" section for this pass specifically.
+- **Quality Pass 2, Tier 1 re-review** (2026-09-09) — the plan for Quality Pass 2
+  originally scoped a Kimi K2 Thinking second opinion on Tier 1 (auth, permissions,
+  mailer — the "money-adjacent" files), deferred at the time for budget. Decided
+  2026-09-09 not to run Kimi at all going forward (cost/token premium not worth it
+  for the quality delta), so instead re-read the
+  MiniMax reviews already sitting in `chunk_qp2_reviews/` for those 12 Tier 1 files
+  against what had actually been synthesised. Found 9 real findings (items 11–19
+  below) that the first synthesis pass had missed — no new API spend, same source
+  material, closer reading. Nothing rose to "fix immediately" severity like the
+  GDPR email-scrub bug did; all left for triage.
 
   **One MiniMax finding turned out to be a false positive on verification** —
   worth recording as a specific caution alongside the general "triage before
@@ -567,6 +577,67 @@ shape as new.
     `return self.cleaned_data`. Tolerated by modern Django's `if cleaned_data is
     not None` guards, but wrong by convention and will break the moment anything
     reads this form's `clean()` return value directly.
+11. **`mailer/models.py:74` (`do_sending`'s `progress_pct` calc) can report
+    101%.** `int((100.0 * sent) / total) + 1 if total else 100` adds an
+    unconditional `+1`, so the final batch (`sent == total`) evaluates to 101.
+    Normally masked by `do_complete` overwriting it with a hardcoded 100, but any
+    job that dies before `do_complete` runs (worker crash, unhandled exception —
+    see finding 13) leaves 101% on screen. One-line fix: drop the `+1`, or cap
+    with `min(100, ...)`.
+12. **`mailer/sender.py` (~113, ~204) interpolates `recipient.mailout_key`
+    into the unsubscribe/edit URL with no None/empty check.** A member with a
+    missing or blank key (legacy data, a creation-time race) gets a link like
+    `?k=None` or `?k=`, which the receiving view will reject — that recipient
+    silently loses their unsubscribe/edit path on every mailout. GDPR-adjacent:
+    fix by refusing to mail recipients without a key, or guarding the
+    interpolation.
+13. **`mailer/mailerd.py`'s `run()` main loop has no exception handling around
+    `run_job(job)`.** Any exception during a send — SMTP timeout, DNS failure, a
+    programming error in the recipient queryset — propagates out of the loop and
+    kills the whole daemon. `clean_up()` only recovers the stuck job on the
+    *next* process restart, so a single transient SMTP hiccup can take the whole
+    mailer offline until someone notices and restarts it. Wrap the `run_job`
+    call in a `try/except` that logs and continues.
+14. **`mailer/views.py`'s `jobs_list` and `jobs_table` disagree on default job
+    visibility.** `jobs_list` defaults `show_completed=False` but
+    `show_failed=True` — failed jobs are visible by default, completed ones
+    aren't. `jobs_table` (used for the polling refresh) treats an absent query
+    param as `False` for *both* flags. A user polling the table sees a
+    different job set than the one they loaded the page with, with no state
+    change on their part.
+15. **`diary/mailout_views.py:134` — the POST-invalid branch of `mailout` drops
+    context the GET branch provides.** The GET path renders via
+    `_render_mailout_form`, which includes `days_ahead`/`copy_days_ahead` in the
+    context; the POST-invalid branch calls `render(request, "form_mailout.html",
+    {"form": form})` directly, omitting both. If the template reads either
+    value (display, or a hidden field round-tripping it into the next POST), a
+    failed-validation resubmit renders with that data missing. Fix by routing
+    the invalid branch through `_render_mailout_form` too.
+16. **`members/forms.py`'s `VolunteerForm.clean_collectives` (~210-219) re-adds
+    deactivated invite-only collectives.** It preserves a volunteer's existing
+    invite-only collective memberships by iterating
+    `self.instance.collectives.filter(invite_only=True)` with no `active=True`
+    filter, while the *new*-selection path two lines earlier (line ~197) does
+    filter on `active=True`. A collective deactivated after a volunteer joined
+    it gets silently re-attached to them on every subsequent profile save.
+17. **`members/forms.py`'s `TrainingRecordForm.__init__` (~306-309) narrows
+    `training_type`'s choices to whatever `general_training_enabled` currently
+    allows.** A volunteer with an existing record of the now-disabled type
+    can't have that record edited through this form — the field's choices no
+    longer include their current value, so re-saving would either reject the
+    form or silently clobber the type. Same shape as the already-documented
+    `VolunteerForm.status` choice-filter issue in the same file.
+18. **`members/models.py`'s `Volunteer.save()` portrait cleanup calls
+    `os.unlink(self.__original_portrait)` directly (~365-375) instead of
+    `default_storage.delete(name)`.** Works today because storage is local
+    filesystem; breaks silently (or raises an uncaught error `except OSError`
+    won't match) the moment storage moves to S3/GCS. Low urgency while storage
+    stays local, but the fix is a one-line swap to the storage API whenever this
+    method is next touched.
+19. **`members/models.py`'s `Volunteer.save()` toggles `user.is_active` in a
+    separate write from the volunteer save itself (~378-400), not inside
+    `transaction.atomic()`.** A crash between the two writes can leave a
+    suspended volunteer's login still active, or vice versa.
 
 ### Needs caller verification (do not act on without checking first)
 

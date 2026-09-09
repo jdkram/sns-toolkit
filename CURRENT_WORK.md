@@ -108,12 +108,16 @@ brittle test in `mailout_views.py`, pre-rewrite Ben-era code that no chunk's sco
 were scoped to what this rewrite actually reworked, not the whole repo, so large parts of the
 original Cube codebase never got a judgement-level review, only ruff/black. Scoped as a
 follow-up, run the same day: [docs/QUALITY_PASS_2_2026_09.md](docs/QUALITY_PASS_2_2026_09.md) —
-44 files, ~9,600 lines, MiniMax M3 only ($0.67, the Kimi second opinion deferred), synthesised
-into [QUALITY_RUBRIC.md](docs/QUALITY_RUBRIC.md) (rules R15-R16 plus a ranked "Unfixed findings,
+44 files, ~9,600 lines, MiniMax M3 only ($0.67), synthesised into
+[QUALITY_RUBRIC.md](docs/QUALITY_RUBRIC.md) (rules R15-R16 plus a ranked "Unfixed findings,
 Quality Pass 2" list). One finding fixed immediately, out of band: `Volunteer.anonymise()`'s
 GDPR email-scrub was replacing a whole `SentEmailLog.recipients` row instead of just the
 matching address, the same comma-joined-field footgun as the documented
-`vols_admin_address` incident — regression test added.
+`vols_admin_address` incident — regression test added. 2026-09-09: decided against ever
+running the originally-scoped Kimi K2 Thinking second opinion (cost/token premium not worth
+the quality delta); instead re-read the 12 Tier 1 (auth/mailer) files' existing MiniMax
+reviews and found 9 further real findings the first synthesis missed, added to the rubric
+and `known-issues.md` Bug AY — no new API spend.
 
 ---
 
