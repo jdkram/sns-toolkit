@@ -4199,7 +4199,7 @@ checklist), 9.54 (structured deal terms — sibling, not superseded), 9.92
 
 ---
 
-### 9.162 — Bridge programming-queue approval and showing confirmation 🟡 M
+### 9.162 — Bridge programming-queue approval and showing confirmation ✅ shipped 2026-09-09
 
 **Source:** Live workflow report, 2026-07-28 (see Bug AR).
 

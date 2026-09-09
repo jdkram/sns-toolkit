@@ -296,21 +296,23 @@
   </div>
 </div>
 {% endif %}
+{% endblock %}
 
 {% block script %}
 {{ block.super }}
 <script src="{% static 'inductions/js/session_detail.js' %}"></script>
 <script>
-sessionDetail({
-  csrf: '{{ csrf_token }}',
-  editUrlPattern: "{% url 'inductions:manage_edit_signup' slug=session.slug signup_id=0 %}",
-  noShowUrlPattern: "{% url 'inductions:manage_no_show' slug=session.slug signup_id=0 %}",
-  setCapUrl: "{% url 'inductions:manage_session_set_cap' slug=session.slug %}",
-  markAttendanceUrlPattern: "{% url 'inductions:manage_mark_attendance' slug=session.slug signup_id=0 %}",
-  linkExistingUrlPattern: "{% url 'inductions:manage_link_existing' slug=session.slug signup_id=0 %}",
-  removeSignupUrlPattern: "{% url 'inductions:manage_remove_signup' slug=session.slug signup_id=0 %}",
-  isSuperuser: {{ user.is_superuser|yesno:"true,false" }}
+document.addEventListener('DOMContentLoaded', function () {
+  sessionDetail({
+    csrf: '{{ csrf_token }}',
+    editUrlPattern: "{% url 'inductions:manage_edit_signup' slug=session.slug signup_id=0 %}",
+    noShowUrlPattern: "{% url 'inductions:manage_no_show' slug=session.slug signup_id=0 %}",
+    setCapUrl: "{% url 'inductions:manage_session_set_cap' slug=session.slug %}",
+    markAttendanceUrlPattern: "{% url 'inductions:manage_mark_attendance' slug=session.slug signup_id=0 %}",
+    linkExistingUrlPattern: "{% url 'inductions:manage_link_existing' slug=session.slug signup_id=0 %}",
+    removeSignupUrlPattern: "{% url 'inductions:manage_remove_signup' slug=session.slug signup_id=0 %}",
+    isSuperuser: {{ user.is_superuser|yesno:"true,false" }}
+  });
 });
 </script>
-{% endblock %}
 {% endblock %}

@@ -8,6 +8,7 @@ from django.http import (
     HttpResponse,
     HttpResponseRedirect,
 )
+from django.conf import settings
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.contrib import messages
@@ -929,6 +930,7 @@ class EditEventView(PermissionRequiredMixin, View):
                 cfg.certificate_lookup_url, event.film
             ),
             "structured_cost_terms_enabled": cfg.structured_cost_terms_enabled,
+            "DEFAULT_TERMS_TEXT": settings.DEFAULT_TERMS_TEXT,
             "has_film_tag": event.tags.filter(slug="film").exists(),
             "event_film_json": (
                 json.dumps(_film_json(event.film)) if event.film else "null"
@@ -998,6 +1000,7 @@ class EditEventView(PermissionRequiredMixin, View):
                 cfg.certificate_lookup_url, event.film
             ),
             "structured_cost_terms_enabled": cfg.structured_cost_terms_enabled,
+            "DEFAULT_TERMS_TEXT": settings.DEFAULT_TERMS_TEXT,
             "suggested_film_information": (
                 event.film.generate_film_information() if event.film else ""
             ),

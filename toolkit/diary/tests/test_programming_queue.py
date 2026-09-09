@@ -123,7 +123,16 @@ class ProgrammingStatusUpdateTests(DiaryTestsMixin, TestCase):
         self.event.programming_status = "proposed"
         self.event.save()
         response = self._post("approve_at_meeting")
-        self.assertRedirects(response, self.queue_url)
+        # The event's showing (from _make_queue_event) is unconfirmed, so
+        # this still needs a final step — see the Bug AR regression test
+        # below for the redirect-to-Event-Hub behaviour this covers.
+        self.assertRedirects(
+            response,
+            reverse(
+                "edit-event-details-view",
+                kwargs={"event_id": self.event.pk},
+            ),
+        )
         self.event.refresh_from_db()
         self.assertEqual(self.event.programming_status, "active")
         self.assertEqual(self.event.approval_type, "meeting")
@@ -131,10 +140,42 @@ class ProgrammingStatusUpdateTests(DiaryTestsMixin, TestCase):
 
     def test_make_active_bypasses_meeting(self):
         response = self._post("make_active")
-        self.assertRedirects(response, self.queue_url)
+        self.assertRedirects(
+            response,
+            reverse(
+                "edit-event-details-view",
+                kwargs={"event_id": self.event.pk},
+            ),
+        )
         self.event.refresh_from_db()
         self.assertEqual(self.event.programming_status, "active")
         self.assertNotEqual(self.event.approval_type, "meeting")
+
+    def test_make_active_with_no_outstanding_step_returns_to_queue(self):
+        """Regression for Bug AR: when approval leaves nothing outstanding
+        (showing already confirmed, terms satisfied), still honour `next`
+        and go back to the queue as before."""
+        self.event.showings.update(confirmed=True)
+        self.event.cost_type = Event.COST_TYPE_INTERNAL
+        self.event.save()
+        response = self._post("make_active")
+        self.assertRedirects(response, self.queue_url)
+
+    def test_make_active_with_outstanding_step_redirects_to_event_hub(self):
+        """Bug AR: approving from the queue must not silently drop the
+        programmer back on the queue with no link to the remaining step."""
+        response = self._post("make_active")
+        self.assertRedirects(
+            response,
+            reverse(
+                "edit-event-details-view",
+                kwargs={"event_id": self.event.pk},
+            ),
+        )
+        messages = list(response.wsgi_request._messages)
+        self.assertTrue(
+            any("still needs a final step" in str(m) for m in messages)
+        )
 
     def test_save_notes_appends_without_status_change(self):
         self.event.programming_status = "proposed"

@@ -363,7 +363,9 @@ def unsubscribe_member_right_now(request, member_id):
     if not _check_access_permitted_for_member_key(
         "toolkit.write", request, member_id
     ):
-        return panopticon_required(unsubscribe_member)(request, member_id)
+        return panopticon_required(unsubscribe_member_right_now)(
+            request, member_id
+        )
 
     member = get_object_or_404(Member, id=member_id)
 
@@ -390,7 +392,7 @@ def opt_in(request, member_id):
     if not _check_access_permitted_for_member_key(
         "toolkit.write", request, member_id
     ):
-        return panopticon_required(unsubscribe_member)(request, member_id)
+        return panopticon_required(opt_in)(request, member_id)
 
     member = get_object_or_404(Member, id=member_id)
 

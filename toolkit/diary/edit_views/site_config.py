@@ -292,14 +292,41 @@ def update_event_programming_status(request, event_id):
 
     event.save()
 
-    # Return to the queue if coming from there, otherwise to Event Hub
-    next_url = request.POST.get("next")
-    if not next_url or not url_has_allowed_host_and_scheme(
-        next_url, allowed_hosts={request.get_host()}
-    ):
+    # Approving an event doesn't confirm its showings — that's a deliberate
+    # separate step (see 9.109) — so leaving the queue can silently leave an
+    # event invisible on the public/volunteer diary if nobody notices it
+    # still needs confirming. If this action just made the event active and
+    # it still has an outstanding step, send the programmer to the Event Hub
+    # (which already surfaces "terms outstanding" / "N unconfirmed" badges)
+    # instead of back to the queue, where the event has now vanished from
+    # the list with no link to what's left to do. See Bug AR / task 9.162.
+    outstanding_step = False
+    if action in ("make_active", "approve_at_meeting"):
+        has_unconfirmed_future = event.showings.filter(
+            confirmed=False, cancelled=False, start__gt=timezone.now()
+        ).exists()
+        outstanding_step = (
+            has_unconfirmed_future or not event.terms_satisfied()
+        )
+
+    if outstanding_step:
+        messages.warning(
+            request,
+            f"'{event.name}' still needs a final step before it's public "
+            "— see the checklist below.",
+        )
         next_url = reverse(
             "edit-event-details-view", kwargs={"event_id": event_id}
         )
+    else:
+        # Return to the queue if coming from there, otherwise to Event Hub
+        next_url = request.POST.get("next")
+        if not next_url or not url_has_allowed_host_and_scheme(
+            next_url, allowed_hosts={request.get_host()}
+        ):
+            next_url = reverse(
+                "edit-event-details-view", kwargs={"event_id": event_id}
+            )
     return HttpResponseRedirect(next_url)
 
 

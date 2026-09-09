@@ -9,25 +9,25 @@ Bugs and current system limitations.
 
 ## Current bugs
 
-**Bug AR** — Approved queue events vanish from the diary — nothing bridges "approved" to "confirmed" 🟡 M
+**Bug AR** — Approved queue events vanish from the diary — nothing bridges "approved" to "confirmed" ✅ fixed 2026-09-09
 
 **Symptom.** A programmer proposes an event, it goes through the Monday-meeting programming queue, gets marked active (`make_active` action) — and then it disappears. It's on the internal calendar somewhere, but not on the diary a programmer actually checks day to day, and there's no message telling them why or what to do next.
 
-**Root cause.** `programming_status` (draft/proposed/active/rejected — the queue's state machine) and `Showing.confirmed` (whether a booking is public-facing — a separate state machine gated by `Event.terms_satisfied()`) are independent. `update_event_programming_status`'s `make_active` branch (`toolkit/diary/edit_views/site_config.py:295-298`) only flips `programming_status`; it never touches `confirmed`, never checks terms, and sends no notification. Meanwhile `Showing.objects.public()` (`toolkit/diary/models/showing.py:102-111`) — used by the public and logged-in-volunteer diary (`public_views.py`) — filters `confirmed=True`. So an "active" event with an unconfirmed showing is invisible on every diary a programmer would normally look at, even though the internal staff calendar (`edit_views/diary_overview.py`) does show it, styled with an `s_unconfirmed` CSS class. Leaving the queue was the programmer's implicit "done" signal; nothing tells them a second step (satisfying terms, then confirming) still remains.
+**Root cause.** `programming_status` (draft/proposed/active/rejected — the queue's state machine) and `Showing.confirmed` (whether a booking is public-facing — a separate state machine gated by `Event.terms_satisfied()`) are independent. `update_event_programming_status`'s `make_active` branch only flipped `programming_status`, then redirected back to the programming queue (`next` posted by the queue template) — a page that only lists draft/proposed/rejected events, so the just-approved event had already vanished from it, with only a flash message and no link to what remained. The Event Hub (`view_event_privatedetails.html`) already had a "terms outstanding" / "N unconfirmed" completeness-bar indicator; the gap was purely that the programmer was never sent there.
 
-**Fix design:** see task 9.162 (bridging the two state machines / surfacing the outstanding step) and 9.164 (emailing the proposer once a decision is made). 9.163 (audit trail + real `created_by`) is a prerequisite for 9.164 knowing who to notify.
+**Fix (task 9.162's scope only, not 9.163/9.164):** `update_event_programming_status` now checks, for `make_active`/`approve_at_meeting`, whether the event still has an unconfirmed future showing or unsatisfied terms after the status change. If so, it overrides `next` and redirects to the Event Hub with a warning message instead of back to the queue, reusing the existing completeness-bar UI rather than building anything new. When nothing is outstanding (showing already confirmed, terms satisfied), it still honours `next` and returns to the queue as before. `toolkit/diary/edit_views/site_config.py`, regression tests in `toolkit/diary/tests/test_programming_queue.py`. The notification-email piece (9.164, blocked on 9.163's `created_by` field) is intentionally still out of scope.
 
-**Bug E** — Homepage list view layout broken by volunteer event info 🔵 S
+**Bug E** — Homepage list view layout broken by volunteer event info ✅ investigated 2026-09-09, not reproducible
 
-The "list" view on the homepage is currently misaligned or layout-broken due to the addition of volunteer event/rota information. The extra data points (available slots, etc.) are likely pushing elements out of their containers or causing spacing issues in the compact list view.
+Re-checked against current code: `view_showing_index.html`'s list-view `is_volunteer`/`hide_in_programme`/`private` conditionals are exhaustive and mutually exclusive (every iteration hits exactly one branch, no dangling unclosed tags), and `programme.css`'s `.list`/`.day`/`.sameday` rules render a coherent hanging-indent layout. Live-browser check as a logged-in volunteer (which is the only path that can render internal/private showings in this view) showed a clean list with no visible misalignment. The original report's own wording was hedged ("likely pushing... etc.") — reads as a report against an earlier version of this page, since fixed by unrelated CSS work, rather than a bug in current code. Re-open with a screenshot if it recurs.
 
-**Bug F** — Grid view volunteer banners aesthetics 🟢 XS
+**Bug F** — Grid view volunteer banners aesthetics ✅ investigated 2026-09-09, not reproducible — superseded by a different design
 
-The "volunteer only" banners in the grid view are currently not filling their cells. They should be made more aesthetically pleasing by extending them to span the full width of their grid containers.
+The "banner" element this bug describes doesn't exist in the current codebase — no `.banner` class anywhere in `programme.css` or `view_showing_index.html`. Internal/private events in the grid are now styled as a whole-card tint + border (`.showing.showing-internal`, `programme.css:476-487`, explicitly commented "Volunteer-only (internal) event cards"), not a separate banner strip that could fail to fill its cell. This bug's premise no longer applies.
 
-**Bug B** — Wagtail `translation_key` column overflow 🔵 S
+**Bug B** — Wagtail `translation_key` column overflow ✅ fixed 2026-02 (this file just hadn't been updated to match)
 
-On MariaDB, `wagtailcore_page.translation_key` was `varchar(32)` but Wagtail 6 generates 36-character UUIDs. Creating CMS pages throws `DataError`. Fix: widen column to `varchar(36)` via migration. See CURRENT_WORK.md Done section for resolution details.
+On MariaDB, `wagtailcore_page.translation_key` was `varchar(32)` but Wagtail 6 generates 36-character UUIDs. Creating CMS pages throws `DataError`. Fixed via migration `0013_widen_page_translation_key.py`, widened to `varchar(36)` with an `INFORMATION_SCHEMA` guard so it's a safe no-op on fresh installs.
 
 **Bug K** — Rota `&amp;` display glitch ✅ fixed 2026-03-02
 
@@ -48,151 +48,71 @@ data: function(value) {
 
 **Server response must stay unescaped plain text** (`return HttpResponse(showing.rota_notes, ...)`). After save jeditable calls `$(self).html(result)`; the browser's innerHTML getter re-encodes `&` → `&amp;`, so the next `data` call sees `&amp;` and decodes correctly. If you add `escape()` to the response, jeditable's `.html()` double-encodes it (`&amp;` → `&amp;amp;`) and a spiral begins.
 
-**Bug M** — Calendar edit view: simultaneous events in the same timeslot overwrite each other 🟠 L
+**Bug M** — Calendar edit view: simultaneous events in the same timeslot overwrite each other ✅ fixed 2026-04-04 (this file just hadn't been updated to match)
 
-On days with 6+ events scheduled at the same time, FullCalendar 3 renders later events on top of earlier ones rather than shrinking and tiling them side-by-side. The result is that some events become completely hidden and unreachable from the calendar view. Reproduce at `/diary/edit/calendar/` on a busy day (e.g. any of the three busy days in the seed data, currently at offsets +35, +70, and +105 from today).
-
-Root cause: FullCalendar's column-based layout is not triggered when all events share the same time of day (all set to e.g. 19:00 with no explicit `end` time). The calendar needs each event's duration to be set so that FullCalendar can detect overlaps and split columns. With `Event.duration` now populated by `seed_dev_data`, this should improve — but busy days with many short events may still need explicit end-time rendering. A secondary fix may be needed on the FullCalendar event source view to emit `end` timestamps.
-
-**Workaround:** Use the list view (`/diary/edit/`) on busy days — it shows all events regardless of overlap.
-
-**Fix approach (not yet implemented):**
-1. Ensure the FullCalendar event source JSON endpoint returns `end` for each event (computed from `start + Event.duration`).
-2. Consider whether a day-grid view (rather than time-grid) is more appropriate for multi-room venues — though this loses time-of-day information.
-3. If sticking with time-grid: add a `minTime`/`maxTime` and increase the minimum event height so short events remain clickable.
+On days with 6+ events scheduled at the same time, FullCalendar rendered later events on top of earlier ones rather than tiling them side-by-side, because events with no explicit `end` had zero duration and FullCalendar's overlap detection never triggered. Fixed by `Showing.end_time` (`toolkit/diary/models/showing.py:264-273`): returns `start + Event.duration` when set, or a default 2-hour fallback when not, so every event now has a real end time for FullCalendar to tile against. Separately, the calendar was later migrated from FullCalendar 3 to FullCalendar 6 entirely (`feat(calendar): migrate from FC3 to FC6 with resource timeline views`).
 
 **Bug L** — Wheelchair-inaccessible role strikethrough too subtle 🟢 XS
 
-The strikethrough symbol on the wheelchair icon (indicating a role is not wheelchair-accessible) is easy to miss — the line is thin and low-contrast. Users may sign up for a role they cannot perform without realising it has accessibility notes. Consider alternatives: a solid badge label ("not accessible"), a distinct colour overlay on the icon, a tooltip with explicit text, or a bolder visual indicator. The fix should be purely CSS/template — no data model change needed.
+**Bug L** — Wheelchair-inaccessible role strikethrough too subtle ✅ N/A — model changed
 
-**Bug O** — Volunteer rota: event-name links redirect to login 🟢 XS
+The strikethrough indicator this bug described no longer exists. Wheelchair accessibility is now an affirmative ♿ badge on roles confirmed accessible, not a strikethrough on inaccessible ones — the ambiguity this bug reported can't recur under the new model.
 
-In `edit_rota.html` the showing title links to `edit-event-details-view` (the Event Hub). That view requires `toolkit.write` permission (Programmer tier or above). When a basic volunteer clicks it they are bounced to the login page because they're not in the Programmers group.
+**Bug O** — Volunteer rota: event-name links redirect to login ✅ fixed 2026-03-03 (this file just hadn't been updated to match)
 
-**Fix:** add a permission conditional in the template:
+`edit_rota.html` now gates the showing-title link on `perms.toolkit.write`/`is_superuser`: programmers/superusers go to the Event Hub, volunteers go to the public showing view instead of bouncing off a permission check.
 
-- `{% if perms.toolkit.write or user.is_superuser %}` → link to `edit-event-details-view`
-- else → link to `single-showing-view` (the public programme page for that showing)
+**Bug P** — Event Tags page: pre-Bootstrap styling and confusing UX ✅ fixed 2026-03-03 (this file just hadn't been updated to match)
 
-The "↗" public link that already exists alongside the title stays unchanged.
+Ported to a Bootstrap 4 card layout; the drag handle is now hidden on non-promoted tags (was previously shown but inert), and footer help text explains the "in menu" vs. drag-order distinction.
 
-**Bug P** — Event Tags page: pre-Bootstrap styling and confusing UX 🔵 S
+**Bug Q** — Roles page: pre-Bootstrap styling ✅ fixed 2026-03-03 (this file just hadn't been updated to match)
 
-`/diary/edit/eventtags/` uses old inline CSS that predates Bootstrap (grey body, dotted border, 400px fixed width). It doesn't match the visual language of the rest of the toolkit.
-
-The interaction model is also unintuitive: users must first tick "Promoted" on a tag and then separately use drag handles to set order. Non-promoted tags show drag handles that do nothing. The mental model of "promoted = in menu" vs "sort order" is not explained in the UI.
-
-**Fix approach:**
-
-- Port styles to Bootstrap 4 card/table layout (consistent with the rest of the toolkit)
-- Clarify the UI: non-promoted tags should either hide their handle or show a disabled state
-- Consider explanatory text or labels making the "in menu" meaning clearer
-
-**Bug Q** — Roles page: pre-Bootstrap styling 🔵 S
-
-`/diary/edit/roles/` has the same vintage of inline CSS as Bug P (grey body, dotted border, 400px form box, raw `<table>` without Bootstrap classes). It also doesn't match the rest of the toolkit's design language.
-
-**Fix:** Port to Bootstrap 4 card + table layout. No UX redesign needed — the table structure (name, standard, description, delete) is clear; just needs Bootstrap table classes and a card wrapper.
+Ported to a Bootstrap 4 card + table layout, with a read-only badge and a highlighted new-row state.
 
 ---
 
-**Bug R** — Mobile: public-site sidebar always visible, not gated by hamburger 🟢 XS
+**Bug R** — Mobile: public-site sidebar always visible, not gated by hamburger ✅ fixed 2026-03-03 (this file just hadn't been updated to match)
 
-**Root cause:** The Bug I fix (2026-02-26) applied `position: fixed; height: 100vh; overflow-y: auto` to `#sidebar` in `site_custom.css` with no media query. On desktop (≥ 1000px) this is correct: the sidebar is always visible. On mobile (< 1000px) it means the sidebar sits in the fixed stacking layer at `left: 0`, visible across the whole viewport regardless of whether the hamburger has been pressed. The S+S `background-color: #e3cae3` applied to both sidebar and grid means the sidebar's nav links show through any gap in the masonry tile layout.
-
-**Symptom:** On the homepage and other public pages, scrolling through content reveals the sidebar nav (Programme, Support Us, etc.) as a persistent layer in the top-left of the screen. It should only appear when the hamburger button is tapped.
-
-**Fix:**
-
-1. In `site_custom.css`: add `left: -240px; z-index: 200; transition: left 0.3s ease;` to the `#sidebar` rule (no media query — applies at all widths). This moves the sidebar off-screen by default.
-2. Wrap the existing `position: fixed; height: 100vh; overflow-y: auto` rule in `@media screen and (min-width: 1000px)` only — at desktop widths, sidebar should always be visible.
-3. In `site-common.js`: update the hamburger click handler to toggle a `.sidebar-open` class on `#sidebar` (sets `left: 0`) in addition to the existing `.open-sidebar` toggle on `.grid`. Also update the swipe-to-close handler to remove `.sidebar-open` from `#sidebar`.
-4. Add CSS: `#sidebar.sidebar-open { left: 0; }`.
+Fixed as designed: the sidebar starts off-screen (`left: -240px; z-index: 200`) at all widths, with a desktop-only `@media (min-width: 1000px)` block making it always-visible there; `site-common.js` toggles a `.sidebar-open` class to bring it on-screen on mobile. (The rules originally landed in `site_custom.css`; that file was later folded into `layout.css` during an unrelated CSS consolidation — same fix, current location.)
 
 ---
 
-**Bug S** — Login page: nav bar overlaps form on mobile; style inconsistent with admin 🟢 XS
+**Bug S** — Login page: nav bar overlaps form on mobile; style inconsistent with admin ✅ fixed 2026-03-03 (this file just hadn't been updated to match)
 
-**Two sub-issues:**
-
-1. **Nav overlap on mobile:** `login.html` extends `base_public.html`, so the login card sits inside `.grid` below the `.navigation-wrap` (hamburger bar, ~50px). The `#mobile-menu-btn` is `position: absolute; z-index: 100` within that bar. On narrow phones the login card's top margin (40px) is close to or below the button, risking overlap.
-
-2. **Style inconsistency:** The public site uses the sidebar/hamburger nav from `base_public.html`. After login, volunteers land on toolkit pages that use the Bootstrap top navbar from `base_admin.html`. The login page sits at this junction, extending the public template, so its navigation context feels inconsistent with what comes after.
-
-**Fix options:**
-
-- Option A (minimal): Keep `base_public.html` extension; add `padding-top: 60px` to the `.grid` content area on mobile so the login card always clears the hamburger button.
-- Option B (clean): Create a lightweight base template (e.g. `base_login.html`) with just the site logo centred, no navigation at all. This makes the login page clearly neutral — not the public site, not the admin.
-
-Recommended: Option B for clear UX. Option A as a quick fix while the decision is made.
+Went with Option B: `star_and_shadow_templates/base_login.html` is a minimal logo-only base template with no navigation at all. Login, logout, and all four password-reset templates now extend it instead of `base_public.html`, so the overlap and the style-inconsistency issue are both moot.
 
 ---
 
-**Bug T** — Admin toolkit: mobile navbar overflow and layout issues 🔵 S
+**Bug T** — Admin toolkit: mobile navbar overflow and layout issues ✅ fixed 2026-03-03 (this file just hadn't been updated to match)
 
-Three sub-issues:
-
-**T1: Navbar brand image pushes toggler off-screen.** `base_admin.html` renders `<img height="40px">` with no `max-width`. If `VENUE.internal_header_img` is a wide landscape image, it overflows the navbar on narrow screens, pushing the Bootstrap collapse toggler off the right edge.
-
-Fix: Add `max-width: 120px; width: auto; height: auto;` to the navbar brand `<img>`.
-
-**T2: Body padding too large on mobile.** `base_admin.html` sets `body { padding: 5rem 1.4rem; }` globally. `5rem` top padding is meant to clear the fixed navbar (~56px ≈ 3.5rem), but 5rem overcompensates and wastes vertical space. `1.4rem` horizontal padding on a 375px viewport leaves ~330px usable width for content.
-
-Fix: Add `@media (max-width: 576px) { body { padding: 3.5rem 0.5rem; } }` in the `base_admin.html` `<style>` block.
-
-**T3: Rota controls bar overflows on narrow screens.** `edit_rota.html`'s `.rota-controls` bar contains two date inputs (each `width: 8em`) plus labels and three quick-select buttons. Although the controls use `flex-wrap`, the minimum combined width of date fields + labels (~320px) is already close to the usable content width after padding. On a 375px phone the controls are very cramped and may force a horizontal scroll.
-
-Fix: Add a mobile media query in the `edit_rota.html` `<style>` block:
-
-```css
-@media screen and (max-width: 576px) {
-    .rota-daterange input[type="text"] { width: 6em; }
-    .rota-daterange label { display: none; }  /* "from" / "to" implied */
-}
-```
+All three sub-issues fixed in `base_admin.html`: brand image capped at `max-width: 120px`, body padding reduced to `3.5rem 0.5rem` on ≤576px, and the rota controls' date inputs shrink to `6em` on ≤640px.
 
 ---
 
-**Bug U** — Rota: excessive left indentation wastes horizontal space on mobile 🟢 XS
+**Bug U** — Rota: excessive left indentation wastes horizontal space on mobile ✅ fixed 2026-03-03 (this file just hadn't been updated to match)
 
-`ul.rota` inherits `padding: 0 0 0 40px` from the normalize reset in `static_pages.css` (line 202). Combined with `base_admin.html`'s `body { padding: 5rem 1.4rem }`, rota list items carry ~40px of blank left margin on mobile — roughly 12% of a 375px viewport.
-
-`.showing_rota_notes` and `.event-links` both have `margin-left: 3em` (≈ 48px at typical font size), adding further waste.
-
-**Fix:** Add to the `edit_rota.html` inline `<style>` block:
-
-```css
-@media screen and (max-width: 640px) {
-    ul.rota { padding-left: 0; }
-    .showing_rota_notes,
-    .past_showing_rota_notes { margin-left: 0.5em; }
-    .event-links { margin-left: 0.5em; }
-}
-```
+`edit_rota.html`'s `@media (max-width: 640px)` block removes `ul.rota`'s left padding and reduces `.showing_rota_notes`/`.event-links` margin to `0.5em`.
 
 ---
 
-**Bug V** — Tags/Roles admin: content overflows horizontally on narrow screens 🟢 XS
+**Bug V** — Tags/Roles admin: content overflows horizontally on narrow screens ✅ fixed 2026-03-03 (this file just hadn't been updated to match)
 
-**V1: Tags page** (`edit_event_tags.html`): `#sortable li` is a flex row. The `.tag-options` child has `flex-shrink: 0`, preventing it from shrinking. On viewports under ~480px the combined content (drag handle + tag name + "Programme nav" label + checkbox + "Delete:" label + checkbox) overflows the card container. The `.card-body` has no `overflow-x: auto`, so it clips.
+**V1** (Tags page): `overflow-x: auto` added to `.card-body` in `edit_event_tags.html`. **V2** (Roles page): the roles table in `form_edit_roles.html` wrapped in `<div style="overflow-x: auto;">`.
 
-Fix: Add `overflow-x: auto` to `.card-body` in that template, or make `.tag-options` `flex-wrap: wrap` so it drops under the tag name on narrow screens.
+**Bug AV** — Induction session detail: the Panopticon "edit signup" modal never initialises ✅ fixed 2026-09-09
 
-**V2: Roles page** (`form_edit_roles.html`): The roles table has 7 columns; several have fixed widths (`width: 90px`, `width: 50px` × 4, `width: 60px`), totalling ~310px fixed before the name and description columns. On a 375px phone this table overflows by 100px+.
+**Root cause, finally found (two compounding bugs):** `session_detail.html`'s `{% block script %}` was nested *inside* its own `{% block body %}` override (`{% block body %}...{% block script %}...{% endblock %}{% endblock %}`), while every ancestor template (`base_admin.html`, `templates/base.html`) treats `script` and `body` as separate sibling blocks. Because Django resolves a block by name wherever that name's tag physically appears anywhere in the inheritance chain, this produced two real bugs at once: (1) the whole resolved script block — jquery, bootstrap, the command palette, `session_detail.js`, and the inline `sessionDetail(...)` call — rendered **twice**, verified via `render_to_string(...).count("session_detail.js") == 2`; and (2) far more importantly, `{% block script %}`'s *real* position is dictated by `templates/base.html`, which places it in `<head>` — so the entire script, including the inline call that queries `#edit-modal` and the walk-in-registration form, executed **before `<body>` (and those elements) existed in the DOM at all**. `document.getElementById('edit-modal')` returned a valid element (IDs still resolve pre-body-parse in some cases) but in a DOM state `bootstrap.Modal`'s constructor couldn't handle cleanly, hence `_config` being undefined inside `_initializeBackDrop`. The original bug write-up's guess (`{% block script %}` "appears twice in `base_admin.html`") was close in spirit but wrong in the specific file — `base_admin.html` and `base.html` each define it exactly once; the duplicate came from `session_detail.html` itself.
 
-Fix: Wrap the `<table>` in `<div style="overflow-x: auto;">` inside the `card-body` div. This gives horizontal scrolling without restructuring the table.
+**Fix:** `toolkit/inductions/templates/inductions/manage/session_detail.html` — closed `{% block body %}` before opening the (now sibling, not nested) `{% block script %}`; wrapped the `sessionDetail({...})` call in `document.addEventListener('DOMContentLoaded', ...)`, matching the pattern already used by `programming_queue.html` and several other admin templates. Verified live: modal opens correctly pre-filled with signup data, walk-in registration form expands, zero console errors. Regression test: `toolkit/inductions/tests/test_flows.py::Capacity::test_manage_detail_script_block_not_duplicated`.
 
-**Bug AV** — Induction session detail: the Panopticon "edit signup" modal never initialises 🔵 S
+**Bug AW** — `unsubscribe_member_right_now` and `opt_in` route access-denied users into the wrong view ✅ fixed 2026-09-09 (was actually dead code, fixed anyway for clarity)
 
-`new bootstrap.Modal(el)` in `inductions/js/session_detail.js` throws `TypeError: Cannot read properties of undefined (reading 'backdrop')` inside Bootstrap's `_initializeBackDrop` on every page load. Pre-existing: reproduced identically on the pre-September-2026 inline-script version of the template, so not caused by the extraction. Since 2026-09-08 the crash is contained in a try/catch so it no longer silently disables the cap editor, room counter, keyboard navigation, walk-in registration and table sorting that sit after it in the same script; the edit modal itself is still broken. Root cause not investigated. Start by checking which Bootstrap bundle `base_admin.html` loads and whether the modal markup is inside the block that renders twice (`{% block script %}` appears twice in `base_admin.html`, so every page's script block executes twice).
+Both views in `members/views/member_views.py` called `panopticon_required(unsubscribe_member)(...)` on their access-denied branch instead of wrapping themselves — a real-looking bug, but tracing the actual code paths shows it was unreachable: `_check_access_permitted_for_member_key` returns `True` (skipping the `panopticon_required(...)` branch entirely) whenever `request.user.has_perm("toolkit.write")` is `True`, and Django's `PermissionsMixin.has_perm` unconditionally returns `True` for any active superuser *before* consulting the permission itself. Since `panopticon_required` demands `is_superuser`, the only user who could ever reach the mis-wrapped `func(request, ...)` call already satisfied `has_perm` at the top of the function and never got there. So this specific miswiring never changed behaviour for any real user — the observable symptom in the original write-up doesn't occur. Fixed anyway (`unsubscribe_member_right_now`/`opt_in` now wrap themselves, not `unsubscribe_member`) since it's a one-line, zero-risk clarity fix that removes a footgun for future readers, and would matter the moment `panopticon_required` ever changes to a non-superuser-bypassing check. Predates the 2026 rewrite (`git log -S` traces it to feature 9.74).
 
-**Bug AW** — `unsubscribe_member_right_now` and `opt_in` route access-denied users into the wrong view 🟢 XS
+**Bug AX** — Structured-cost-terms placeholder has never shown its default text ✅ fixed 2026-09-09
 
-Both views in `members/views/member_views.py` call `panopticon_required(unsubscribe_member)(...)` on their access-denied branch instead of wrapping themselves, so a Panopticon-level user without a magic key lands in the generic unsubscribe flow rather than the one they asked for. Predates the 2026 rewrite (`git log -S` traces it to feature 9.74). Surfaced by the September 2026 review sweep.
-
-**Bug AX** — Structured-cost-terms placeholder has never shown its default text 🟢 XS
-
-`diary/js/form_event.js` reads `DEFAULT_TERMS_PLACEHOLDER` from a template variable (`DEFAULT_TERMS_TEXT`) that no view or context processor ever sets, so it has always rendered as an empty string. Either pass the value through from the view or drop the fallback.
+`diary/js/form_event.js` read `DEFAULT_TERMS_PLACEHOLDER` from a template variable (`DEFAULT_TERMS_TEXT`) that no view or context processor ever set — confirmed by checking `settings_common.py` (where `DEFAULT_TERMS_TEXT` genuinely exists, but as a Django *setting*, not template context) and `diary/context_processors.py` (no reference to it at all). Fixed by adding `"DEFAULT_TERMS_TEXT": settings.DEFAULT_TERMS_TEXT` to both context dicts `EditEventView` builds for `form_event.html` (`toolkit/diary/edit_views/events.py`, GET and POST-validation-error paths), matching the pattern every sibling context value already follows. Regression test: `toolkit/diary/tests/test_edit_event.py::EditEventView::test_default_terms_placeholder_is_populated`.
 
 **Bug AY** — Findings from the September 2026 review sweeps, verified but not yet fixed 🔵 S
 

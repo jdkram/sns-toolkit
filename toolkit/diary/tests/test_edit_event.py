@@ -376,6 +376,19 @@ class EditEventView(DiaryTestsMixin, TestCase):
         self.assertContains(response, "diary/js/form_event.js")
         # Blah. It's probably fine. Ahem.
 
+    def test_default_terms_placeholder_is_populated(self):
+        """Regression for Bug AX: DEFAULT_TERMS_TEXT is a Django setting,
+        not a template context variable, so `{{ DEFAULT_TERMS_TEXT }}` in
+        form_event.html rendered empty until the view context passed it
+        through explicitly."""
+        from django.conf import settings
+
+        url = reverse("edit-event-details", kwargs={"event_id": 1})
+        response = self.client.get(url)
+        self.assertContains(
+            response, settings.DEFAULT_TERMS_TEXT.splitlines()[0]
+        )
+
     def test_get_edit_event_form_no_media_legacy_copy(self):
         # Test the transformation of legacy copy properly in a separate set of
         # tests...

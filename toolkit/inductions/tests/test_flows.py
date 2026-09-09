@@ -169,6 +169,28 @@ class Capacity(InductionsTestsMixin, TestCase):
             ),
         )
 
+    def test_manage_detail_script_block_not_duplicated(self):
+        """Regression for Bug AV: session_detail.html used to nest its
+        {% block script %} override inside {% block body %}, which made
+        Django render the whole inherited script block twice (once at its
+        real position, once again nested inside body) and, worse, placed it
+        in <head> before the modal/walk-in-form DOM existed — so
+        bootstrap.Modal() and other DOM-dependent setup threw on every
+        page load."""
+        from django.urls import reverse
+
+        self.login_admin()
+        resp = self.client.get(
+            reverse(
+                "inductions:manage_session_detail", args=[self.session.slug]
+            )
+        )
+        html = resp.content.decode()
+        self.assertEqual(html.count("session_detail.js"), 1)
+        self.assertEqual(html.count('id="edit-modal"'), 1)
+        # The script must run after the DOM (modal, walk-in form) exists.
+        self.assertIn("DOMContentLoaded", html)
+
     def test_set_cap_updates_session(self):
         from django.urls import reverse
 
