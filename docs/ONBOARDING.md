@@ -1,6 +1,6 @@
 # Cube Toolkit — Developer Onboarding
 
-This doc is for people new to the project who want to get a local dev environment running and understand how the codebase is structured. It assumes no prior Django experience.
+For people new to the project: get a local dev environment running and understand how the codebase is structured. Assumes no prior Django experience.
 
 ---
 
@@ -422,7 +422,7 @@ Cube and Star and Shadow currently share this codebase via separate settings fil
 ### 1. Settings file / environment variables
 
 - Copy an existing `settings_<venue>.py` as a starting point; review every value in its `VENUE` dict, not just the obviously venue-specific ones (`name`, `url`).
-- `VENUE["siteurl"]` — the toolkit's own domain (not the marketing site in `VENUE["url"]`). Used to build absolute login links in emails sent from management commands, which have no HTTP request to call `build_absolute_uri()` on. Set in `docker_settings_<venue>.py` (dev, e.g. `http://localhost:8000`) and `docker_settings_prod_<venue>.py` (prod, typically `f"https://{os.environ['ALLOWED_HOST']}"`). **Easy to miss:** there's no error if it's unset — affected links just resolve relative instead of absolute, and nothing surfaces that in the UI.
+- `VENUE["siteurl"]` — the toolkit's own domain (not the marketing site in `VENUE["url"]`). Builds absolute login links in emails from management commands, which have no HTTP request to call `build_absolute_uri()` on. Set in `docker_settings_<venue>.py` (dev, e.g. `http://localhost:8000`) and `docker_settings_prod_<venue>.py` (prod, typically `f"https://{os.environ['ALLOWED_HOST']}"`). **Easy to miss:** unset it and links just resolve relative instead of absolute, silently.
 - `VENUE["mailout_from_address"]`, `VENUE["vols_admin_address"]` — the latter defaults to `[]` (no-op) if unset; the volunteer-status-change notification to your vols admin silently does nothing until it's set.
 - Production only: `SECRET_KEY`, `ALLOWED_HOST`, `DB_PASSWORD` — see environment variable table above.
 

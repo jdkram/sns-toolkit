@@ -8,7 +8,7 @@ status: "#ai-input"
 
 **Status:** scoped and run 2026-09-08, on branch `chore/quality-pass-2-2026-09`. The MiniMax
 M3 sweep (all 44 files, $0.6715, zero empty outputs) is done and synthesised into
-[QUALITY_RUBRIC.md](QUALITY_RUBRIC.md) (new rules R15–R16, a "not rubric material" addendum,
+[QUALITY_RUBRIC.md](../QUALITY_RUBRIC.md) (new rules R15–R16, a "not rubric material" addendum,
 and a ranked "Unfixed findings, Quality Pass 2" section). One finding — the GDPR email-scrub
 bug in `Volunteer.anonymise()`, same root-cause class as the already-documented
 `vols_admin_address` incident — was fixed immediately, out of band, with a regression test,
@@ -31,7 +31,7 @@ codebase that no review pass had ever opened. See "Why this exists" below.
 
 ## Why this exists
 
-[`docs/ARCHIVE/QUALITY_PASS_2026_09.md`](ARCHIVE/QUALITY_PASS_2026_09.md) put ruff/black/CI
+[`docs/ARCHIVE/QUALITY_PASS_2026_09.md`](QUALITY_PASS_2026_09.md) put ruff/black/CI
 under the whole repo and ran two AI review sweeps (MiniMax M3, then Kimi K2 Thinking) — but
 those sweeps were **scoped to the apps and modules this rewrite actually reworked or extended**:
 `labs/`, `inductions/`, `audit/`, `operations/`, `diary/edit_views/`, `diary/forms.py`,

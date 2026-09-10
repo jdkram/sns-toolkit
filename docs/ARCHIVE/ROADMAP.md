@@ -12,7 +12,7 @@ status: "#ai-input"
 
 Sequencing plan for remaining Phase 2 work. Source of truth for individual
 task status remains [CURRENT_WORK.md](../CURRENT_WORK.md); design rationale
-lives in [TASKS.md](TASKS.md). This file is the *order* and the *why* of
+lives in [TASKS.md](../TASKS.md). This file is the *order* and the *why* of
 that order.
 
 The driving question for sequencing is: **which features unblock the most
@@ -192,5 +192,5 @@ was real money.
 
 ---
 
-*Navigation: [CURRENT_WORK.md](../CURRENT_WORK.md) · [TASKS.md](TASKS.md) ·
-[SPEC.md](SPEC.md) · [PIPELINE_IMPL.md](PIPELINE_IMPL.md)*
+*Navigation: [CURRENT_WORK.md](../CURRENT_WORK.md) · [TASKS.md](../TASKS.md) ·
+[SPEC.md](../SPEC.md) · [PIPELINE_IMPL.md](PIPELINE_IMPL.md)*

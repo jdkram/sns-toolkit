@@ -37,7 +37,7 @@ from three sources:
   re-run, and the R14 authorization-check pattern (below) got five different
   severity ratings across five structurally identical instances in the same sweep.
   Treat its findings list as reliable, its priority ordering as not.
-- **Quality Pass 2** (2026-09-08, see [QUALITY_PASS_2_2026_09.md](QUALITY_PASS_2_2026_09.md)) —
+- **Quality Pass 2** (2026-09-08, see [ARCHIVE/QUALITY_PASS_2_2026_09.md](ARCHIVE/QUALITY_PASS_2_2026_09.md)) —
   a second MiniMax M3 sweep, 44 files, covering the pre-rewrite Cube-era code that
   Pass 1's chunk scoping never touched (`toolkit_auth/`, `members/forms.py` +
   `models.py`, `mailer/`, `diary/mailout_views.py` and several sibling `diary/`

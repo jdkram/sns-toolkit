@@ -174,9 +174,36 @@ Implementation steps, in order:
 
 **Unblocks**: 9.25 (tap-to-sign-up), 8.10 (volunteer workload view), "my schedule" view, reliable email to showing sign-ups, reliable GDPR erasure.
 
-### 8.2 Volunteer induction is entirely manual
-The Google Form → manual entry process has no automation. Names from the form
-must be copy-pasted. There is no audit trail of who inducted whom.
+### 8.2 Volunteer induction is entirely manual ✅ Largely addressed (2026-09-09 audit; built earlier)
+
+**Built:** the `inductions` app. Capacity-limited sessions, a public sign-up form
+with GDPR consent and configurable custom questions, `.ics` calendar links,
+check-in and walk-in registration on the day, no-show marking, timed purge of
+pending and no-show sign-ups, a separate access-needs request form routing to
+1:1 sessions, CSV export, and bulk `Member` + `User` + `Volunteer` creation from
+the attendees, with a duplicate check on email and name. Gated behind
+`InductionsSettings.inductions_enabled`, default off. Full description in
+[SPEC.md §4.2](../SPEC.md).
+
+The audit-trail complaint in the original wording no longer holds:
+`InductionSignup.checked_in_by`, `InductionSession.created_by` and the per-volunteer
+log line at account creation together answer "who inducted whom".
+
+**Still open:**
+
+1. **Not deployed.** Production runs the `s+s` branch, which has no `inductions`
+   app, so the Google Form and copy-paste process described above is still what
+   actually happens at Star and Shadow. Everything here is untested against real
+   users.
+2. **No mailing-list notification on the induction path.** `_create_volunteer_from_signup`
+   (`inductions/views/signups.py`) creates the records directly and never calls the
+   `vols_admin_address` notification that `/volunteers/add/` fires via
+   `members/views/_common.py`. Someone inducted this way never generates a "please
+   add to the mailing list" email, so they are invisible to whoever maintains
+   Simplelists. Worse than the manual path it replaces, because bulk creation can
+   drop a whole cohort silently. Compounds 8.5 below.
+3. **Off by default**, which is correct as a shipping default but means the flow
+   is easy to forget exists.
 
 ### 8.3 Volunteer self-service is partial
 Volunteers can log in, view the rota, and sign up for slots via an

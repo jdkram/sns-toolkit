@@ -46,7 +46,7 @@ The `UserForm` on the volunteer edit page currently uses Django's raw field labe
 - **Programmer** — member of the `Programmers` group; can edit events, showings, members (read access to names/emails = GDPR-sensitive)
 - **Panopticon** — `is_superuser=True`; full Django admin access (read/write to everything = high GDPR sensitivity)
 
-The user form should use these names. Additionally, Programmer and Panopticon roles should carry a visible warning that granting them exposes GDPR-covered data (member names, emails, addresses) to the recipient.
+The user form should use these names. Programmer and Panopticon roles should also carry a visible warning that granting them exposes GDPR-covered data (member names, emails, addresses) to the recipient.
 
 **Proposed changes:**
 
@@ -661,7 +661,7 @@ The gallery can also be embedded on the public programme page, replacing or supp
 
 ---
 
-### 9.161 — Unify Nav tags and filter groups into one filter UI 🟠 L (speculative, unscoped)
+### 9.167 — Unify Nav tags and filter groups into one filter UI 🟠 L (speculative, unscoped)
 
 **Problem.** The public programme currently has two separate, overlapping filtering mechanisms: the filter-group buttons (9.105) at the top of the page, and individually "Nav"-flagged tags that appear as their own links in the sidebar. A venue admin has to think about both when deciding how a tag should surface, and end users see two different places to narrow down the programme.
 

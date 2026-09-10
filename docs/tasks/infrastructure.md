@@ -8,11 +8,11 @@ Feature specs for accessibility, test coverage, backup, permission model redesig
 
 ### 9.16 Alt text fields for images — ✅ Done 2026-03-02
 
-**Goal:** Add structured alt text (alternative text) fields to all images across the toolkit, ensuring that screen reader users and people with images disabled can understand visual content.
+**Goal:** Add structured alt text (alternative text) fields to all images across the toolkit, so screen reader users and people with images disabled can understand visual content.
 
 #### Why this matters
 
-Alt text is critical for web accessibility. When an image fails to load, or when a user relies on a screen reader, alt text provides the essential context that sighted users get from looking at the image. The toolkit uses images throughout:
+Alt text gives a screen reader user, or anyone whose image failed to load, the context a sighted user gets from looking at the image. The toolkit uses images throughout:
 
 - Event images in the public programme
 - Volunteer portraits
@@ -148,7 +148,6 @@ These flags are **informational only** — the goal is transparency, not exclusi
 - Browser tabs show only the first ~60 characters of a title — make them count
 - Screen reader users rely on page titles to understand page context
 - Clear titles reduce navigation confusion, especially when many tabs are open
-- Consistency improves maintainability
 
 **Files to review:**
 - `toolkit/diary/templates/*.html` (edit_rota.html, view_rota.html, form_*.html)
@@ -275,7 +274,7 @@ Backend validation (minimum word count) is tested in `test_edit_views.py` via `@
 
 #### Background
 
-The production DB is currently backed up manually and infrequently (two snapshots exist in `~/code/sns-live-toolkit/backups/` as of April 2026). The gap between backups means that changes to records — including financial terms on events — can go undetected. A nightly automated backup closes this window and provides a reliable rollback point.
+The production DB is currently backed up manually and infrequently (two snapshots exist in `~/code/sns-live-toolkit/backups/` as of April 2026), so changes to records, including financial terms on events, can go undetected between backups. A nightly automated backup closes that gap.
 
 The existing manual dump procedure is documented in `~/notes/Community/Star and Shadow/servers.md`.
 

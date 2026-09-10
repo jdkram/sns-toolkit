@@ -30,21 +30,36 @@ Features:
   sent N days before a showing
 - **My schedule view** — a volunteer can see all showings they're signed up for
 
-### 9.4 Volunteer induction workflow
+### 9.4 Volunteer induction workflow ✅ Delivered as the `inductions` app (recorded 2026-09-09)
 
 **Goal:** Replace the Google Form → manual entry process with something integrated.
 
-Features:
-- **Self-registration form** — public-facing form where prospective volunteers
-  can submit their details (replaces Google Form)
-- **Pending volunteer queue** — admins see a queue of submitted applications
-- **Induction session attendance tracking** — mark which sessions someone attended
-- **One-click activation** — once verified, activate the volunteer with a single
-  action that creates their account and notifies them
-- **Welcome email** — automatic email sent on activation with login details and
-  next steps
-- **Induction checklist** — record which induction topics were covered for each
-  new volunteer
+Built. See [SPEC.md §4.2](../SPEC.md) for the workflow and
+[known-issues.md §8.2](known-issues.md) for what remains. Marked up on 2026-09-09
+during the user-stories pass, which found this spec still reading as unbuilt long
+after the app shipped; the delivery date itself is earlier and not recorded here.
+
+Features, against what was proposed:
+
+- ✅ **Self-registration form** — public sign-up per session at `/inductions/<slug>/`,
+  with GDPR consent and per-session custom questions
+- ✅ **Pending volunteer queue** — the session detail page lists sign-ups by status
+- ✅ **Induction session attendance tracking** — check-in, walk-in registration and
+  no-show marking, with `checked_in_by` recorded
+- ✅ **One-click activation** — bulk account creation across a whole session, with a
+  duplicate check on email and name
+- ✅ **Welcome email** — sent on account creation with a password-set link;
+  subject and body configurable
+- ❌ **Induction checklist** — not built. `custom_questions` asks the *attendee*
+  questions at sign-up; there is still no record of which induction *topics* were
+  covered for a given person. This is the one genuinely outstanding piece of the
+  original spec, and it overlaps the training-model problem in
+  [known-issues.md §8.8](known-issues.md).
+
+Delivered beyond the original spec: access-needs requests routing to 1:1 sessions,
+capacity limits with session-full handling, `.ics` calendar links, timed purge of
+pending and no-show sign-ups, privacy-policy versioning with re-consent emails, and
+CSV export.
 
 ### 9.5 Volunteer wellbeing dashboard
 
@@ -949,7 +964,7 @@ Panopticons can view the audit log at `/volunteers/export/audit/`.
 
 By analogy with `/volunteers/training-report/`, add a qualification report at `/volunteers/qualification-report/` showing:
 - Each qualification: how many volunteers hold it, who holds it, when each was granted
-- Highlight any with blocking role gates so the reader can see which qualifications are load-bearing
+- Highlight any with blocking role gates so the reader can see which qualifications actually gate a role
 - Link through to each volunteer's profile
 
 **Part 2: Audit the existing training/role reports.**
@@ -984,7 +999,7 @@ Qualifications are currently managed inline on the Roles page (`/diary/edit/role
 
 **Problem.** The Suspended status is currently one radio button option alongside Active / Dormant / Retired in the volunteer edit profile. It is not visually distinct, yet it is qualitatively different: it immediately blocks login and clears future rota entries. This severity is not communicated in the UI.
 
-Additionally, the help text above the status section currently reads:
+The help text above the status section currently reads:
 
 > "This controls what a volunteer can do. Each option below says exactly what changes. Only Suspended stops someone logging in — the others just take them off the rota and mailing list."
 

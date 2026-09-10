@@ -297,7 +297,7 @@ directly they translate to toolkit features:
   there.
 - **Auto-populate from the programming queue** — see 9.2: when an event is
   approved, the proposing programmer's name is written into the Programmer slot
-  automatically. The warning highlight serves as a fallback for events that
+  automatically. The warning highlight is a fallback for events that
   bypass the queue or where the slot has been cleared.
 
 **"Put your event on the rota ASAP and no less than a week before."**
@@ -515,6 +515,14 @@ notifications ("Middle Corridor blocked 14:00–15:00 for exhibition install").
 
 **Not needed:** no change to `RoomBookingForm` — all rooms are already
 selectable there; no change to clash detection logic.
+
+### 9.168 — Room capacity and access information 🟢 XS
+
+**Goal:** Extend `Room` with fields it doesn't yet have: `capacity` (optional integer), `access_notes` (short free text, e.g. "key fob, red doors" / "keycode door" / "public access"), and `publicly_accessible` (boolean — whether the public can use the space unescorted during an event). None of this is currently modelled; SPEC.md documents `Room` as built and lists these as the gap.
+
+**Why:** these are properties of the physical room, useful for programmers who don't know the building well, and (`publicly_accessible`) potentially relevant to safeguarding decisions about which spaces to open for a given event.
+
+**Related:** 9.7 (room booking data model).
 
 ### 9.9 Break-even calculator for programmers 🟢 XS
 
@@ -3597,6 +3605,10 @@ Show the permission table with inline dropdowns in the settings page rather than
 
 ---
 
+**Related:** 9.49 (collective ratification of current permission levels), 9.90 (access transparency page)
+
+---
+
 ### 9.125 — Annual profile review reminder 🟡 M (10–18h)
 
 **Context:** Volunteer profiles contain safety-critical data (emergency contact name, phone, relationship) that goes stale. There is currently no mechanism to prompt volunteers to review or update this information. A volunteer who joined years ago may have outdated emergency contact details without anyone noticing.
@@ -3722,10 +3734,6 @@ Add a "Profile overdue" indicator to the volunteer pool health page (alongside d
 ---
 
 **Related:** 9.113 (volunteer directory), 9.120 (CSV export), emergency contact fields added in 9.X overhaul
-
----
-
-**Related:** 9.49 (collective ratification of current permission levels), 9.90 (access transparency page)
 
 ---
 

@@ -238,6 +238,8 @@ The `s+s` branch is available locally for reference (`git checkout s+s`, or insp
 
 **For current task status, what's done, and what's next, see [CURRENT_WORK.md](CURRENT_WORK.md).** That is the single source of truth — do not track status anywhere else.
 
+**Next planned workstream (not started):** [docs/USER_STORIES_PASS.md](docs/USER_STORIES_PASS.md) — a persona/workflow audit to identify which user journeys deserve the most polish and to sanity-check the architecture against them. Self-contained plan, resumable cold.
+
 ---
 
 ## Docker setup on `master`

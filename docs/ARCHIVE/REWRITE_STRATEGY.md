@@ -6,7 +6,7 @@ status: "#ai-input"
 
 # Rewrite Strategy
 
-> Extracted from [SPEC.md](SPEC.md) (was sections 10–12). SPEC.md covers the system as built; this file covers the strategic question of rewriting it, what to preserve, and how to migrate data.
+> Extracted from [SPEC.md](../SPEC.md) (was sections 10–12). SPEC.md covers the system as built; this file covers the strategic question of rewriting it, what to preserve, and how to migrate data.
 
 ---
 
