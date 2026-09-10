@@ -188,17 +188,20 @@ p.month:first-of-type {
 p.month {
     text-decoration: underline;
 }
-p.day {
+/* Date/time column: fixed-width in `ch` units, not px — the list font is
+ * monospace, so a `ch`-wide column lines up exactly regardless of font-size
+ * and needs no per-breakpoint tuning. `visibility: hidden` (set by JS when a
+ * row repeats the previous row's date) keeps the column's width even when
+ * the date text itself is suppressed. */
+p.day, p.sameday {
     display: block;
-    padding-left: 58px;
-    text-indent: -58px;
 }
-p.day > span.time {
-    padding-left: 10px;
+p.day > span.date, p.sameday > span.date {
+    display: inline-block;
+    width: 7ch;
 }
-p.sameday {
-    display: block;
-    padding-left: 58px;
+.list p.filter-hidden {
+    display: none;
 }
 
 /* Footer
@@ -232,15 +235,6 @@ p.sameday {
         font-size: 0.802875em;
         line-height: 1.4;
     }
-    p.day {
-        display: block;
-        padding-left: 70px;
-        text-indent: -70px;
-    }
-    p.sameday {
-        display: block;
-        padding-left: 70px;
-    }
 }
 
 /* 475px */
@@ -262,16 +256,6 @@ p.sameday {
     }
     .list.active {
         padding-left: 12px;
-    }
-    p.day {
-        display: block;
-        padding-left: 134px;
-        text-indent: -134px;
-    }
-    p.sameday {
-        display: block;
-        padding-left: 134px;
-        text-indent: -76px;
     }
     .showing h3, .list p {
         font-size: 0.7142em;
@@ -352,19 +336,6 @@ p.sameday {
     p.month {
         text-decoration: underline;
     }
-    p.day {
-        display: block;
-        padding-left: 146px;
-        text-indent: -146px;
-    }
-    p.day > span.time {
-        padding-left: 10px;
-    }
-    p.sameday {
-        display: block;
-        padding-left: 146px;
-        text-indent: -83px;
-    }
     .showing h3, .list p {
         font-size: 0.7857em;
         line-height: 1.4;
@@ -432,16 +403,6 @@ p.sameday {
     }
     .showing:hover {
         border: 1px solid #cccccc;
-    }
-    p.day {
-        display: block;
-        padding-left: 146px;
-        text-indent: -146px;
-    }
-    p.sameday {
-        display: block;
-        padding-left: 146px;
-        text-indent: -83px;
     }
 }
 

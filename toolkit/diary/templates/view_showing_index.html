@@ -192,9 +192,9 @@ setup_page(true);
   {% for showing in showings %}
     {% ifchanged %}<p class="month">{{ showing.start|date:"F"|upper }}{% endifchanged %}
     {% ifchanged %}{{ showing.start|date:" Y" }}{% endifchanged %}
-    {% ifchanged %}<p class="day">{{ showing.start|date:"D"}} {{ showing.start|date:"d" }}
+    {% ifchanged %}<p class="day"><span class="date">{{ showing.start|date:"D"}} {{ showing.start|date:"d" }}</span>
     {% else %}
-        <p class="sameday">
+        <p class="sameday"><span class="date"></span>
     {% endifchanged %}
     <span class="time">{{showing.start|date:"H:i"}}</span> ....
     {% if showing.hide_in_programme or showing.event.private %}Closed for private event.
