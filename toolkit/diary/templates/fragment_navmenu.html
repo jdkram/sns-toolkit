@@ -1,3 +1,6 @@
+{# One of three independently hand-written nav surfaces (sidebar/toolkit navbar/ #}
+{# command palette) — see docs/NAVIGATION.md before adding, removing, or #}
+{# re-gating an item here. #}
 {% load wagtailcore_tags %}
 {% wagtail_site as current_site %}
 <ul>
@@ -43,7 +46,7 @@
     <li><a href="{% url "toolkit-index" %}" data-nav-key="t">Toolkit</a></li>
     {% if feature_perms.diary_read %}
     <li><a href="{% url "default-edit" %}" data-nav-key="i">Diary</a></li>
-    <li><a href="{% url "past-events-search" %}" data-nav-key="p">Past events</a></li>
+    <li><a href="{% url "past-events-search" %}" data-nav-key="v">Past events</a></li>
     {% endif %}
     {% if feature_perms.diary_calendar %}
     <li><a href="{% url "diary-edit-calendar" %}" data-nav-key="a">Calendar</a></li>

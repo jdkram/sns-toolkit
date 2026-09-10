@@ -322,6 +322,7 @@ docker compose exec toolkit /venv/bin/python3 manage.py test toolkit.diary.tests
 | Current work / status / roadmap | [CURRENT_WORK.md](CURRENT_WORK.md) |
 | Code standard (checkable rules R1–R14) | [docs/QUALITY_RUBRIC.md](docs/QUALITY_RUBRIC.md) |
 | CSS conventions (checkable rules C1–C8) | [docs/CSS_CONVENTIONS.md](docs/CSS_CONVENTIONS.md) |
+| Navigation surfaces (sidebar/toolkit navbar/command palette parity) | [docs/NAVIGATION.md](docs/NAVIGATION.md) |
 | Tool config: ruff, black, complexity gate | [pyproject.toml](pyproject.toml) |
 | System specification | [docs/SPEC.md](docs/SPEC.md) |
 | Logging: what's logged where, email log lines | [docs/LOGGING.md](docs/LOGGING.md) |

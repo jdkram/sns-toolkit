@@ -146,6 +146,19 @@ Both views in `members/views/member_views.py` called `panopticon_required(unsubs
 
 **Fix:** `messages.css` — `font-size: 16pt` → `1.333rem` (equivalent rendered size at default browser settings, but a relative unit). `li.warning`'s colour changed from `#FF7E00` to `#856404` (≈5.49:1 on white), reusing the amber already established site-wide for warning states (`edit_rota.css`, `form_event.css`) rather than inventing a sixth ad hoc colour. Success/error/info left unchanged since they already pass. Not browser-verified.
 
+**Bug BD** — Sidebar, toolkit navbar, and command palette had drifted apart — several items present in one and missing from the others ✅ fixed 2026-09-10
+
+**Symptom (as reported):** "Past events" showed in the public sidebar but not in the toolkit's top navbar.
+
+**Root cause:** there are three independently hand-written navigation surfaces — `fragment_navmenu.html` (sidebar), the `<nav>` block in `base_admin.html` (toolkit navbar), and `window.TOOLKIT_COMMANDS` in the same file (the Ctrl+K command palette) — with no shared data source. Design decision established while investigating (see [docs/NAVIGATION.md](../NAVIGATION.md)): the sidebar is deliberately a leaner subset for public-page browsing; the navbar and palette are meant to be the complete toolkit set and must mirror each other exactly. Auditing all three against that rule found:
+
+1. **"Past events"** missing from the navbar and palette despite sitting behind the identical `feature_perms.diary_read` gate as "Diary" in the sidebar — a plain omission when it was added to one template and not the others.
+2. **"Maintenance schedule"** missing from the navbar's Community dropdown and the palette, present in the sidebar's Noticeboard dropdown.
+3. **Six `site_config.*_enabled` feature flags** (`building_map_enabled`, `shopping_list_enabled`, `lost_and_found_enabled`, `collectives_enabled`, `donations_enabled`, `jobs_board_enabled`) gated correctly in the sidebar but left ungated in the navbar and/or palette — not a security hole (the views themselves enforce `@_feature_enabled_or_404`) but a link that 404s the moment a site admin disables the feature, since the nav item itself doesn't know to disappear.
+4. **A `data-nav-key` bug found along the way:** the sidebar used `"p"` for both "Programme" and "Past events". `keyboard-nav-public.js` selects by `data-nav-key`, and jQuery's `.attr()` on a multi-element match returns only the first DOM match — so the `g → p` shortcut could only ever reach "Programme"; "Past events" was silently unreachable by keyboard. Also found: the command palette listed "Rota vacancies" twice, once unconditionally and once correctly gated on `feature_perms.rota_vacancies`.
+
+**Fix:** added the missing items and feature-flag gates to whichever surface(s) lacked them (`toolkit/index/templates/base_admin.html`, both the navbar and the palette); changed "Past events"'s key to `v` in all three surfaces (sidebar, navbar, palette) to resolve the collision and keep the shortcut consistent across surfaces; removed the duplicate "Rota vacancies" palette entry. `docs/NAVIGATION.md` records the design decision and a maintenance checklist so this doesn't silently drift a third time; all three files now carry a one-line pointer comment to it. Not browser-verified — the command palette and keyboard shortcuts in particular should get a manual click-through.
+
 **Bug AY** — Findings from the September 2026 review sweeps, verified but not yet fixed 🔵 S
 
 Each is small on its own; grouped so they are not lost. Fix when the relevant file is next touched.

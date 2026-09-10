@@ -85,12 +85,16 @@ body {
     <script src="{{ STATIC_URL }}js/keyboard-nav-admin.js"></script>
     <script src="{{ STATIC_URL }}js/command-palette.js"></script>
     <script>
+    // One of three independently hand-written nav surfaces (sidebar/toolkit
+    // navbar/command palette) — see docs/NAVIGATION.md before adding,
+    // removing, or re-gating an item here. Keep this array's gates in sync
+    // with the <nav> below; they're meant to mirror each other exactly.
     window.TOOLKIT_COMMANDS = [
       {label:"Home",               category:"Navigate", shortcut:"g → h", href:"{% url 'toolkit-index' %}",      keywords:"dashboard index"},
       {label:"Rota",               category:"Navigate", shortcut:"g → r", href:"{% url 'rota-edit' %}",          keywords:"shifts schedule volunteering sign up"},
-      {label:"Rota vacancies",     category:"Navigate",                         href:"{% url 'view-rota-vacancies' %}", keywords:"gaps empty unfilled shifts"},
       {% if feature_perms.diary_read %}
       {label:"Diary",              category:"Navigate", shortcut:"g → d", href:"{% url 'default-edit' %}",       keywords:"events showings edit list"},
+      {label:"Past events",        category:"Navigate", shortcut:"g → v", href:"{% url 'past-events-search' %}", keywords:"find search archive history"},
       {% endif %}
       {% if feature_perms.diary_calendar %}
       {label:"Calendar",           category:"Navigate", shortcut:"g → c", href:"{% url 'diary-edit-calendar' %}", keywords:"events week month view"},
@@ -102,7 +106,9 @@ body {
       {label:"Rota vacancies",     category:"Navigate",                         href:"{% url 'view-rota-vacancies' %}", keywords:"gaps empty unfilled shifts"},
       {% endif %}
       {label:"Public programme",   category:"Website",                          href:"{% url 'default-view' %}",       keywords:"front website public listings"},
+      {% if site_config.donations_enabled %}
       {label:"Donations wishlist",  category:"Website",                         href:"{% url 'labs-donations' %}",     keywords:"want list labs"},
+      {% endif %}
       {% if feature_perms.donations_manage %}
       {label:"Manage donations",   category:"Website",                          href:"{% url 'labs-donations-manage' %}", keywords:"wishlist labs"},
       {% endif %}
@@ -110,13 +116,24 @@ body {
       {label:"Wagtail CMS",        category:"Website",                          href:"{% url 'wagtailadmin_home' %}",  keywords:"pages articles content cms"},
       {% endif %}
       {label:"Bulletins",          category:"Community",                        href:"{% url 'labs-bulletins' %}",     keywords:"notices news announcements board labs"},
+      {% if site_config.collectives_enabled %}
       {label:"Collectives",        category:"Community",                        href:"{% url 'labs-collectives' %}",   keywords:"groups teams labs"},
+      {% endif %}
       {label:"Volunteer directory",category:"Community",                        href:"{% url 'volunteer-directory' %}", keywords:"people contacts find labs"},
+      {% if site_config.jobs_board_enabled %}
       {label:"Jobs board",         category:"Community",                        href:"{% url 'labs-jobs' %}",          keywords:"tasks help wanted labs"},
+      {% endif %}
+      {label:"Maintenance schedule", category:"Community",                      href:"{% url 'operations-schedule' %}", keywords:"repairs building rooms tasks"},
+      {% if site_config.building_map_enabled %}
       {label:"Building map",       category:"Community",                        href:"{% url 'labs-floorplan' %}",     keywords:"rooms floor plan layout labs"},
+      {% endif %}
+      {% if site_config.shopping_list_enabled %}
       {label:"Shopping list",      category:"Community",                        href:"{% url 'labs-shopping' %}",      keywords:"buy stock supplies labs"},
       {label:"Do a shop",          category:"Community",                        href:"{% url 'labs-shopping-buy' %}",  keywords:"buy order supplier shop labs"},
+      {% endif %}
+      {% if site_config.lost_and_found_enabled %}
       {label:"Lost and found",     category:"Community",                        href:"{% url 'labs-found-items' %}",   keywords:"lost found items log labs"},
+      {% endif %}
       {% if user.is_superuser %}
       {label:"Volunteer profiles", category:"People",                           href:"{% url 'view-volunteer-list' %}", keywords:"list all volunteers"},
       {label:"Volunteer list",     category:"People",                           href:"{% url 'view-volunteer-summary' %}", keywords:"stats overview count summary"},
@@ -174,6 +191,9 @@ body {
 {% endblock %}
 
 {% block header %}
+    {# See docs/NAVIGATION.md — this navbar must mirror TOOLKIT_COMMANDS above, #}
+    {# and the sidebar's fragment_navmenu.html for anything a volunteer also #}
+    {# needs from the public site. #}
     {% if user.is_superuser %}
       <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
     {% else %}
@@ -201,6 +221,9 @@ body {
           <li class="nav-item">
             <a class="nav-link" href="{% url "default-edit" %}" data-nav-key="d">Diary</a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url "past-events-search" %}" data-nav-key="v">Past events</a>
+          </li>
           {% endif %}
           {% if feature_perms.diary_calendar %}
           <li class="nav-item">
@@ -220,7 +243,9 @@ body {
               {% if site_config.printed_programme_archive_enabled %}
               <a class="dropdown-item" href="{% url "printed-programme-archive" %}">Printed programme archive</a>
               {% endif %}
+              {% if site_config.donations_enabled %}
               <a class="dropdown-item" href="{% url "labs-donations" %}">Donations wishlist <span class="labs-tag">labs</span></a>
+              {% endif %}
               {% if feature_perms.donations_manage %}
               <a class="dropdown-item" href="{% url "labs-donations-manage" %}">Manage donations <span class="labs-tag">labs</span></a>
               {% endif %}
@@ -234,18 +259,29 @@ body {
             <a class="nav-link dropdown-toggle" href="#" id="dropdown-community" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-nav-key="o">Community</a>
             <div class="dropdown-menu" aria-labelledby="dropdown-community">
               <a class="dropdown-item" href="{% url "labs-bulletins" %}">Bulletins <span class="labs-tag">labs</span></a>
+              {% if site_config.collectives_enabled %}
               <a class="dropdown-item" href="{% url "labs-collectives" %}">Collectives <span class="labs-tag">labs</span></a>
+              {% endif %}
               <a class="dropdown-item" href="{% url "volunteer-directory" %}">Volunteer directory <span class="labs-tag">labs</span></a>
+              {% if site_config.jobs_board_enabled %}
               <a class="dropdown-item" href="{% url "labs-jobs" %}">Jobs board <span class="labs-tag">labs</span></a>
+              {% endif %}
+              <a class="dropdown-item" href="{% url "operations-schedule" %}">Maintenance schedule</a>
               {% if site_config.community_exchange_enabled %}
               <a class="dropdown-item" href="{% url "labs-exchange" %}">Community exchange <span class="labs-tag">labs</span></a>
               {% endif %}
               <div class="dropdown-divider"></div>
+              {% if site_config.building_map_enabled %}
               <a class="dropdown-item" href="{% url "labs-floorplan" %}">Building Map <span class="labs-tag">labs</span></a>
+              {% endif %}
+              {% if site_config.shopping_list_enabled %}
               <a class="dropdown-item" href="{% url "labs-shopping" %}">Shopping list <span class="labs-tag">labs</span></a>
               <a class="dropdown-item" href="{% url "labs-shopping-buy" %}">Do a shop <span class="labs-tag">labs</span></a>
+              {% endif %}
+              {% if site_config.lost_and_found_enabled %}
               <a class="dropdown-item" href="{% url "labs-found-item-log" %}">Log found item <span class="labs-tag">labs</span></a>
               <a class="dropdown-item" href="{% url "labs-found-items" %}">Lost &amp; found list <span class="labs-tag">labs</span></a>
+              {% endif %}
             </div>
           </li>
 
