@@ -1600,3 +1600,20 @@ precedent to reuse).
 **Size estimate:** 🟡 M — genuinely unscoped past the direction above; needs
 a proper session to nail the field shape and induction-form changes before
 sizing tightens further.
+
+**Resume protocol (for a fresh session picking this up cold).**
+1. Read this entry in full first — it already has the agreed direction and
+   the open-questions list above; don't re-derive either from scratch.
+2. Read `toolkit/inductions/forms.py`'s `SignupForm` (fields, and how/where
+   any existing consent notice is rendered) — this is the concrete
+   next step that was started and interrupted last time, not completed.
+3. Read `toolkit/inductions/models.py`'s `InductionsSettings` fields
+   (`privacy_policy_url`/`privacy_policy_version`/`privacy_policy_updated_at`)
+   as the consent-versioning precedent flagged above to reuse rather than
+   invent from scratch.
+4. Work through the open-questions list above one at a time; each answered
+   question should get written back into this entry (direction-agreed
+   section), same as 9.169's design section did, before any code gets
+   written. This is more sensitive than 9.169 (privacy/GDPR-adjacent, touches
+   every volunteer's identity) — don't jump to implementation until the
+   design is locked, unlike 9.169 which arrived here already fully specced.

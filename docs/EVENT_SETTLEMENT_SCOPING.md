@@ -284,6 +284,10 @@ questions" list; kept in the same grouping for continuity.
 3. That task-file entry should specify: the showing-level settlement model with flexible
    price-band line items, the three-shape split (film/gig/hire), the feature flag + Site Settings
    visibility control, and how it hooks into the existing `EventTermsRevision`/`EventAuditLog`
-   audit precedents.
-4. This file is now linked from `CLAUDE.md`'s "Next planned workstream" section (done 2026-09-10,
-   same session as this evidence pass) — keep that pointer current once the task-file entry exists.
+   audit precedents. `Event.no_financial_activity` already exists (built 2026-09-10 as part of
+   9.169, `docs/tasks/events-and-rota.md`) — treat it as available, not something to design; wire
+   the settlement-actuals requirement to key off it rather than adding a second flag.
+4. This file is linked from `CLAUDE.md`'s "Also queued" line — keep that pointer current once the
+   task-file entry exists. As of 2026-09-10, `CLAUDE.md`'s primary "resume here" pointer is
+   `docs/tasks/volunteers.md` 9.170 instead — this finance.md work is queued behind it, not the
+   active resume target.
