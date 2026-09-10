@@ -7,6 +7,44 @@ Bugs and current system limitations.
 
 ---
 
+## Browser verification checklist (2026-09-10)
+
+Three commits landed 2026-09-10 with zero browser verification (no Claude-in-Chrome connection
+that session): `b072e4d0` (CSS systemic review — Bugs AZ, BA, BB, BC) and `eed5301f` (nav
+parity — Bug BD). Whoever picks this up next — human or a fresh session with a working browser
+connection — should click through the following before dropping the "not browser-verified"
+caveat from those bug entries below:
+
+**Public sidebar** (any page extending `base_public.html`, e.g. `/programme/`):
+- Desktop (≥1000px): sidebar renders with no visual regression from the `#sidebar`/`#site-nav`/
+  `.nav-wrap` consolidation in `layout.css`.
+- Mobile width (<1000px, e.g. resize to ~375px): tap the hamburger, drawer opens; tap it again —
+  confirm it now **closes** (Bug BA — previously unclickable, sat below the sidebar's z-index).
+- If you have access to a real Windows/Firefox machine: check the nav doesn't show a spurious
+  horizontal scrollbar when the link list is tall enough to need a vertical one (Bug AZ — the
+  original report). Otherwise, at minimum confirm no regression on whatever scrollbars this
+  machine has.
+- Find some bold text (event descriptions use `<strong>`) — confirm it's now visibly bolder
+  than surrounding body text (Bug BB — was previously the same weight, invisible).
+- Keyboard: press `g` then `v` — should jump to "Past events", not "Programme" (was a
+  `data-nav-key` collision; `v` should work on both the sidebar and the toolkit navbar).
+
+**Toolkit pages** (any page extending `base_admin.html`, e.g. `/toolkit/` — check as both a
+volunteer with `diary_read` and as a superuser):
+- Trigger a flash message of each kind (success/error/warning/info — e.g. save a form) and
+  confirm all four are legible, especially warning (Bug BC — was ~2.55:1 contrast, essentially
+  unreadable).
+- Top navbar: confirm "Past events" and "Maintenance schedule" now appear (Bug BD).
+- Ctrl+K command palette: confirm "Past events" and "Maintenance schedule" appear there too.
+- Toggle a `site_config.*_enabled` flag off in Site Settings (e.g. Building Map) and confirm
+  the corresponding item disappears from **both** the navbar dropdown and the command palette,
+  not just one (Bug BD's feature-flag-gating fix).
+- Watch the browser console for JS errors on both `base_admin.html` and `fragment_navmenu.html`
+  pages — nothing here should have introduced any, but this wasn't checked live.
+
+Once confirmed, remove the "not browser-verified" line from each bug entry below (Bug AZ, BA,
+BB, BC, BD) rather than leaving it stale, or reopen the specific one with what actually broke.
+
 ## Current bugs
 
 **Bug AR** — Approved queue events vanish from the diary — nothing bridges "approved" to "confirmed" ✅ fixed 2026-09-09
