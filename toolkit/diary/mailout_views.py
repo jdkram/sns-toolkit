@@ -139,7 +139,30 @@ def mailout(request):
             request.POST, html_mailout_enabled=html_mailout_setting
         )
         if not form.is_valid():
-            return render(request, "form_mailout.html", {"form": form})
+            # The GET branch above puts days_ahead/copy_days_ahead in the
+            # render context so the "listings from N days ahead" number
+            # inputs show the value the user set; this branch used to omit
+            # them entirely, so a resubmit after a validation error reset
+            # both inputs to blank rather than preserving what was typed.
+            config = get_site_config()
+            days_ahead = config.mailout_listings_days_ahead
+            copy_days_ahead = config.mailout_details_days_ahead
+            try:
+                days_ahead = int(request.POST.get("daysahead", days_ahead))
+                copy_days_ahead = int(
+                    request.POST.get("copydaysahead", copy_days_ahead)
+                )
+            except ValueError:
+                pass
+            return render(
+                request,
+                "form_mailout.html",
+                {
+                    "form": form,
+                    "days_ahead": days_ahead,
+                    "copy_days_ahead": copy_days_ahead,
+                },
+            )
 
         send_html = request.POST.get("send_html") == "on"
 

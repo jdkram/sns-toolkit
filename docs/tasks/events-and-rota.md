@@ -13,7 +13,8 @@ Feature specs for the diary, event creation, programming pipeline, rota, room bo
 [9.15 Film metadata](#915-film-metadata-distributor-records-and-screening-reports-) ·
 [9.18 Event create/edit UX](#918-unified-event-createedit-ux-) ·
 [9.108 TicketSource guide](#9108--ticketsource-setup-guide-in-the-event-creation-flow-) ·
-[9.109 Mark as confirmed](#9109--mark-as-confirmed-as-a-satisfying-end-of-creation-action-)
+[9.109 Mark as confirmed](#9109--mark-as-confirmed-as-a-satisfying-end-of-creation-action-) ·
+[9.169 Event.programmer field](#9169--eventprogrammer-a-real-accountable-owner-field-)
 
 **Rota management** — volunteer sign-up and rota operations:
 [9.3 Rota management view](#93-volunteer-rota--improved-management-view) ·
@@ -4265,7 +4266,23 @@ dependent follow-on), Bug AR (symptom writeup).
 
 ---
 
-### 9.163 — Event/showing audit trail + real created-by/booked-for fields 🟡 M
+### 9.163 — Event/showing audit trail + real created-by/booked-for fields ✅ Delivered 2026-09-10
+
+**Delivered as spec'd below**, with the open question about a separate "responsible programmer"
+FK left for 9.164 to resolve, as originally flagged. `Event.created_by` (migration `0045`,
+set in `add_event` and `clone_event`, null for pre-existing rows — not backfilled). New
+`audit.EventAuditLog` model (migration `audit/0003`) logs creation, `programming_status`
+changes (with a from→to detail string), and showing confirm/unconfirm (including one
+aggregate row for the bulk "confirm all" action, since `.update()` bypasses per-row logging).
+The Event Hub's collapsed "Audit trail" panel (`_build_event_audit_trail()`,
+`edit_views/events.py`) merges `EventAuditLog` + `EventTermsRevision` + `DeletionLog` (matched
+to this event by the `(event id N)` phrase `delete_showing()` already puts in its description
+— no FK possible there since the showing's already gone) into one sorted timeline, gated
+`user.is_superuser` same as the email/deletion logs. `/toolkit/access/` updated to name what
+the panel shows and that it excludes login/signup/session logs. 15 new tests (creation,
+status-change, confirm/unconfirm, panel visibility, the merge/sort logic); full suite (1,402
+tests) green, ruff/black clean. **Not browser-verified** — checked via Django's test client
+only, consistent with the other backend-only work this session.
 
 **Source:** Live workflow report, 2026-07-28 — a volunteer specifically
 requested a "creation date" field after a dispute over who booked a slot
@@ -4389,6 +4406,87 @@ one call site in `update_event_programming_status`.
 
 **Related:** 9.163 (blocking dependency), 9.162 (the workflow this closes
 the loop on), 9.109 (confirm-button UX, sibling scoping decision).
+
+---
+
+### 9.169 — `Event.programmer`: a real, accountable owner field 🔵 S
+
+**Source:** Conversation 2026-09-10, arising from the event-financial-loop
+user-stories pass. Directly resolves the open question 9.163 flagged and
+deferred to 9.164 ("whether 'booked for' also needs its own FK... e.g.
+'Programmer'") — that question was never actually answered there.
+
+**Problem.**
+No field on `Event` captures "who is the programmer" as a real, selectable
+identity. `Event.created_by` (9.163) is who made the *record*, not who owns
+the event; `Showing.booked_by` is free text, kept loose deliberately because
+it must also cover external hirers with no toolkit account. In practice:
+for roughly half of events, per live workflow feedback, there's no reliable
+field to check for "who do I actually contact about this."
+
+The nearest existing mechanism, `Role.programmer_contact` (a rota-role flag
+with a "needs programmer" warning badge — `edit_rota_ui.js:86-103`), doesn't
+fix this: it's rota-page-only, opt-in (toggled via a controls-bar switch,
+`edit_rota.html:216`'s `data-programmer` attribute), per-showing rather than
+per-event, and — checked directly against `events.py:187-199` — absent from
+the Event Hub's own `completeness` dict, the one place that already nags
+about missing copy/image/terms/film-details on every event.
+
+**Design.**
+- Add `Event.programmer` — FK to `members.Volunteer`, nullable, set via
+  search-select (not free text) at event creation/edit. Distinct from both
+  `created_by` (the data-entry account) and `booked_by` (Showing-level,
+  stays free text — it still needs to cover the outside-hire case).
+- Add `has_programmer` to the Event Hub's `completeness` dict
+  (`events.py:187-199`) alongside `has_copy`/`has_image`/`terms_ok` — a
+  strong nag, not a gate, matching how every other item in that checklist
+  already behaves.
+- New `SiteConfiguration` flag (e.g. `programmer_required_for_financial_events`,
+  following the `structured_cost_terms_enabled` precedent from 9.54) —
+  when enabled, a missing `programmer` becomes a **hard block**, but only
+  when the event carries financial terms (i.e. the "no financial activity"
+  flag from the event-financial-loop work, see
+  `docs/EVENT_SETTLEMENT_USER_STORIES.md`, is *not* ticked). Events with no
+  financial terms — Cleaning Club, work parties, internal meetings — never
+  hit the block. This also sidesteps a real social cost raised in
+  conversation: pinning one named, possibly-disliked volunteer against every
+  instance of a recurring communal event nobody wants singled out for.
+- Auto-populate the rota's `programmer_contact` role slot from
+  `Event.programmer` when set, rather than asking anyone to enter the same
+  fact twice on two different screens — removes the risk of the two
+  silently disagreeing about who's actually responsible.
+- `Event.programmer` is the natural recipient for 9.164's approval/return/
+  rejection email — resolves that task's still-open "creator vs. responsible
+  programmer" question.
+- Display: once the (separate, not-yet-built) volunteer display-name /
+  surname-privacy feature exists (see `docs/tasks/volunteers.md` 9.170),
+  render via the volunteer's public display name. Until then, render
+  `programmer.member.name`, same as every other name on the page today.
+
+**Deliberately out of scope (this task).**
+- Co-programming / multiple programmers per event — considered and
+  explicitly rejected for now, not just deferred: a single accountable
+  owner avoids diffusion-of-responsibility failure modes ("school group
+  project syndrome"); volunteers who want to share credit can already use
+  the existing `Role` system informally to do so. Revisit only against a
+  concrete case, not speculatively.
+- Backfilling `programmer` for existing events (no reliable source data,
+  same call already made for `created_by` in 9.163).
+- The exact blocking UX/copy for the hard-block case (which screen it fires
+  on, what error text says) — needs its own small design pass at
+  implementation time.
+
+**Related:** 9.163 (the open question this resolves), 9.164 (blocked on
+this for its notification recipient), 9.54 (cost terms / the
+financial-activity flag this task's hard block keys off), the
+event-financial-loop work (`docs/EVENT_SETTLEMENT_SCOPING.md`,
+`docs/EVENT_SETTLEMENT_USER_STORIES.md` — the programmer is the natural
+settlement-record owner), `docs/tasks/volunteers.md` 9.170 (display-name
+rendering).
+
+**Size estimate:** 🔵 S — model field + migration, one completeness-checklist
+entry, one `SiteConfiguration` flag + block logic, rota auto-populate hook.
+Roughly 8–14h.
 
 ---
 

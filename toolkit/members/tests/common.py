@@ -10,6 +10,14 @@ class MembersTestsMixin:
     def setUp(self):
         self._setup_test_data()
         self._setup_test_users()
+        # Per-process cache persists across transaction-rolled-back tests, so
+        # a previous test's SiteConfiguration mutation could leak in. Clear it
+        # (same convention as diary/tests/common.py and labs/tests/common.py --
+        # see CLAUDE.md's "Tooling and gates" section).
+        from django.core.cache import cache
+        from toolkit.diary.models import SiteConfiguration
+
+        cache.delete(SiteConfiguration._CACHE_KEY)
 
         return super().setUp()
 

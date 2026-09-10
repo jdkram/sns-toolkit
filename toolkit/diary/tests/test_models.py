@@ -439,11 +439,14 @@ class EventTagTests(TestCase):
         tag.save()
         pk = tag.pk
 
-        tag.delete()
+        result = tag.delete()
 
         self.assertEqual(EventTag.objects.filter(id=pk).count(), 1)
         tag = EventTag.objects.get(id=pk)
         self.assertEqual(tag.name, "test")
+        # Match Django's documented delete() return shape (count, dict) so
+        # generic callers doing `count, _ = obj.delete()` don't blow up.
+        self.assertEqual(result, (0, {}))
 
     def test_can_edit_not_readonly(self):
         tag = EventTag(name="test", slug="test", read_only=False)
@@ -572,11 +575,14 @@ class RoleTests(TestCase):
         role.save()
         pk = role.pk
 
-        role.delete()
+        result = role.delete()
         self.assertEqual(Role.objects.filter(id=pk).count(), 1)
 
         role_re = Role.objects.get(id=pk)
         self.assertEqual(role_re.name, "Role One")
+        # Match Django's documented delete() return shape (count, dict) so
+        # generic callers doing `count, _ = obj.delete()` don't blow up.
+        self.assertEqual(result, (0, {}))
 
     def test_can_edit_not_readonly(self):
         role = Role(name="Role One")

@@ -1,11 +1,14 @@
 # human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude"]; status: "#ai-written"
 """
-Durable audit records: sent emails (9.156) and deletions (9.159).
+Durable audit records: sent emails (9.156), deletions (9.159), and event
+programming-lifecycle events (9.163).
 
-Both models answer "what happened?" questions for organisers without server
-access. Log lines rotate away with the container; these rows persist until
-the retention purge (purge_audit_logs command, driven by the
-email_log_retain_days / deletion_log_retain_days SiteConfiguration fields).
+All three answer "what happened?" questions for organisers without server
+access. Log lines rotate away with the container; these rows persist (the
+email/deletion logs until the retention purge, purge_audit_logs command,
+driven by the email_log_retain_days / deletion_log_retain_days
+SiteConfiguration fields -- EventAuditLog has no retention purge yet, see
+its own docstring).
 """
 
 import logging
@@ -110,6 +113,71 @@ def log_deletion(
     except Exception:
         logger.exception(
             f"Failed to write DeletionLog row for {model} pk={object_pk}"
+        )
+
+
+class EventAuditLog(models.Model):
+    """One row per programming-lifecycle event on an Event: created,
+    programming_status changed, a showing confirmed/unconfirmed. Deletions
+    and terms changes already have their own tables (DeletionLog,
+    diary.EventTermsRevision) -- this covers the remaining lifecycle detail
+    neither of those does. The Event Hub's audit panel (9.163) assembles
+    all three into one timeline.
+
+    No retention purge exists for this table yet (unlike SentEmailLog/
+    DeletionLog) -- out of scope for 9.163, add one if this ever needs it.
+
+    event is a string FK ("diary.Event") to avoid a circular import:
+    toolkit.diary already imports from toolkit.audit (log_deletion).
+    """
+
+    ACTION_CREATED = "created"
+    ACTION_STATUS_CHANGED = "status_changed"
+    ACTION_CONFIRMED = "confirmed"
+    ACTION_UNCONFIRMED = "unconfirmed"
+    ACTION_CHOICES = [
+        (ACTION_CREATED, "Created"),
+        (ACTION_STATUS_CHANGED, "Programming status changed"),
+        (ACTION_CONFIRMED, "Showing confirmed"),
+        (ACTION_UNCONFIRMED, "Showing unconfirmed"),
+    ]
+
+    event = models.ForeignKey(
+        "diary.Event", on_delete=models.CASCADE, related_name="audit_logs"
+    )
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        help_text="The logged-in user whose action this was, if any "
+        "(null for actions with no request, e.g. a management command).",
+    )
+    action = models.CharField(max_length=32, choices=ACTION_CHOICES)
+    detail = models.TextField(
+        blank=True, help_text="Free text, e.g. 'proposed -> active'."
+    )
+
+    class Meta:
+        ordering = ["-timestamp"]
+
+    def __str__(self):
+        return (
+            f"{self.timestamp:%Y-%m-%d %H:%M} {self.action} "
+            f"on event pk={self.event_id}"
+        )
+
+
+def log_event_action(event, action, actor=None, detail=""):
+    """Write an EventAuditLog row; never let a logging failure block the save."""
+    try:
+        EventAuditLog.objects.create(
+            event=event, action=action, actor=actor, detail=detail
+        )
+    except Exception:
+        logger.exception(
+            f"Failed to write EventAuditLog row for event pk={event.pk}"
         )
 
 

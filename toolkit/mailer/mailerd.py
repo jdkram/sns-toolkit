@@ -45,6 +45,23 @@ def run_job(job: MailoutJob) -> None:
     )
 
 
+def _run_job_safely(job: MailoutJob) -> None:
+    """Run one job, catching anything run_job() doesn't already handle
+    itself. An unhandled exception here (SMTP timeout, DNS failure, a DB
+    hiccup) used to propagate out of run()'s loop and kill the whole
+    daemon -- not just this job, every subsequent job too, until someone
+    noticed mailerd had died and restarted it."""
+    try:
+        run_job(job)
+    except Exception:
+        logger.exception(f"Unhandled error running job: {job}")
+        try:
+            job.do_fail("Unhandled error, see server logs")
+            job.save()
+        except Exception:
+            logger.exception(f"Failed to even mark job as failed: {job}")
+
+
 def poll_for_pending() -> List[MailoutJob]:
     return list(
         MailoutJob.objects.filter(state=MailoutJob.SendState.PENDING)
@@ -92,4 +109,4 @@ def run() -> None:
         pending_jobs = poll_for_pending()
         for idx, job in enumerate(pending_jobs):
             logger.info(f"Running job {idx+1}/{len(pending_jobs)}: {job}")
-            run_job(job)
+            _run_job_safely(job)

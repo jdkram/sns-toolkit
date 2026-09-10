@@ -286,6 +286,23 @@ class Event(models.Model):
         choices=SOUND_ENGINEER_PAID_BY_CHOICES,
         verbose_name="Sound engineer paid by",
     )
+    no_financial_activity = models.BooleanField(
+        default=False,
+        verbose_name="No financial activity",
+        help_text=(
+            "Tick if this event genuinely has no money attached -- no ticket "
+            "sales, no fees, no bar takings to record. Recuses it from having "
+            "to state cost terms, and from the programmer hard-block on "
+            "financial events (9.169). Decided upfront, at terms-entry time, "
+            "rather than after the fact at settlement time, so low-stakes "
+            "rota items (Cleaning Club, maintenance, work parties) never pay "
+            "a settlement-reporting tax for existing. Distinct from the "
+            "'meeting'/'training' tags, which only affect whether the "
+            "free-text Terms field is required -- not whether money is "
+            "involved."
+        ),
+    )
+
     technical_notes = models.TextField(
         max_length=4096,
         null=True,
@@ -381,6 +398,37 @@ class Event(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        editable=False,
+        on_delete=models.SET_NULL,
+        help_text=(
+            "The account that created this record, set once and never "
+            "edited afterwards. Settles 'who booked this first' disputes "
+            "alongside created_at. Distinct from booked_by (Showing), which "
+            "is who the slot is actually *for* -- may be an external hirer "
+            "with no toolkit account at all. Null for events created "
+            "before this field existed (9.163) -- not backfilled."
+        ),
+    )
+    programmer = models.ForeignKey(
+        "members.Volunteer",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="programmed_events",
+        help_text=(
+            "The volunteer who owns this event -- who to contact about it. "
+            "Distinct from created_by (who entered the record) and "
+            "booked_by (Showing, free text, covers external hirers with no "
+            "account). Deliberately single-owner (9.169): co-programming "
+            "was considered and rejected to avoid diffusion of "
+            "responsibility. Not backfilled for events created before this "
+            "field existed."
+        ),
+    )
 
     class Meta:
         db_table = "Events"
@@ -495,6 +543,26 @@ class Event(models.Model):
     def all_showings_confirmed(self) -> bool:
         return all(s.confirmed for s in self.showings.all())
 
+    def sync_programmer_contact_rota(self):
+        """Push this event's programmer onto the rota's programmer_contact
+        slot for every future showing, so the two never silently disagree
+        about who's responsible (9.169). Past showings are left alone --
+        rewriting who was on the line for something that already happened
+        isn't useful and would corrupt the historical record.
+        """
+        from .rota import RotaEntry
+
+        now = django.utils.timezone.now()
+        entries = RotaEntry.objects.filter(
+            showing__event=self,
+            showing__start__gt=now,
+            role__programmer_contact=True,
+        )
+        for entry in entries:
+            entry.volunteer = self.programmer
+            entry.name = self.programmer.member.name if self.programmer else ""
+            entry.save(update_fields=["volunteer", "name", "updated_at"])
+
     # Tags and attributes permitted in stored HTML copy.
     # Script tags, event-handler attributes (onclick etc.) and javascript:
     # hrefs are stripped by nh3 regardless of this allowlist.
@@ -601,6 +669,18 @@ class Event(models.Model):
             return True
         if self.terms_long_enough():
             return True
+        return bool(self.cost_type and self.cost_type != self.COST_TYPE_TBC)
+
+    def has_financial_terms(self) -> bool:
+        """True if this event has a real (non-TBC) cost type recorded and
+        hasn't been explicitly flagged as having no financial activity.
+        Distinct from terms_required()/terms_satisfied(), which are about
+        the free-text Terms field, not money. Gates the 9.169 programmer
+        hard block, and (once built) the event-settlement work's per-showing
+        actuals requirement.
+        """
+        if self.no_financial_activity:
+            return False
         return bool(self.cost_type and self.cost_type != self.COST_TYPE_TBC)
 
 

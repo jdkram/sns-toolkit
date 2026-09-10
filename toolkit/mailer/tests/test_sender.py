@@ -250,3 +250,38 @@ class TestSendMailoutTo(MembersTestsMixin, TestCase):
         self.assertEqual(MailoutJob.SendState.SENT, job.state)
         self.assertEqual("Complete", job.status)
         self.assertEqual(6, job.send_count)
+
+
+class BlankMailoutKeySelfHeals(MembersTestsMixin, TestCase):
+    """A blank mailout_key (blank=False/a default only govern form
+    validation and new-row creation, not a legacy row or bulk import that
+    bypassed them) used to produce a broken unsubscribe/edit link on every
+    mailout with no guard against it. It should now be regenerated and
+    persisted before the email goes out."""
+
+    def test_blank_key_is_regenerated_before_sending(self) -> None:
+        member = Member.objects.get(id=1)
+        member.mailout_key = ""
+        member.save()
+
+        job = MailoutJob(
+            subject="Subject",
+            body_text="Body",
+            send_html=False,
+            send_at=django.utils.timezone.now() + timedelta(days=1),
+        )
+        job.do_sending(sent=0, total=0)
+        job.save()
+        send_mailout_to(
+            job,
+            Member.objects.filter(pk=member.pk),
+            report_to=SUMMARY_RECIPIENT,
+        )
+
+        member.refresh_from_db()
+        self.assertNotEqual(member.mailout_key, "")
+
+        recipient_mail = mail.outbox[0]
+        self.assertNotIn("?k=\n", recipient_mail.body)
+        self.assertNotIn("?k=&", recipient_mail.body)
+        self.assertIn(f"?k={member.mailout_key}", recipient_mail.body)

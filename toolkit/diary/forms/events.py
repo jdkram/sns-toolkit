@@ -1,6 +1,7 @@
 import datetime
 
 from django import forms
+from django.db import models
 from django.forms import inlineformset_factory
 from django.conf import settings
 from django.utils import timezone
@@ -16,10 +17,12 @@ from toolkit.diary.form_widgets import (
 
 import toolkit.diary.models
 from toolkit.diary.models import get_site_config
+from toolkit.members.models import Volunteer
 
 from toolkit.diary.validators import validate_in_future
 
 _COST_FIELDS = (
+    "no_financial_activity",
     "cost_type",
     "cost_distributor",
     "cost_flat_fee_gbp",
@@ -55,9 +58,34 @@ def _card_open(section_id: str, title: str, start_open: bool = True) -> str:
 _CARD_CLOSE = "</div></div></div>"
 
 
+class _VolunteerChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return obj.member.name
+
+
 class EventForm(forms.ModelForm):
+    programmer = _VolunteerChoiceField(
+        queryset=Volunteer.objects.filter(
+            status=Volunteer.STATUS_ACTIVE
+        ).select_related("member"),
+        required=False,
+        help_text=(
+            "Who owns this event -- who to contact about it. "
+            "Only one person; use the Role system on the rota to share "
+            "credit informally if more than one volunteer is involved."
+        ),
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # If the current programmer has since gone dormant/retired, keep them
+        # selectable so re-saving the form doesn't silently unset them.
+        current_programmer_id = getattr(self.instance, "programmer_id", None)
+        if current_programmer_id:
+            self.fields["programmer"].queryset = Volunteer.objects.filter(
+                models.Q(status=Volunteer.STATUS_ACTIVE)
+                | models.Q(pk=current_programmer_id)
+            ).select_related("member")
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.form_class = "form-horizontal"
@@ -84,6 +112,7 @@ class EventForm(forms.ModelForm):
         if cfg.structured_cost_terms_enabled:
             cost_and_terms = [
                 HTML(_card_open("costs", "Cost &amp; terms")),
+                "no_financial_activity",
                 "cost_type",
                 "cost_distributor",
                 "cost_flat_fee_gbp",
@@ -119,6 +148,7 @@ class EventForm(forms.ModelForm):
             "post_title",
             HTML(_CARD_CLOSE),
             HTML(_card_open("programming", "Programming")),
+            "programmer",
             "approval_type",
             "approved_at_meeting_date",
             "meeting_name",
@@ -246,12 +276,14 @@ class EventForm(forms.ModelForm):
             "meeting_minutes_url",
             "programming_status",
             "programming_notes",
+            "programmer",
             "duration",
             "outside_hire",
             "hire_name",
             "private",
             "copy",
             "copy_summary",
+            "no_financial_activity",
             "cost_type",
             "cost_distributor",
             "cost_flat_fee_gbp",
@@ -321,6 +353,15 @@ class EventForm(forms.ModelForm):
                 cost_type
                 and cost_type != toolkit.diary.models.Event.COST_TYPE_TBC
             )
+            # Decided upfront, at terms-entry time (not after the fact at
+            # settlement time), so low-stakes rota items never pay a
+            # financial-admin tax for existing. Recuses from stating cost
+            # terms and from the 9.169 programmer hard block; distinct from
+            # terms_not_required (tags), which only waives the free-text
+            # Terms field.
+            no_financial_activity = bool(
+                cleaned_data.get("no_financial_activity")
+            )
 
             cfg = get_site_config()
             min_words = cfg.programme_event_terms_min_words
@@ -330,17 +371,20 @@ class EventForm(forms.ModelForm):
                 and cfg.structured_cost_required
                 and not cost_type_set
                 and not terms_not_required
+                and not no_financial_activity
             ):
                 self.add_error(
                     "cost_type",
                     f"Cost type must be set (to something other than TBC) before "
-                    f"'{self.instance.name}' can be confirmed.",
+                    f"'{self.instance.name}' can be confirmed, or tick "
+                    f"'No financial activity' above.",
                 )
 
             if (
                 terms_word_count < min_words
                 and not terms_not_required
                 and not cost_type_set
+                and not no_financial_activity
             ):
                 msg = (
                     f"Event terms for confirmed event '{self.instance.name}' "
@@ -348,6 +392,20 @@ class EventForm(forms.ModelForm):
                     f"{min_words} words, or set the cost type above."
                 )
                 self.add_error("terms", msg)
+
+            if (
+                cfg.structured_cost_terms_enabled
+                and cfg.programmer_required_for_financial_events
+                and cost_type_set
+                and not no_financial_activity
+                and not cleaned_data.get("programmer")
+            ):
+                self.add_error(
+                    "programmer",
+                    f"A programmer must be set before '{self.instance.name}' "
+                    f"can be confirmed, since it has financial terms attached "
+                    f"-- there has to be someone on the line for that.",
+                )
         return cleaned_data
 
 

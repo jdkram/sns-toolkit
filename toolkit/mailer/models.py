@@ -71,7 +71,14 @@ class MailoutJob(models.Model):
         return self.state == MailoutJob.SendState.SENDING
 
     def do_sending(self, sent: int, total: int) -> bool:
-        progress_pct = int((100.0 * sent) / total) + 1 if total else 100
+        # The +1 is deliberate -- it shows 1% rather than 0% the moment a
+        # job starts (sent=0), rather than looking stalled. But applied
+        # unconditionally it also pushes the final batch (sent=total) to
+        # 101%, normally masked by do_complete() resetting to exactly 100,
+        # but visible if the job dies before that runs. Clamp instead.
+        progress_pct = (
+            min(100, int((100.0 * sent) / total) + 1) if total else 100
+        )
         if self.state not in (
             MailoutJob.SendState.PENDING,
             MailoutJob.SendState.SENDING,

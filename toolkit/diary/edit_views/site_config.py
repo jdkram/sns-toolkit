@@ -29,6 +29,7 @@ from toolkit.diary.models import (
 import toolkit.diary.forms as diary_forms
 from ._common import _get_omdb_api_key
 from toolkit.diary.poster import generate_event_placeholder
+from toolkit.audit.models import EventAuditLog, log_event_action
 
 # Shared utility method:
 
@@ -242,6 +243,7 @@ def update_event_programming_status(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
     action = request.POST.get("action", "")
     notes = request.POST.get("notes", "").strip()
+    status_before = event.programming_status
 
     status_changed = False
     if action == "propose":
@@ -291,6 +293,14 @@ def update_event_programming_status(request, event_id):
         event.programming_notes = event.programming_notes + sep + notes
 
     event.save()
+
+    if status_changed:
+        log_event_action(
+            event,
+            EventAuditLog.ACTION_STATUS_CHANGED,
+            actor=request.user,
+            detail=f"{action}: {status_before} → {event.programming_status}",
+        )
 
     # Approving an event doesn't confirm its showings — that's a deliberate
     # separate step (see 9.109) — so leaving the queue can silently leave an

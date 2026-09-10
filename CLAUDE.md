@@ -240,6 +240,8 @@ The `s+s` branch is available locally for reference (`git checkout s+s`, or insp
 
 **Next planned workstream (not started):** [docs/USER_STORIES_PASS.md](docs/USER_STORIES_PASS.md) — a persona/workflow audit to identify which user journeys deserve the most polish and to sanity-check the architecture against them. Self-contained plan, resumable cold.
 
+**Also queued (scoping and user-stories pass complete, not yet spec'd):** [docs/EVENT_SETTLEMENT_SCOPING.md](docs/EVENT_SETTLEMENT_SCOPING.md) + [docs/EVENT_SETTLEMENT_USER_STORIES.md](docs/EVENT_SETTLEMENT_USER_STORIES.md) — closing the event financial loop (attendance/revenue/settlement actuals, none of which exist anywhere today). Next step is a `docs/tasks/finance.md` task-file entry, not more scoping.
+
 ---
 
 ## Docker setup on `master`

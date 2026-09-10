@@ -373,6 +373,44 @@ class MailoutTests(DiaryTestsMixin, TestCase):
             response.context["form"], "body_text", "This field is required."
         )
 
+    def test_post_invalid_form_preserves_days_ahead(self):
+        """A failed-validation resubmit used to drop days_ahead/
+        copy_days_ahead from the render context entirely, resetting both
+        "days ahead" number inputs to blank even though the user had set
+        them, rather than preserving what they'd typed."""
+        url = reverse("members-mailout")
+        response = self.client.post(
+            url, data={"daysahead": "21", "copydaysahead": "9"}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "form_mailout.html")
+        self.assertFormError(
+            response.context["form"], "subject", "This field is required."
+        )
+        self.assertEqual(response.context["days_ahead"], 21)
+        self.assertEqual(response.context["copy_days_ahead"], 9)
+
+    def test_post_invalid_form_falls_back_to_config_defaults(self):
+        """Same as above, but with no days-ahead fields posted at all --
+        should fall back to the site config defaults, same as the GET
+        branch, not blank."""
+        from toolkit.diary.models import get_site_config
+
+        config = get_site_config()
+        url = reverse("members-mailout")
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context["days_ahead"],
+            config.mailout_listings_days_ahead,
+        )
+        self.assertEqual(
+            response.context["copy_days_ahead"],
+            config.mailout_details_days_ahead,
+        )
+
     def test_invalid_method(self):
         url = reverse("members-mailout")
         response = self.client.put(url)

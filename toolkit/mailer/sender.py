@@ -183,6 +183,24 @@ def send_mailout_to(
                     logger.info(f"Aborting job: {job}")
                     break
 
+                # mailout_key has blank=False/a default, but that only
+                # governs form validation and new-row creation -- it
+                # doesn't stop an empty string reaching the DB via a bulk
+                # import or legacy data predating the field. A blank key
+                # produces a broken unsubscribe/edit link with no error
+                # anywhere; self-heal it here rather than silently sending
+                # a link that can't work.
+                if not recipient.mailout_key:
+                    from toolkit.util import generate_random_string
+
+                    recipient.mailout_key = generate_random_string()
+                    recipient.save(update_fields=["mailout_key"])
+                    logger.warning(
+                        "Member pk=%s had a blank mailout_key; generated "
+                        "a fresh one before sending",
+                        recipient.pk,
+                    )
+
                 # Build per-recipient signature, with customised unsubscribe links:
                 text_pre, text_post = _get_text_preamble_signature(recipient)
 

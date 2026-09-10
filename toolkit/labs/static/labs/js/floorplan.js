@@ -19,6 +19,33 @@ function floorplan(
 ) {
   "use strict";
 
+  // These URL templates are built server-side by substituting a sentinel
+  // (ROOM_ID, ZONE_ID, AREA_ID, or the placeholder pk 0) into a reverse()d
+  // URL, then stripped/re-substituted here client-side. String.replace()
+  // silently returns the input unchanged when the sentinel isn't found --
+  // no exception, no console output -- so a URL pattern change (a
+  // different converter, a renamed kwarg, an extra path segment) would
+  // previously fail 404-at-click-time far from the actual cause, with
+  // nothing pointing back at "the sentinel didn't match". Assert each
+  // sentinel is actually present before relying on it, so a mismatch
+  // fails loudly here instead.
+  function assertSentinel(tmpl, sentinel, label) {
+    if (tmpl.indexOf(sentinel) === -1) {
+      throw new Error(
+        "floorplan: expected \"" + sentinel + "\" in " + label +
+        " URL template but it wasn't found: " + tmpl +
+        " (a URL pattern probably changed without updating this template)"
+      );
+    }
+  }
+  assertSentinel(noteUrlTmpl, "/ROOM_ID/", "note");
+  assertSentinel(itemCreateTmpl, "/ZONE_ID/", "item-create");
+  assertSentinel(itemTmpl, "/0/", "item");
+  assertSentinel(itemPhotoTmpl, "/0/", "item-photo");
+  assertSentinel(photoDeleteTmpl, "/0/", "photo-delete");
+  assertSentinel(areaPhotoTmpl, "AREA_ID", "area-photo");
+  assertSentinel(areaPhotoDeleteTmpl, "AREA_ID", "area-photo-delete");
+
   var NOTE_URL_BASE = noteUrlTmpl.replace("/ROOM_ID/", "/");
   var ITEM_CREATE_BASE = itemCreateTmpl.replace("/ZONE_ID/", "/");
   var ITEM_BASE = itemTmpl.replace("/0/", "/");

@@ -45,6 +45,49 @@ class SiteConfigurationModelTests(DiaryTestsMixin, TestCase):
         self.assertTrue(SiteConfiguration.objects.filter(pk=1).exists())
 
 
+class PassesLevelTests(DiaryTestsMixin, TestCase):
+    """An unrecognised permission-level value used to fall through to
+    `user.is_superuser` -- not a privilege escalation (that's the most
+    restrictive of the three real checks), but the wrong failure mode: a
+    corrupted config should deny everyone, not quietly keep working for
+    superusers while everyone else is locked out."""
+
+    def setUp(self):
+        super().setUp()
+        from django.contrib.auth.models import User
+
+        self.superuser = User.objects.create_superuser(
+            "super", "super@test.example", "pw"
+        )
+        self.plain_user = User.objects.create_user(
+            "plain", "plain@test.example", "pw"
+        )
+
+    def test_unrecognised_level_denies_superuser(self):
+        self.assertFalse(
+            SiteConfiguration._passes_level(self.superuser, "not-a-real-level")
+        )
+
+    def test_unrecognised_level_denies_plain_user(self):
+        self.assertFalse(
+            SiteConfiguration._passes_level(
+                self.plain_user, "not-a-real-level"
+            )
+        )
+
+    def test_panopticon_level_still_requires_superuser(self):
+        self.assertTrue(
+            SiteConfiguration._passes_level(
+                self.superuser, SiteConfiguration.PERM_PANOPTICON
+            )
+        )
+        self.assertFalse(
+            SiteConfiguration._passes_level(
+                self.plain_user, SiteConfiguration.PERM_PANOPTICON
+            )
+        )
+
+
 class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
     url = property(lambda self: reverse("edit-site-configuration"))
 

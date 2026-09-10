@@ -8,6 +8,7 @@ Covers: consent_policy_version stamped at signup, the two reminder commands
 
 import datetime
 from io import StringIO
+from unittest import mock
 
 from django.core import mail
 from django.core.management import call_command
@@ -222,3 +223,37 @@ class MarkPolicyUpdatedAdminAction(InductionsTestsMixin, TestCase):
             reverse("inductions:manage_mark_policy_updated")
         )
         self.assertEqual(resp.status_code, 405)
+
+    def test_failed_notification_rolls_back_the_version_bump(self):
+        """A total send failure (e.g. mail server down) used to leave the
+        version permanently bumped with nobody actually notified, so a
+        retry bumped it *again* -- inflating the version number by one per
+        failed attempt with no corresponding policy change. The bump and
+        the notify are now one transaction: a failure rolls both back."""
+        self._make_vol("v1c", consent_policy_version=1)
+        cfg_before = InductionsSettings.load()
+        starting_version = cfg_before.privacy_policy_version
+
+        self.login_admin()
+        with mock.patch(
+            "toolkit.inductions.views.manage_settings.notify_policy_change",
+            side_effect=RuntimeError("SMTP connection refused"),
+        ):
+            resp = self.client.post(
+                reverse("inductions:manage_mark_policy_updated")
+            )
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(resp.json()["ok"])
+
+        cfg = InductionsSettings.load()
+        self.assertEqual(cfg.privacy_policy_version, starting_version)
+        self.assertEqual(len(mail.outbox), 0)
+
+        # Retrying (without the injected failure) should bump by exactly
+        # one from the original version, not skip ahead.
+        resp = self.client.post(
+            reverse("inductions:manage_mark_policy_updated")
+        )
+        self.assertTrue(resp.json()["ok"])
+        cfg = InductionsSettings.load()
+        self.assertEqual(cfg.privacy_policy_version, starting_version + 1)

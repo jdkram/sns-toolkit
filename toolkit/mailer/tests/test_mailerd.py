@@ -162,3 +162,42 @@ class TestRunJob(MembersTestsMixin, TestCase):
 
         job.refresh_from_db()
         self.assertEqual(MailoutJob.SendState.FAILED, job.state)
+
+
+class TestRunJobSafely(MembersTestsMixin, TestCase):
+    """An unhandled exception from run_job() used to propagate out of
+    run()'s loop and kill the whole mailerd daemon -- not just the one
+    failing job, every subsequent job too. _run_job_safely() should catch
+    it, mark just that job failed, and let the daemon carry on."""
+
+    @patch("toolkit.mailer.mailerd.run_job")
+    def test_unhandled_exception_marks_job_failed_not_reraised(
+        self, run_job_mock
+    ) -> None:
+        run_job_mock.side_effect = RuntimeError("SMTP connection refused")
+        job = MailoutJob.objects.create(
+            subject="s",
+            body_text="t",
+            send_html=False,
+            send_at=timezone.now(),
+        )
+
+        mailerd._run_job_safely(job)  # must not raise
+
+        job.refresh_from_db()
+        self.assertEqual(MailoutJob.SendState.FAILED, job.state)
+
+    @patch("toolkit.mailer.mailerd.send_mailout_to")
+    def test_successful_job_is_unaffected(self, send_mock) -> None:
+        job = MailoutJob.objects.create(
+            subject="s",
+            body_text="t",
+            send_html=False,
+            send_at=timezone.now(),
+        )
+
+        mailerd._run_job_safely(job)
+
+        send_mock.assert_called_once()
+        job.refresh_from_db()
+        self.assertEqual(MailoutJob.SendState.SENDING, job.state)

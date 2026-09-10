@@ -134,7 +134,10 @@ class Role(models.Model):
     def delete(self, *args, **kwargs):
         if self.pk and self.read_only:
             logger.error(f"Tried to delete read-only role {self.name}")
-            return False
+            # Match Django's documented delete() return shape (count, dict)
+            # even when refusing to delete, so generic callers doing
+            # `count, _ = obj.delete()` don't blow up on a bare `False`.
+            return (0, {})
         # Archive instead of delete if this role appears in any rota entries.
         if self.pk and RotaEntry.objects.filter(role=self).exists():
             self.archived = True
@@ -348,6 +351,25 @@ class RotaEntry(models.Model):
 
     def __str__(self):
         return f"{str(self.role)} {self.rank}"
+
+    def save(self, *args, **kwargs):
+        # New programmer_contact slots start pre-filled from Event.programmer
+        # (9.169), so nobody has to enter the same fact twice on two
+        # different screens. Only on creation -- once someone's signed up or
+        # it's been edited, this stops touching it; sync_programmer_contact_rota()
+        # on Event handles keeping later programmer changes in step instead.
+        if (
+            self.pk is None
+            and self.volunteer_id is None
+            and self.role_id
+            and self.role.programmer_contact
+            and self.showing_id
+            and self.showing.event.programmer_id
+        ):
+            programmer = self.showing.event.programmer
+            self.volunteer = programmer
+            self.name = programmer.member.name
+        super().save(*args, **kwargs)
 
     def __init__(self, *args, **kwargs):
         # Allow a template keyword arg to be supplied. If it is, copy rota

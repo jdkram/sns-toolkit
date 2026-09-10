@@ -163,7 +163,10 @@ class EventTag(models.Model):
 
     def delete(self, *args, **kwargs):
         if self.pk and self.read_only:
-            return False
+            # Match Django's documented delete() return shape (count, dict)
+            # even when refusing to delete, so generic callers doing
+            # `count, _ = obj.delete()` don't blow up on a bare `False`.
+            return (0, {})
         # Archive instead of delete if this tag has been used on any event.
         if self.pk and Event.objects.filter(tags=self).exists():
             self.archived = True

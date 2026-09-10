@@ -19,6 +19,33 @@ function sessionDetail(opts) {
   var REMOVE_SIGNUP_URL_PATTERN = opts.removeSignupUrlPattern;
   var isSuperuser = opts.isSuperuser;
 
+  // Each *_URL_PATTERN is a reverse()d URL with a placeholder pk (0)
+  // substituted back in per-call below via String.replace('/0/', ...).
+  // replace() silently returns the string unchanged when '/0/' isn't
+  // found -- no exception -- so a URL pattern change (different
+  // converter, renamed kwarg, extra segment) would previously fail
+  // 404-at-click-time with nothing pointing back at the actual cause.
+  // Assert the sentinel is present once, up front, so a mismatch fails
+  // loudly here instead.
+  (function assertUrlPatternsHaveSentinel() {
+    var patterns = {
+      editUrlPattern: EDIT_URL_PATTERN,
+      noShowUrlPattern: NO_SHOW_URL_PATTERN,
+      markAttendanceUrlPattern: MARK_ATTENDANCE_URL_PATTERN,
+      linkExistingUrlPattern: LINK_EXISTING_URL_PATTERN,
+      removeSignupUrlPattern: REMOVE_SIGNUP_URL_PATTERN
+    };
+    for (var name in patterns) {
+      if (patterns[name].indexOf('/0/') === -1) {
+        throw new Error(
+          'sessionDetail: expected "/0/" in opts.' + name +
+          ' but it wasn\'t found: ' + patterns[name] +
+          ' (a URL pattern probably changed without updating this template)'
+        );
+      }
+    }
+  }());
+
   // Exposed here, before anything below can throw: the original inline <script>
   // declared these as bare top-level `function`s, which JS hoists to global scope
   // unconditionally, so the inline onclick="saveCap()"/"adjustRoom(-1)" handlers in

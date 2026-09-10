@@ -213,7 +213,14 @@ class VolunteerForm(forms.ModelForm):
         # they're already a member of one we must not silently drop it on save.
         if not self._is_superuser and self.instance.pk:
             existing_pks = {c.pk for c in selected}
-            for c in self.instance.collectives.filter(invite_only=True):
+            # active=True matches the queryset the visible field is built
+            # from (above) -- without it, a volunteer's membership of a
+            # since-deactivated invite-only collective got silently
+            # re-added on every save, since it's invisible/uncheckable in
+            # the form either way, so there was no way to ever let it go.
+            for c in self.instance.collectives.filter(
+                invite_only=True, active=True
+            ):
                 if c.pk not in existing_pks:
                     selected.append(c)
         return selected
@@ -305,7 +312,16 @@ class TrainingRecordForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         from toolkit.diary.models import get_site_config
 
-        if not get_site_config().general_training_enabled:
+        # A volunteer's existing record of a since-disabled training type
+        # (general_training_enabled turned off after they were recorded as
+        # having done it) must stay editable -- narrowing choices down to
+        # just role-specific training made re-saving that record fail
+        # validation outright, since its own current value was no longer
+        # one of the offered choices.
+        instance_type = getattr(self.instance, "training_type", None)
+        if not get_site_config().general_training_enabled and (
+            instance_type != TrainingRecord.GENERAL_TRAINING
+        ):
             self.fields["training_type"].choices = [
                 (TrainingRecord.ROLE_TRAINING, "Role Specific Training")
             ]

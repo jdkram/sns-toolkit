@@ -6,6 +6,7 @@ authenticated non-superusers get 403. Public views are reachable by anyone when
 the feature is enabled, and 404 when it is switched off.
 """
 
+from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 
@@ -167,3 +168,43 @@ class ExportCsvFormulaInjection(InductionsTestsMixin, TestCase):
         content = response.content.decode()
         self.assertNotIn("\n=cmd", content)
         self.assertIn("\t=cmd", content)
+
+
+class TemplatePreviewMalformedPlaceholder(InductionsTestsMixin, TestCase):
+    """A malformed email template (referencing an unknown {placeholder}) used
+    to be caught, silently fall back to sending the raw unformatted template,
+    and report success -- an operator testing a broken template got no
+    signal anything was wrong. It should now report the error instead."""
+
+    def test_unknown_placeholder_reports_error_not_silent_success(self):
+        self.settings.confirmation_email_body = (
+            "Hi {name}, your session is on {no_such_placeholder}."
+        )
+        self.settings.save()
+
+        self.login_admin()
+        response = self.client.post(
+            reverse("inductions:manage_send_test_email"),
+            {"template_type": "confirmation"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertFalse(data["ok"])
+        self.assertIn("no_such_placeholder", data["error"])
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_well_formed_template_still_sends(self):
+        self.settings.confirmation_email_body = "Hi {name}, see you soon."
+        self.settings.save()
+
+        self.login_admin()
+        response = self.client.post(
+            reverse("inductions:manage_send_test_email"),
+            {"template_type": "confirmation"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["ok"])
+        self.assertEqual(len(mail.outbox), 1)

@@ -145,7 +145,7 @@ function hideAddShowingForm() {
 <h1>{{ event.name }}</h1>
 
 {% with c=completeness %}
-{% if not c.has_copy or not c.has_copy_summary or not c.has_image or not c.terms_ok or c.film_details_required and not c.has_film_details %}
+{% if not c.has_copy or not c.has_copy_summary or not c.has_image or not c.terms_ok or c.film_details_required and not c.has_film_details or not c.has_programmer %}
 <div class="completeness-bar mb-3">
     <strong>Checklist:</strong>
     {% if not c.has_copy %}<a href="{% url "edit-event-details" event.pk %}#div_id_copy" class="badge text-bg-warning text-decoration-none">No description yet →</a>{% endif %}
@@ -156,6 +156,7 @@ function hideAddShowingForm() {
         <a href="{% url "edit-event-details" event.pk %}#div_id_terms" class="badge text-bg-danger text-decoration-none">Terms needed before confirming →</a>
         {% endif %}
     {% endif %}
+    {% if not c.has_programmer %}<a href="{% url "edit-event-details" event.pk %}#div_id_programmer" class="badge text-bg-warning text-decoration-none">No programmer set -- nobody knows who to contact →</a>{% endif %}
     {% if c.film_details_required and not c.has_film_details %}<a href="{% url "edit-event-details" event.pk %}#film-section" class="badge text-bg-warning text-decoration-none">Film details not linked →</a>{% endif %}
     {% if unconfirmed_future_count and c.has_future_showing %}<a href="#showings-heading" class="badge text-bg-warning text-decoration-none">{{ unconfirmed_future_count }} unconfirmed {% if unconfirmed_future_count == 1 %}{{ site_config.occurrence_noun }}{% else %}{{ site_config.occurrence_noun_plural }}{% endif %}, hidden from the public programme and rota →</a>{% endif %}
 </div>
@@ -175,6 +176,39 @@ function hideAddShowingForm() {
 </div>
 {% endif %}
 {% endwith %}
+
+{# ── Audit trail (9.163) — Panopticon only, same tier as the email/deletion logs #}
+{% if user.is_superuser %}
+<details class="mb-3">
+  <summary>Audit trail{% if audit_trail %} ({{ audit_trail|length }}){% endif %}</summary>
+  <p class="text-muted small mt-2 mb-2">
+    Created{% if event.created_by %} by {{ event.created_by.get_full_name|default:event.created_by.username }}{% endif %}
+    on {{ event.created_at|date:"d/m/Y H:i" }}.
+  </p>
+  {% if audit_trail %}
+  <table class="table table-sm">
+    <thead>
+      <tr>
+        <th>When</th>
+        <th>Who</th>
+        <th>What</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for row in audit_trail %}
+      <tr>
+        <td>{{ row.timestamp|date:"d/m/Y H:i" }}</td>
+        <td>{% if row.actor %}{{ row.actor.get_full_name|default:row.actor.username }}{% else %}—{% endif %}</td>
+        <td>{{ row.summary }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-muted small">No further activity recorded.</p>
+  {% endif %}
+</details>
+{% endif %}
 
 {# ── Programming status ────────────────────────────────────────────────────── #}
 {% if event.programming_status != "active" and not event.approved_at_meeting_date or event.programming_notes %}
@@ -325,6 +359,15 @@ function hideAddShowingForm() {
   <dd class="col-sm-9">
     {% if event.age_restriction %}<span class="badge text-bg-secondary fw-normal">{{ event.get_age_restriction_display }}</span>
     {% else %}<span class="text-muted">Not stated</span>{% endif %}
+  </dd>
+
+  <dt class="col-sm-3">Programmer
+    <span class="field-tip" data-bs-toggle="tooltip" data-bs-placement="right"
+          title="Who owns this event -- who to contact about it.">ⓘ</span>
+  </dt>
+  <dd class="col-sm-9">
+    {% if event.programmer %}{{ event.programmer.member.name }}
+    {% else %}<span class="text-muted">Not set</span>{% endif %}
   </dd>
 
   <dt class="col-sm-3">Outside hire

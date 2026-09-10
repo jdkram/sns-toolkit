@@ -237,6 +237,29 @@ class TestVolunteerSuspension(MembersTestsMixin, TestCase):
         entry.refresh_from_db()
         self.assertEqual(entry.volunteer_id, self.vol_2.pk)
 
+    def test_crash_toggling_login_rolls_back_the_suspend_too(self):
+        """The Volunteer row and the User.is_active toggle are two
+        separate writes. If a crash happened between them, the Volunteer
+        row used to already be committed as suspended while is_active
+        stayed True -- a suspended volunteer who could still log in. Both
+        writes are now one transaction: a crash rolls back both, not just
+        the second one."""
+        from unittest.mock import patch
+
+        from django.contrib.auth.models import User
+
+        self.vol_1.status = Volunteer.STATUS_SUSPENDED
+        with patch.object(
+            User, "save", side_effect=RuntimeError("simulated crash")
+        ):
+            with self.assertRaises(RuntimeError):
+                self.vol_1.save()
+
+        self.vol_1.refresh_from_db()
+        self.vol_1.user.refresh_from_db()
+        self.assertNotEqual(self.vol_1.status, Volunteer.STATUS_SUSPENDED)
+        self.assertTrue(self.vol_1.user.is_active)
+
     def test_save_does_not_reenable_independently_disabled_account(self):
         # A non-suspend save must never silently re-enable a login that was
         # disabled for another reason (e.g. GDPR anonymisation).
@@ -262,6 +285,98 @@ class TestVolunteerSuspension(MembersTestsMixin, TestCase):
         form = VolunteerForm(instance=self.vol_1, is_superuser=True)
         values = [v for v, _ in form.fields["status"].choices]
         self.assertNotIn(Volunteer.STATUS_SUSPENDED, values)
+
+
+class TestVolunteerFormInviteOnlyCollectivePreservation(
+    MembersTestsMixin, TestCase
+):
+    """A non-superuser can't see (or uncheck) invite-only collectives in
+    the form, so clean_collectives() re-adds any the volunteer already
+    belongs to -- but it was missing the active=True filter the visible
+    field's own queryset uses, so a since-deactivated invite-only
+    collective got silently re-added on every save with no way to ever
+    let it go."""
+
+    def setUp(self):
+        super().setUp()
+        self.active_invite_only = Collective.objects.create(
+            name="Active Invite-Only",
+            slug="active-invite-only",
+            invite_only=True,
+            active=True,
+        )
+        self.deactivated_invite_only = Collective.objects.create(
+            name="Deactivated Invite-Only",
+            slug="deactivated-invite-only",
+            invite_only=True,
+            active=False,
+        )
+        self.vol_1.collectives.add(
+            self.active_invite_only, self.deactivated_invite_only
+        )
+
+    def test_active_invite_only_collective_is_preserved(self):
+        from toolkit.members.forms import VolunteerForm
+
+        form = VolunteerForm(data={}, instance=self.vol_1, is_superuser=False)
+        form.is_valid()
+        self.assertIn(
+            self.active_invite_only, form.cleaned_data["collectives"]
+        )
+
+    def test_deactivated_invite_only_collective_is_not_readded(self):
+        from toolkit.members.forms import VolunteerForm
+
+        form = VolunteerForm(data={}, instance=self.vol_1, is_superuser=False)
+        form.is_valid()
+        self.assertNotIn(
+            self.deactivated_invite_only, form.cleaned_data["collectives"]
+        )
+
+
+class TestTrainingRecordFormChoiceNarrowing(MembersTestsMixin, TestCase):
+    """Disabling general_training_enabled narrows the training_type choices
+    to role-specific only, for *new* records. But a volunteer's existing
+    record of general training (created back when the flag was on) must
+    stay editable -- narrowing the choices for that record's own form
+    made re-saving it fail validation outright, since its current value
+    was no longer an offered choice."""
+
+    def setUp(self):
+        super().setUp()
+        from toolkit.diary.models import get_site_config
+
+        self.role = Role.objects.create(name="Some Role")
+        config = get_site_config()
+        config.general_training_enabled = False
+        config.save()
+
+    def _form_data(self, training_type):
+        return {
+            "training_type": training_type,
+            "role": self.role.pk if training_type == "R" else "",
+            "trainer": "A Trainer",
+            "training_date": "2026-01-01",
+            "notes": "",
+        }
+
+    def test_new_record_cannot_select_disabled_general_training(self):
+        from toolkit.members.forms import TrainingRecordForm
+
+        form = TrainingRecordForm(data=self._form_data("G"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("training_type", form.errors)
+
+    def test_existing_general_training_record_stays_editable(self):
+        from toolkit.members.forms import TrainingRecordForm
+
+        record = TrainingRecord.objects.create(
+            volunteer=self.vol_1,
+            training_type=TrainingRecord.GENERAL_TRAINING,
+            trainer="A Trainer",
+        )
+        form = TrainingRecordForm(data=self._form_data("G"), instance=record)
+        self.assertTrue(form.is_valid(), form.errors)
 
 
 class TestVolunteerEdit(MembersTestsMixin, TestCase):
@@ -652,6 +767,29 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
 
         # TODO do this properly:
         shutil.rmtree(os.path.join("/tmp", settings.VOLUNTEER_PORTRAIT_DIR))
+
+    def test_old_portrait_deleted_via_storage_api_not_os_unlink(self):
+        """Old-portrait cleanup used os.unlink() directly, which only
+        works by accident on local FileSystemStorage (where the field's
+        internal .file.name happens to resolve to a real filesystem path)
+        and would silently delete nothing the moment storage moves to
+        S3/GCS/etc. It should go through the field's own storage API,
+        which works on any backend. One fetch, one change, one save --
+        matching the real request/response lifecycle (a fresh instance
+        per request), since __original_portrait is only recomputed in
+        __init__."""
+        from unittest.mock import patch
+
+        vol = Volunteer.objects.get(id=1)
+        original_portrait = vol.portrait.name
+
+        with patch(
+            "django.core.files.storage.FileSystemStorage.delete"
+        ) as delete_mock:
+            vol.portrait = "some/new/portrait.jpg"
+            vol.save()
+
+        delete_mock.assert_called_once_with(original_portrait)
 
     @override_settings(MEDIA_ROOT="/tmp")
     def test_post_update_vol_set_portrait_data_uri(self):

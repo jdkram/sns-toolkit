@@ -858,6 +858,22 @@ class SiteConfiguration(models.Model):
         ),
     )
 
+    # --- Event programmer ---
+    programmer_required_for_financial_events = models.BooleanField(
+        default=False,
+        verbose_name="Programmer required for financial events",
+        help_text=(
+            "Require Event.programmer to be set before a showing can be confirmed, "
+            "but only for events with financial terms attached (cost type set to "
+            "something other than TBC, and 'No financial activity' not ticked). "
+            "Events with no cost type set, or explicitly flagged as having no "
+            "financial activity (Cleaning Club, work parties, internal meetings), "
+            "are never blocked -- deliberately, so nobody gets pinned as the named "
+            "contact against a recurring communal event nobody wants singled out "
+            "for. Only takes effect when structured cost terms are enabled above."
+        ),
+    )
+
     # --- Itemised budget lines ---
     budget_lines_enabled = models.BooleanField(
         default=False,
@@ -921,7 +937,20 @@ class SiteConfiguration(models.Model):
             return user.has_perm("diary.change_rotaentry")
         if level == SiteConfiguration.PERM_PROGRAMMER:
             return user.has_perm("toolkit.write")
-        return user.is_superuser
+        if level == SiteConfiguration.PERM_PANOPTICON:
+            return user.is_superuser
+        # Not one of the three known choices (a bad migration, a stale
+        # value from a removed choice, manual DB tampering). Fail closed --
+        # deny everyone, including superusers, so a corrupted config shows
+        # up as "nobody can get in" (loud, obviously broken) rather than
+        # "only superusers can get in" (quiet, and superusers are the
+        # people least likely to notice something's wrong).
+        logger.warning(
+            "SiteConfiguration._passes_level: unrecognised permission "
+            "level %r -- denying access",
+            level,
+        )
+        return False
 
     def save(self, *args, **kwargs):
         # Singleton: always pk=1
@@ -1040,6 +1069,9 @@ SITE_CONFIG_FIELD_GROUPS = {
     "Structured cost terms": [
         "structured_cost_terms_enabled",
         "structured_cost_required",
+    ],
+    "Event programmer": [
+        "programmer_required_for_financial_events",
     ],
     "Itemised budget lines (experimental)": [
         "budget_lines_enabled",

@@ -1523,3 +1523,80 @@ If blank, show nothing. No default — forces an explicit decision.
 **Known gap surfaced by this work (not fixed, out of scope):** the reminder/notification emails build their login link from `settings.VENUE.get("siteurl", "")`. No settings file for this venue actually defines `siteurl`, so the link resolves relative rather than absolute — the same latent issue already present in `send_volunteer_digest.py`'s `toolkit_url`. Needs a one-line fix to `settings_starandshadow.py` (or wherever `VENUE` is defined per-environment) before either of these email flows can be relied on in production.
 
 **Related:** 9.4 (induction workflow, where consent is first captured)
+
+---
+
+### 9.170 — Volunteer display names + surname privacy 🟡 M (unscoped past direction below)
+
+**Source:** Conversation 2026-09-10, surfaced alongside `docs/tasks/events-and-rota.md`
+9.169 — the new `Event.programmer` field needs something to render, which exposed
+the fact that `Member.name` is one free-text full-name field with no privacy
+control at all.
+
+**Problem.**
+`Member.name` (`members/models.py:108`) is a single `CharField` — no first/surname
+split, no concept of a display name distinct from the name used in membership/
+admin records, and no privacy control. Every place a volunteer's identity is
+shown (rota, `Event.programmer`, anywhere else a name surfaces) renders the
+same full name to everyone who can see that page, including the general
+volunteer base. Some volunteers may reasonably want their surname kept out of
+what most other volunteers see while remaining fully identifiable to
+Panopticons for membership/GDPR/dispute purposes.
+
+**Direction agreed so far (not yet a locked design).**
+- Split identity into a private canonical name (kept exactly as `Member.name`
+  works today — full legal/preferred name, visible to Panopticons, used for
+  membership records) and a separate public `display_name`, shown everywhere
+  else.
+- Capture `display_name` at induction time (`SignupForm` in
+  `inductions/forms.py`), alongside the existing `first_name`/`last_name`
+  fields already collected there.
+- Disclose plainly at that point that most volunteers will see the display
+  name while Panopticons can look up full name records — an explicit,
+  consent-style notice, not a buried privacy-policy clause.
+- No hard rate-limit on changing it later. Instead, log changes via an audit
+  trail, reusing the `EventTermsRevision`/`EventAuditLog` pattern from
+  events-and-rota.md rather than inventing a new one, and optionally flag
+  (never block) a change that would make someone's display name exactly
+  match another currently-active volunteer's. Reasoning from conversation:
+  FK-based linkage (rota sign-ups, `Event.programmer`) already makes a
+  rename harmless to data integrity — the residual risk is purely a
+  display-layer impersonation/confusion one, and a blanket throttle
+  punishes the common, benign case (someone just wants a different name) to
+  guard a narrow one.
+- Booking or selecting a volunteer for anything (rota sign-up, the
+  `Event.programmer` search-select) should always resolve to a real record
+  by PK via search, never free text — the privacy boundary applies to what's
+  *shown*, not to how records get disambiguated internally, so whoever is
+  doing the selecting can see enough (email fragment, membership number) to
+  pick the right record without the public site ever exposing a surname.
+
+**Open questions — not yet resolved, needs a proper scoping session.**
+- Exact field shape: `display_name` on `Member` or `Volunteer`? Does it need
+  a fallback/default (e.g. first name + last initial) for volunteers who
+  never set one?
+- Where the consent notice actually lives and its exact copy —
+  `InductionsSettings` already has a `privacy_policy_url`/
+  `privacy_policy_version` pattern (see 9.151, the consent-renewal
+  precedent) worth reusing rather than inventing new consent-tracking
+  machinery, but this wasn't checked against the real form fields before
+  the investigating session ended.
+- Whether existing volunteers (pre-dating this feature) get prompted to set
+  a display name retroactively, or default silently to their current full
+  name until they visit a settings page.
+- Interaction with `RotaEntry.name`'s free-text fallback path (superuser-
+  entered, unlinked, external-hire-style entries) and the pronoun-matching
+  lookup (`diary/edit_views/rota.py:172-192`), which currently does an
+  exact-string match against `Member.name` to attach pronouns to unlinked
+  rota entries — a live example of what already breaks when identity
+  depends on string matching rather than a picked record. Both would need
+  to match on `display_name` instead, or be re-derived some other way.
+
+**Related:** `docs/tasks/events-and-rota.md` 9.169 (the first real consumer
+of `display_name`), 9.144 (Configurable signup form fields via Inductions
+Settings — same screen this would extend), 9.151 (consent-renewal
+precedent to reuse).
+
+**Size estimate:** 🟡 M — genuinely unscoped past the direction above; needs
+a proper session to nail the field shape and induction-form changes before
+sizing tightens further.

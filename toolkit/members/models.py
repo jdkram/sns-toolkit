@@ -1,4 +1,3 @@
-import os
 import logging
 import binascii
 import datetime
@@ -434,10 +433,7 @@ class Volunteer(models.Model):
         db_table = "Volunteers"
 
     def save(self, *args, **kwargs):
-        try:
-            current_portrait_file = self.portrait.file.name
-        except (OSError, ValueError):
-            current_portrait_file = None
+        current_portrait_file = self.portrait.name if self.portrait else None
 
         if current_portrait_file != self.__original_portrait:
             # Delete old image:
@@ -446,7 +442,14 @@ class Volunteer(models.Model):
                     f"Deleting old volunteer portrait '{self.__original_portrait}'"
                 )
                 try:
-                    os.unlink(self.__original_portrait)
+                    # Storage API, not os.unlink(): the field's storage
+                    # name is a relative key, not necessarily a local
+                    # filesystem path (only FileSystemStorage happens to
+                    # make .file.name resolve to one) -- os.unlink()
+                    # worked by accident on local storage and would
+                    # silently never delete anything the moment storage
+                    # moves to S3/GCS/etc.
+                    self.portrait.storage.delete(self.__original_portrait)
                 except OSError as err:
                     logger.error(
                         f"Failed deleting old volunteer portrait '{self.__original_portrait}': {err}"
@@ -456,24 +459,33 @@ class Volunteer(models.Model):
         was_suspended = self.__original_status == self.STATUS_SUSPENDED
         is_suspended = self.status == self.STATUS_SUSPENDED
 
-        result = super().save(*args, **kwargs)
-
         # `status` is the canonical control for login access. Suspension is a
         # safeguarding action: it must immediately lock the account so the
         # volunteer can no longer log in or sign up for shifts. Django rejects
         # the session on the next request once is_active is False.
-        if self.user_id:
-            if is_suspended and self.user.is_active:
-                self.user.is_active = False
-                self.user.save(update_fields=["is_active"])
-            elif (
-                was_suspended and not is_suspended and not self.user.is_active
-            ):
-                # Reinstating: restore login. Only fires on the suspended->other
-                # transition, so we never silently re-enable an account that was
-                # disabled for some other reason (e.g. GDPR anonymisation).
-                self.user.is_active = True
-                self.user.save(update_fields=["is_active"])
+        #
+        # The Volunteer row and the User.is_active toggle are two separate
+        # writes; wrapped in one transaction so a crash between them can't
+        # leave the two disagreeing (status says suspended, is_active still
+        # True -- a suspended volunteer who can still log in -- or the
+        # reverse after a crash mid-reinstatement).
+        with transaction.atomic():
+            result = super().save(*args, **kwargs)
+
+            if self.user_id:
+                if is_suspended and self.user.is_active:
+                    self.user.is_active = False
+                    self.user.save(update_fields=["is_active"])
+                elif (
+                    was_suspended
+                    and not is_suspended
+                    and not self.user.is_active
+                ):
+                    # Reinstating: restore login. Only fires on the suspended->other
+                    # transition, so we never silently re-enable an account that was
+                    # disabled for some other reason (e.g. GDPR anonymisation).
+                    self.user.is_active = True
+                    self.user.save(update_fields=["is_active"])
 
         # On suspension, release any future rota commitments so the venue
         # doesn't rely on someone who can no longer attend. Past entries stay.
@@ -486,13 +498,13 @@ class Volunteer(models.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Store current filename of portrait (if any) so that, at save, changes
-        # can be detected and the old image deleted:
-        try:
-            self.__original_portrait = (
-                self.portrait.file.name if self.portrait else None
-            )
-        except (OSError, ValueError):
-            self.__original_portrait = None
+        # can be detected and the old image deleted. .name is the storage's
+        # own relative key (works with storage.delete() on any backend) --
+        # not .file.name, which only happens to be a real filesystem path on
+        # local FileSystemStorage, and reading .file would open the file.
+        self.__original_portrait = (
+            self.portrait.name if self.portrait else None
+        )
         # Remember the status at load so save() can detect suspend/reinstate
         # transitions and apply the login + rota side-effects. Read from
         # __dict__ rather than self.status: the attribute access would trigger

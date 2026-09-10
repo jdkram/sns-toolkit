@@ -4,6 +4,7 @@ import logging
 from django.conf import settings
 from django.contrib import messages
 from django.core.mail import send_mail
+from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -88,13 +89,23 @@ def manage_mark_policy_updated(request):  # noqa: ARG001 -- view signature
     email round), so this only needs a JS confirm() dialog rather than the
     typed-confirmation-phrase pattern used for anonymisation.
     """
-    cfg = InductionsSettings.load()
-    cfg.privacy_policy_version += 1
-    cfg.privacy_policy_updated_at = timezone.now()
-    cfg.save()
-
+    # notify_policy_change() queries live from the DB for volunteers behind
+    # *the already-bumped* version, so the bump has to be committed before
+    # it runs -- it can't simply be reordered to "notify, then bump". But
+    # bumping outside a transaction meant a failed send (e.g. the mail
+    # server being down) left the version permanently bumped with nobody
+    # notified, and a retry then bumped it *again* -- inflating the version
+    # number by one for every failed attempt with no corresponding policy
+    # change. Wrapping both in one transaction means a failure rolls the
+    # bump back too, so a retry starts from the same version instead of
+    # skipping ahead.
     try:
-        sent, skipped = notify_policy_change()
+        with transaction.atomic():
+            cfg = InductionsSettings.load()
+            cfg.privacy_policy_version += 1
+            cfg.privacy_policy_updated_at = timezone.now()
+            cfg.save()
+            sent, skipped = notify_policy_change()
     except Exception as exc:
         logger.exception("Failed to send policy-change notifications")
         return JsonResponse({"ok": False, "error": str(exc)})
@@ -159,12 +170,18 @@ def manage_send_test_email(request):
     raw_subject, raw_body = template_map[template_type]
     try:
         subject = raw_subject.format(**sample_vars)
-    except KeyError:
-        subject = raw_subject
-    try:
         body = raw_body.format(**sample_vars)
-    except KeyError:
-        body = raw_body
+    except KeyError as exc:
+        # A malformed template referencing an unknown placeholder used to be
+        # swallowed here and the raw, unformatted template sent as if the
+        # test had succeeded -- an operator testing a broken template got no
+        # signal anything was wrong. Surface it instead.
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": f"Template has an unknown placeholder: {exc}",
+            }
+        )
 
     preview_note = (
         f"--- PREVIEW (sent to {recipient} with sample data) ---\n\n"

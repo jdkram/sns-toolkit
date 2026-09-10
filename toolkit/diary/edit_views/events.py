@@ -38,6 +38,7 @@ from toolkit.diary.models import (
 )
 import toolkit.diary.forms as diary_forms
 import toolkit.diary.validators as diary_validators
+from toolkit.audit.models import DeletionLog, EventAuditLog, log_event_action
 
 # Shared utility method:
 from toolkit.diary.daterange import safe_json
@@ -99,6 +100,55 @@ def past_events_search(request):
     )
 
 
+def _build_event_audit_trail(event):
+    """Assemble the Event Hub's audit panel rows (9.163): EventAuditLog
+    (created/status-changed/confirmed/unconfirmed) + EventTermsRevision
+    (terms/outside_hire/private changes) + DeletionLog (deleted showings),
+    merged into one timeline sorted newest-first.
+
+    DeletionLog has no FK back to the event it belonged to (the showing is
+    already gone by the time it's written) -- delete_showing() puts
+    "(event id N)" in the free-text description, which is the only thing
+    to match against. String matching is fragile in the abstract, but this
+    is a closed loop: the exact phrase is controlled by delete_showing()
+    itself, not user input, so it can't silently drift without a test
+    catching it.
+    """
+    rows = []
+    for log in event.audit_logs.select_related("actor"):
+        rows.append(
+            {
+                "timestamp": log.timestamp,
+                "actor": log.actor,
+                "summary": (
+                    f"{log.get_action_display()}: {log.detail}"
+                    if log.detail
+                    else log.get_action_display()
+                ),
+            }
+        )
+    for rev in event.terms_revisions.select_related("saved_by"):
+        rows.append(
+            {
+                "timestamp": rev.saved_at,
+                "actor": rev.saved_by,
+                "summary": "Terms/hire/privacy details changed",
+            }
+        )
+    for log in DeletionLog.objects.filter(
+        model="Showing", description__contains=f"(event id {event.pk})"
+    ).select_related("deleted_by"):
+        rows.append(
+            {
+                "timestamp": log.deleted_at,
+                "actor": log.deleted_by,
+                "summary": f"Deleted: {log.description}",
+            }
+        )
+    rows.sort(key=lambda r: r["timestamp"], reverse=True)
+    return rows
+
+
 @write_required
 @require_http_methods(["GET", "POST"])
 def event_detail_view(request, event_id):
@@ -146,10 +196,19 @@ def event_detail_view(request, event_id):
         # Only shown when the event has the "film" tag
         "film_details_required": has_film_tag,
         "has_film_details": bool(event.film_id),
+        "has_programmer": bool(event.programmer_id),
     }
 
     unconfirmed_future_count = sum(
         1 for s in future_showings if not s.confirmed and not s.cancelled
+    )
+
+    # Audit trail (9.163) shows who created/changed things -- the same
+    # category of personal-activity data as the email/deletion logs, which
+    # are both Panopticon-only. Only built for superusers; a Programmer
+    # viewing the same page never pays the extra queries.
+    audit_trail = (
+        _build_event_audit_trail(event) if request.user.is_superuser else None
     )
 
     return render(
@@ -167,6 +226,7 @@ def event_detail_view(request, event_id):
             # A single-occurrence event reads as one thing; the "dates" concept
             # only surfaces once a second showing exists. See plan: UI collapse.
             "is_series": len(all_showings) > 1,
+            "audit_trail": audit_trail,
         },
     )
 
@@ -192,6 +252,12 @@ def update_showing_status(request, showing_id):
             else:
                 showing.confirmed = True
                 showing.save()
+                log_event_action(
+                    showing.event,
+                    EventAuditLog.ACTION_CONFIRMED,
+                    actor=request.user,
+                    detail=f"Showing on {showing.start:%d/%m/%Y %H:%M} confirmed",
+                )
                 messages.success(
                     request,
                     f"{noun} confirmed — it's now public and on the rota.",
@@ -199,6 +265,12 @@ def update_showing_status(request, showing_id):
         elif action == "unconfirm":
             showing.confirmed = False
             showing.save()
+            log_event_action(
+                showing.event,
+                EventAuditLog.ACTION_UNCONFIRMED,
+                actor=request.user,
+                detail=f"Showing on {showing.start:%d/%m/%Y %H:%M} unconfirmed",
+            )
             messages.success(
                 request,
                 f"{noun} unconfirmed — removed from the programme and rota.",
@@ -237,10 +309,19 @@ def confirm_all_showings(request, event_id):
             reverse("edit-event-details-view", kwargs={"event_id": event_id})
         )
     now = timezone.now()
+    # .update() is a bulk queryset write -- it doesn't call .save() on each
+    # showing, so it never goes through update_showing_status()'s per-showing
+    # logging above. One aggregate log row for the whole action instead.
     updated = event.showings.filter(
         confirmed=False, cancelled=False, start__gt=now
     ).update(confirmed=True)
     if updated:
+        log_event_action(
+            event,
+            EventAuditLog.ACTION_CONFIRMED,
+            actor=request.user,
+            detail=f"{updated} showing{'s' if updated != 1 else ''} confirmed (bulk)",
+        )
         messages.success(
             request,
             f"{updated} showing{'s' if updated != 1 else ''} confirmed.",
@@ -288,10 +369,17 @@ def clone_event(request, event_id):
                 programming_notes=source_event.programming_notes,
                 # Ticket link is date-specific — leave blank so programmer
                 # notices it needs updating.
+                created_by=request.user,
             )
             # Set template separately to avoid __init__ auto-population
             new_event.template = source_event.template
             new_event.save()
+            log_event_action(
+                new_event,
+                EventAuditLog.ACTION_CREATED,
+                actor=request.user,
+                detail=f"Cloned from event pk={source_event.pk} ('{source_event.name}')",
+            )
             # Copy tags from source event
             for tag in source_event.tags.all():
                 new_event.tags.add(tag)
@@ -591,9 +679,16 @@ def add_event(request):
                     Event.APPROVAL_STANDING if entry_mode == "standing" else ""
                 ),
                 target_month=form.cleaned_data.get("target_month"),
+                created_by=request.user,
             )
             # Set event tags and template links from its template:
             new_event.save()
+            log_event_action(
+                new_event,
+                EventAuditLog.ACTION_CREATED,
+                actor=request.user,
+                detail=f"Created via {entry_mode} entry mode",
+            )
             new_event.reset_tags_to_default()
             if form.cleaned_data["event_template"]:
                 for tl in form.cleaned_data["event_template"].links.all():
@@ -813,6 +908,8 @@ class EditEventView(PermissionRequiredMixin, View):
         event.legacy_copy = False
         # Then save the main form:
         form.save()
+        # Keep the rota's programmer_contact slot in step (9.169).
+        event.sync_programmer_contact_rota()
 
         # Handle generated poster (from AJAX generation) - takes priority
         if generated_media_id:

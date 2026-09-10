@@ -258,6 +258,10 @@ class EventHubChecklistTests(DiaryTestsMixin, TestCase):
 
     @override_settings(MEDIA_ROOT="/tmp")
     def test_ready_to_go_live_banner_still_shown_when_checklist_clean(self):
+        from toolkit.members.models import Volunteer
+
+        self.e4.programmer = Volunteer.objects.first()
+        self.e4.save()
         with tempfile.NamedTemporaryFile(
             dir="/tmp", prefix="toolkit-test-", suffix=".jpg"
         ) as temp_jpg:
@@ -270,6 +274,7 @@ class EventHubChecklistTests(DiaryTestsMixin, TestCase):
             response = self.client.get(self.url)
             self.assertContains(response, "Everything looks good")
             self.assertNotContains(response, "No image yet")
+            self.assertNotContains(response, "No programmer set")
 
 
 class ViewEventFieldTests(DiaryTestsMixin, TestCase):
