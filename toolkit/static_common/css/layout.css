@@ -24,6 +24,42 @@
     :root { --sidebar-width: 192px; }
 }
 
+/* Site brand palette. This is the S+S brand blue/pink pairing used
+ * throughout layout.css and login.css — extracted to variables so the
+ * two files can't drift into the near-miss duplicates (#0056b3, #007bff,
+ * #00308F, #000080 — all "some other blue" used elsewhere in the
+ * codebase for unrelated Bootstrap-derived UI) that a docs/CSS_CONVENTIONS.md
+ * follow-up flags. New site-wide brand colour, not a Bootstrap tint: don't
+ * reach for these on admin/rota pages that intentionally follow Bootstrap's
+ * own palette instead. */
+:root {
+    --colour-brand: #082080;
+    --colour-brand-bg: #e3cae3;
+}
+
+/* z-index scale. Every stacking value on a public page should come from
+ * here, not a fresh magic number: #sidebar and .add-to-calendar__menu
+ * (calendar_links.css) both used to be z-index: 500 with no relationship
+ * to each other, which is exactly the kind of accidental tie a shared
+ * scale prevents. Layers, low to high:
+ *   --z-backdrop   : dimming layer behind an open drawer/overlay
+ *   --z-sidebar    : the fixed site nav
+ *   --z-nav-toggle : the mobile hamburger button — must stay above
+ *                    --z-sidebar (Bug BA): it's the only thing that opens
+ *                    the drawer, so it has to stay clickable on top of it
+ *                    to also close it, not get buried underneath
+ *   --z-dropdown   : transient floating menus that must clear both
+ *   --z-skiplink   : the keyboard skip-link, must always win when focused
+ * Page-specific overlays (modals, toasts, rota rails) are scoped to their
+ * own page and don't share this scale yet — see docs/CSS_CONVENTIONS.md. */
+:root {
+    --z-backdrop: 20;
+    --z-sidebar: 500;
+    --z-nav-toggle: 600;
+    --z-dropdown: 650;
+    --z-skiplink: 10000;
+}
+
 /* Normalise
 -------------------------------------------------------------------------------*/
 html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td, article, aside, canvas, details, embed, figure, figcaption, footer, header, hgroup, menu, nav, output, ruby, section, summary, time, mark, audio, video {margin: 0; padding: 0; border: 0; font-size: 100%; vertical-align: baseline;}
@@ -88,7 +124,14 @@ h5 { font-size: 0.83em; margin: 1.67em 0; }
 h6 { font-size: 0.75em; margin: 2.33em 0; }
 
 abbr[title] { border-bottom: 1px dotted; }
-b, strong { font-weight: 500; }
+/* 700, not 500: body text is also font-weight:500 (see "Overall font size"
+ * below), so a bold tag at the same weight rendered with zero visible
+ * distinction from surrounding text (Bug BB). Roboto Mono — the body font
+ * for most public-page text — only has weights up to 500 fetched from
+ * Google Fonts, so this renders via the browser's synthetic-bold fallback
+ * there rather than a true bold face; Source Code Pro (.copy p/#site-nav)
+ * does have a real 700 already loaded. Synthetic bold beats invisible. */
+b, strong { font-weight: 700; }
 blockquote { margin: 1em 40px; }
 dfn, em, i { font-style: italic; }
 mark { background: #ff0; color: #000; }
@@ -229,7 +272,7 @@ a {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 100;
+    z-index: var(--z-nav-toggle);
     background: none;
     border: none;
     padding: 0;
@@ -237,7 +280,7 @@ a {
     font: inherit;
     color: inherit;
 }
-#mobile-menu-btn:before {/
+#mobile-menu-btn:before {
     display: inline-block;
     -webkit-font-smoothing: antialiased;
     font: normal 1.3571em;
@@ -251,8 +294,13 @@ a {
     text-indent: -99999px;
     display: block;
 }
+/* Backdrop behind the mobile nav drawer. Its active state (.active-search-bg,
+ * below) starts at left:var(--sidebar-width) and never actually overlaps
+ * #sidebar's own screen region, so its z-index relative to --z-sidebar/
+ * --z-nav-toggle doesn't matter for correctness — named here anyway so it's
+ * not an undocumented magic number sitting outside the z-index scale. */
 .black_overlay {
-    z-index: 20;
+    z-index: var(--z-backdrop);
     position: fixed;
     background: #fff;
     width: 0;
@@ -272,48 +320,16 @@ a {
     filter: alpha(opacity=85);
 }
 
-/* --- Sidebar Layout --- */
-#sidebar {
-    display: block;
-    position: absolute;
-    left: 0px;
-    top: 0px;
-    min-height: 100%;
-    width: var(--sidebar-width);
-    margin: 0;
-    padding: 0;
-    background-color: #fff;
-    overflow-y: auto;
-}
+/* --- Sidebar Layout ---
+ * #sidebar / #site-nav / .nav-wrap geometry (position, width, padding) all
+ * live in one place: the "Sidebar / nav geometry" section near the end of
+ * this file. It used to be redeclared here, again inside the 1000px query
+ * below, and a third time in a later "runtime behaviour" section — three
+ * layers that had to be read together to know the actual computed style,
+ * which is what let Bug AA (nav-clip) and Bug AZ (spurious nav scrollbar
+ * on Windows/Firefox) happen. Don't reintroduce a fourth. */
 .grid.open-sidebar {
     left: var(--sidebar-width);
-}
-#site-nav {
-    display: block;
-    position: absolute;
-    left: 0px;
-    top: 0px;
-    width: 220px;
-    background: transparent;
-    padding-top: 37px;
-    padding-right: 0px;
-    padding-bottom: 20px;
-    padding-left: 22px;
-}
-.nav-wrap {
-    display: block;
-    position: absolute;
-    left: 0px;
-    width: 220px;
-    border-top-width: 0px;
-    border-right-width: 0px;
-    border-bottom-width: 0px;
-    border-left-width: 0px;
-    border-spacing: 0px;
-    padding-top: 21.7647%;
-    padding-right: 0;
-    padding-bottom: 11.7647%;
-    padding-left: 12.9411%;
 }
 #site-title h1 {
     display: block;
@@ -477,49 +493,8 @@ main#main-content {
         display: none;
     }
 
-    /* Sidebar */
-    #sidebar {
-        display: block;
-        position: fixed;
-        left: 0px;
-        top: 0px;
-        min-height: 100%;
-        width: var(--sidebar-width);
-        margin: 0;
-        padding: 0;
-        background-color: #fff;
-        overflow-y: hidden;
-    }
-    #site-nav {
-        position: relative;
-        left: 0;
-        top: 0;
-        width: var(--sidebar-width);
-        background: transparent;
-        border-top-width: 0px;
-        border-right-width: 0px;
-        border-bottom-width: 0px;
-        border-left-width: 0px;
-        border-spacing: 0px;
-        padding-top: 0px;
-        padding-right: 0px;
-        padding-bottom: 20px;
-        padding-left: 22px;
-    }
-    .nav-wrap {
-        position: relative;
-        left: 0;
-        width: var(--sidebar-width);
-        border-top-width: 0px;
-        border-right-width: 0px;
-        border-bottom-width: 0px;
-        border-left-width: 0px;
-        border-spacing: 0px;
-        padding-top: 42px;
-        padding-right: 0px;
-        padding-bottom: 0px;
-        padding-left: 22px;
-    }
+    /* Sidebar geometry (position/width/padding) is set once in the
+     * "Sidebar / nav geometry" section near the end of this file. */
     #site-title h1 {
         font-weight: 400;
         padding: 0;
@@ -556,10 +531,6 @@ main#main-content {
     /* Menus */
     .mobile-wrap {
         display: none;
-    }
-    #site-nav {
-        display: block;
-        margin-top: 1em;
     }
     #site-nav ul {
         padding: 0;
@@ -600,29 +571,8 @@ main#main-content {
     }
 }
 
-/* 1600px — sidebar widens (via --sidebar-width); only padding changes here. */
-@media screen and (min-width: 1600px) {
-    #site-nav {
-        padding-bottom: 20px;
-        padding-left: 27px;
-    }
-    .nav-wrap {
-        padding-top: 42px;
-        padding-left: 27px;
-    }
-}
-
-/* 1900px — slightly more inner padding. */
-@media screen and (min-width: 1900px) {
-    #site-nav {
-        padding-bottom: 20px;
-        padding-left: 30px;
-    }
-    .nav-wrap {
-        padding-top: 42px;
-        padding-left: 30px;
-    }
-}
+/* 1600px/1900px nav padding tweaks now live in the "Sidebar / nav geometry"
+ * section near the end of this file, alongside the rest of the geometry. */
 
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -652,48 +602,48 @@ body {
 /* --- Text and background colours --- */
 
 html, body, #sidebar, .grid-item, .grid, .black_overlay {
-    color: #082080;
-    background-color: #e3cae3;
+    color: var(--colour-brand);
+    background-color: var(--colour-brand-bg);
 }
 
 mark {
     background: #ff0;
-    color: #082080;
+    color: var(--colour-brand);
 }
 
 a {
-    color: #082080;
+    color: var(--colour-brand);
 }
 
 #mobile-menu-btn:before {
-    color: #082080;
+    color: var(--colour-brand);
 }
 
 .site-description h4 {
-    color: #082080;
+    color: var(--colour-brand);
 }
 
 .action a:hover {
-    color: #082080 !important;
+    color: var(--colour-brand) !important;
 }
 
 .copy p {
-    color: #082080;
+    color: var(--colour-brand);
 }
 
 .copy p > a {
-    color: #082080;
-    border-bottom: 0px dotted #082080;
+    color: var(--colour-brand);
+    border-bottom: 0px dotted var(--colour-brand);
     text-decoration: underline;
 }
 
 .copy p > a:visited {
-    color: #082080;
+    color: var(--colour-brand);
 }
 
 .action a {
     color: black !important;
-    background: #e3cae3 !important;
+    background: var(--colour-brand-bg) !important;
     border: 0.1em solid black;
     border-radius: 0 !important;
 }
@@ -728,30 +678,70 @@ a {
 }
 
 
-/* --- Sidebar runtime behaviour ---
- * Bug I fix: sidebar must be a proper scroll container.
- * Bug R fix: on mobile the sidebar should be off-screen until the hamburger
- * is tapped. position:fixed with negative left hides it; the .sidebar-open
- * class (toggled by site-common.js) slides it in. On desktop (>=1000px)
- * the sidebar is always visible so left:0 and transition:none.
- * top:0 is explicit because the base #sidebar rule above uses
- * position:absolute on the non-responsive viewport, which could
- * otherwise leave top:auto when this rule activates.
+/* --- Sidebar / nav geometry ---
+ * Single source of truth for #sidebar / #site-nav / .nav-wrap position,
+ * size, and padding, at every breakpoint. This used to be spread across
+ * three separate places in this file (a base rule, a redeclaration inside
+ * the 1000px query, and a third "runtime behaviour" override block that
+ * came later and silently won on several properties) — reading any one of
+ * the three told you the wrong computed style. That shape is what let
+ * Bug AA (nav-clip) and Bug AZ (spurious horizontal scrollbar in the nav
+ * on Windows/Firefox) happen. Consolidated 2026-09-10; every value below
+ * was traced through the old cascade first, so this is a reorganisation,
+ * not a redesign — computed styles are unchanged except where noted.
  *
- * Width and content offset both come from --sidebar-width (declared at
- * the top of this file) so they cannot drift apart across breakpoints. */
+ * #sidebar: position:fixed with a negative left hides it off-screen on
+ * mobile; the .sidebar-open class (toggled by site-common.js) slides it
+ * to left:0. On desktop (>=1000px) it's always visible, so left:0 and
+ * transition:none. Width and the `.grid` content offset both read
+ * --sidebar-width (declared at the top of this file) so they can't drift
+ * apart across breakpoints. overflow-x:hidden is a defensive backstop:
+ * per the CSS overflow spec, overflow-y:auto with overflow-x left at its
+ * default (visible) forces overflow-x to compute to auto too — one axis
+ * can't scroll while the other stays visible. #site-nav/.nav-wrap use
+ * width:100% (not a copy of --sidebar-width) so they should never exceed
+ * this box's content area, but a non-overlay scrollbar (Windows is the
+ * common case; this bug was reported there in Firefox) still narrows
+ * that area by its own width — nav content should never need to scroll
+ * sideways, so clipping is the safe failure mode, not a second scrollbar.
+ *
+ * #site-nav and .nav-wrap are siblings inside #sidebar with genuinely
+ * different mobile widths (220px vs 100% of the sidebar's ~240px) — that
+ * mismatch predates this consolidation and is preserved as-is rather than
+ * silently changed; if it's not intentional it's a separate decision, not
+ * a casualty of this cleanup. */
 #sidebar {
     position: fixed !important;
     top: 0;
     left: calc(var(--sidebar-width) * -1);
-    z-index: 500;
+    z-index: var(--z-sidebar);
+    width: var(--sidebar-width);
     height: 100vh;
     overflow-y: auto;
+    overflow-x: hidden;
     transition: left 0.3s ease;
 }
-
 #sidebar.sidebar-open {
     left: 0 !important;
+}
+
+#site-nav {
+    position: relative;
+    top: auto;
+    left: 0;
+    width: 220px;
+    background: transparent;
+    padding: 37px 0 20px 22px;
+}
+#site-nav ul li a {
+    text-decoration: none;
+}
+
+.nav-wrap {
+    position: relative;
+    left: 0;
+    width: 100%;
+    padding: 30px 0 11.7647% 12.9411%;
 }
 
 @media screen and (min-width: 1000px) {
@@ -763,27 +753,32 @@ a {
     .grid {
         margin-left: var(--sidebar-width);
     }
+    #site-nav {
+        width: 100%;
+        margin-top: 1em;
+        padding: 0 0 20px 22px;
+    }
+    /* padding-top here used to say 42px in this file's old 1000px/1600px/
+     * 1900px breakpoint rules, but a later unconditional rule always won
+     * regardless of viewport width and actually rendered 30px at every
+     * desktop size — so 30px is docs-confirmed current behaviour, kept
+     * here deliberately. If 42px was the intended desktop value, that's
+     * a design decision to make explicitly, not something to silently
+     * restore during a dead-code cleanup. */
+    .nav-wrap {
+        width: 100%;
+        padding: 30px 0 0 22px;
+    }
 }
 
-#site-nav {
-    position: relative;
-    top: auto;
+@media screen and (min-width: 1600px) {
+    #site-nav  { padding-left: 27px; }
+    .nav-wrap  { padding-left: 27px; }
 }
 
-#site-nav ul li a {
-    text-decoration: none;
-}
-
-.nav-wrap {
-    position: relative;
-    left: 0;
-    width: var(--sidebar-width);
-    border-top-width: 0px;
-    border-right-width: 0px;
-    border-bottom-width: 0px;
-    border-left-width: 0px;
-    border-spacing: 0px;
-    padding-top: 30px;
+@media screen and (min-width: 1900px) {
+    #site-nav  { padding-left: 30px; }
+    .nav-wrap  { padding-left: 30px; }
 }
 
 /* Volunteer section divider in the sidebar nav — horizontal rule only */
@@ -846,8 +841,8 @@ a {
     width: auto;
     height: auto;
     overflow: visible;
-    z-index: 10000;
-    background: #082080;
+    z-index: var(--z-skiplink);
+    background: var(--colour-brand);
     color: #fff;
     padding: 8px 16px;
     text-decoration: none;

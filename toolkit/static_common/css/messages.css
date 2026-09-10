@@ -1,6 +1,11 @@
+  /* This only ever loads on admin pages (base_admin.html-derived
+   * templates), which have a plain white page background — not the
+   * public-page pink (--colour-brand-bg). Contrast below is checked
+   * against white; don't reuse these classes on a public page without
+   * rechecking. */
   .messages li {
       text-align: center;
-      font-size: 16pt;
+      font-size: 1.333rem;   /* was 16pt — points are a print unit, not a screen one */
       font-weight: bold;
       list-style-position: outside;
       list-style-type: none;
@@ -14,7 +19,11 @@
   }
   li.error::before { content: "✗ "; }
   li.warning {
-      color: #FF7E00;
+      /* was #FF7E00 (~2.55:1 on white — fails even the 3:1 large-bold-text
+       * minimum). This is the same amber used for warning states elsewhere
+       * (edit_rota.css, form_event.css) rather than a new one-off colour;
+       * ~5.5:1 on white. */
+      color: #856404;
   }
   li.warning::before { content: "⚠ "; }
   li.info {

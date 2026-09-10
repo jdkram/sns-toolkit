@@ -68,11 +68,21 @@
     color: currentColor;
 }
 
-/* Dropdown menu — position:fixed, coordinates set by JS on open. */
+/* Dropdown menu — position:fixed, coordinates set by JS on open.
+ * z-index: this used to be a bare 500 — identical to (and tied with)
+ * #sidebar's z-index on every public page this menu can open on top of.
+ * var(--z-dropdown) (layout.css, currently 650) sits above both the
+ * sidebar's --z-sidebar (500) and the mobile hamburger's --z-nav-toggle
+ * (600) on pages that define it; the literal 650 fallback keeps a
+ * plausible value on pages that don't (this file also loads on
+ * edit_rota.html, which extends base_admin.html rather than
+ * base_public.html and never loads layout.css — no sidebar/nav-toggle
+ * exist there to collide with, so the exact fallback number is a
+ * courtesy, not critical). */
 .add-to-calendar__menu {
     display: none;
     position: fixed;
-    z-index: 500;
+    z-index: var(--z-dropdown, 650);
     min-width: 10rem;
     background: #fff;
     border: 1px solid #cfd8e0;
