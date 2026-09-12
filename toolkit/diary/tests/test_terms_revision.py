@@ -72,6 +72,24 @@ class EventTermsRevisionSignalTests(TestCase):
         self.event.save()
         self.assertEqual(self.event.terms_revisions.count(), 2)
 
+    def test_changed_fields_recorded(self):
+        self.event.terms = "New terms."
+        self.event.save()
+        rev = self.event.terms_revisions.first()
+        self.assertEqual(rev.changed_fields, "terms")
+
+    def test_legacy_blank_changed_fields_treated_as_terms_group(self):
+        """Rows written before changed_fields existed (blank) should still
+        summarise sensibly, as the original terms/outside_hire/private."""
+        self.event.terms = "New terms."
+        self.event.save()
+        rev = self.event.terms_revisions.first()
+        rev.changed_fields = ""
+        rev.save()
+        self.assertEqual(
+            rev.changed_field_list(), ["terms", "outside_hire", "private"]
+        )
+
     def test_revision_snapshot_reflects_state_before_save(self):
         """Each revision captures the pre-save values, not the new ones."""
         self.event.terms = "Second version."

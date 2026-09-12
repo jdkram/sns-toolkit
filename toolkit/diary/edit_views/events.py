@@ -33,6 +33,7 @@ from toolkit.diary.models import (
     EventTag,
     RoomBooking,
     EventBudgetLine,
+    SettlementRevision,
     get_site_config,
     sync_budget_lines_for_event,
 )
@@ -132,7 +133,20 @@ def _build_event_audit_trail(event):
             {
                 "timestamp": rev.saved_at,
                 "actor": rev.saved_by,
-                "summary": "Terms/hire/privacy details changed",
+                "summary": f"Event details changed — {rev.summary()}",
+            }
+        )
+    for rev in SettlementRevision.objects.filter(
+        settlement__showing__event=event
+    ).select_related("saved_by", "settlement__showing"):
+        rows.append(
+            {
+                "timestamp": rev.saved_at,
+                "actor": rev.saved_by,
+                "summary": (
+                    f"Settlement corrected for "
+                    f"{rev.settlement.showing.start:%d/%m/%Y %H:%M}"
+                ),
             }
         )
     for log in DeletionLog.objects.filter(
@@ -203,6 +217,18 @@ def event_detail_view(request, event_id):
         1 for s in future_showings if not s.confirmed and not s.cancelled
     )
 
+    # Settlement (9.171) -- only computed when the feature's turned on.
+    # Elapsed events get more visual prominence on this page precisely when
+    # something here is outstanding; see view_event_privatedetails.html.
+    settlement_enabled = get_site_config().event_settlement_enabled
+    showing_settlement_statuses = {}
+    event_settlement_status = None
+    if settlement_enabled:
+        showing_settlement_statuses = {
+            s.pk: s.settlement_status() for s in past_showings
+        }
+        event_settlement_status = event.settlement_status()
+
     # Audit trail (9.163) shows who created/changed things -- the same
     # category of personal-activity data as the email/deletion logs, which
     # are both Panopticon-only. Only built for superusers; a Programmer
@@ -227,6 +253,14 @@ def event_detail_view(request, event_id):
             # only surfaces once a second showing exists. See plan: UI collapse.
             "is_series": len(all_showings) > 1,
             "audit_trail": audit_trail,
+            "settlement_enabled": settlement_enabled,
+            "showing_settlement_statuses": showing_settlement_statuses,
+            "event_settlement_status": event_settlement_status,
+            "distributor_payment_status": (
+                event.distributor_payment_status()
+                if settlement_enabled
+                else None
+            ),
         },
     )
 

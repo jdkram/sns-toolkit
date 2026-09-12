@@ -303,6 +303,32 @@ class Event(models.Model):
         ),
     )
 
+    # --- Settlement: distributor payment outcome (9.171) ---
+    # The raw attendance/ticket-income actuals live on ShowingSettlement
+    # (per-showing, toolkit.diary.models.finance); these three are
+    # event-level because a single deal/invoice usually covers every
+    # showing under the event, not each one separately.
+    distributor_invoiced_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Distributor invoiced",
+        help_text="Date the distributor/performer invoice was received (or sent, for a % split owed to us).",
+    )
+    distributor_paid_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Distributor paid",
+        help_text="Date the distributor/performer payment was actually made.",
+    )
+    distributor_paid_amount_gbp = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Amount paid (£)",
+        help_text="Actual amount paid out -- may differ from cost_total_gbp once settled.",
+    )
+
     technical_notes = models.TextField(
         max_length=4096,
         null=True,
@@ -683,6 +709,47 @@ class Event(models.Model):
             return False
         return bool(self.cost_type and self.cost_type != self.COST_TYPE_TBC)
 
+    def settlement_status(self):
+        """Derived settlement-completeness across this event's elapsed,
+        non-cancelled showings (9.171). One of:
+
+        - None -- too soon to ask: has_financial_terms() is True but there
+          are no elapsed showings yet.
+        - "not_applicable" -- has_financial_terms() is False (no cost type
+          recorded, or explicitly flagged no_financial_activity).
+        - "not_recorded" -- financial and past, nothing entered anywhere.
+        - "partial" -- some but not all elapsed showings have a settlement.
+        - "recorded" -- every elapsed showing that needs one has one.
+
+        Not stored -- computed fresh each time, matching every other
+        completeness indicator on the Event Hub (has_copy, terms_ok, etc.).
+        Callers iterating many events should prefetch showings and
+        settlement/line_items to avoid N+1 queries.
+        """
+        if not self.has_financial_terms():
+            return "not_applicable"
+        elapsed = [
+            s for s in self.showings.all() if s.in_past() and not s.cancelled
+        ]
+        if not elapsed:
+            return None
+        statuses = [s.settlement_status() for s in elapsed]
+        if all(status == "recorded" for status in statuses):
+            return "recorded"
+        if all(status == "not_recorded" for status in statuses):
+            return "not_recorded"
+        return "partial"
+
+    def distributor_payment_status(self):
+        """One of None (no deal recorded), 'outstanding', 'invoiced', 'paid'."""
+        if not self.cost_type or self.cost_type == self.COST_TYPE_TBC:
+            return None
+        if self.distributor_paid_date:
+            return "paid"
+        if self.distributor_invoiced_date:
+            return "invoiced"
+        return "outstanding"
+
 
 class EventLink(models.Model):
     """A named clickable link attached to an event (max 3 per event).
@@ -750,9 +817,17 @@ class EventTemplateLink(models.Model):
 class EventTermsRevision(models.Model):
     """Snapshot of audited financial fields on an Event, captured on each change.
 
-    A new record is created by a pre_save signal whenever terms, outside_hire,
-    or private changes. It stores the values *before* the save so the history
-    is a complete chain of prior states.
+    A new record is created by a pre_save signal (toolkit/diary/signals.py)
+    whenever any field in _AUDITED_FIELDS changes -- originally just
+    terms/outside_hire/private, extended by 9.171 to also cover the
+    distributor-payment outcome fields, on the "reuse the existing audit
+    pattern rather than invent a third one" instruction in
+    docs/tasks/finance.md. changed_fields records which of those actually
+    changed on this save, so the hub/admin display doesn't have to guess
+    from field values alone -- blank on rows written before that field
+    existed, which changed_field_list() treats as "the original three".
+    It stores the values *before* the save so the history is a complete
+    chain of prior states.
     """
 
     event = models.ForeignKey(
@@ -765,13 +840,51 @@ class EventTermsRevision(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
     )
+    changed_fields = models.CharField(max_length=200, blank=True)
     # Snapshot of audited fields immediately before this save
     terms_text = models.TextField(blank=True)
     outside_hire = models.BooleanField()
     private = models.BooleanField()
+    distributor_invoiced_date = models.DateField(null=True, blank=True)
+    distributor_paid_date = models.DateField(null=True, blank=True)
+    distributor_paid_amount_gbp = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True
+    )
 
     class Meta:
         ordering = ["-saved_at"]
 
     def __str__(self):
         return f"Revision of '{self.event_id}' at {self.saved_at}"
+
+    def changed_field_list(self):
+        if not self.changed_fields:
+            return ["terms", "outside_hire", "private"]
+        return self.changed_fields.split(",")
+
+    def summary(self):
+        """A human-readable line for whichever fields actually changed."""
+        parts = []
+        for field in self.changed_field_list():
+            if field == "terms":
+                parts.append(f"terms: {self.terms_text[:100] or '—'}")
+            elif field == "outside_hire":
+                parts.append(
+                    f"outside hire: {'yes' if self.outside_hire else 'no'}"
+                )
+            elif field == "private":
+                parts.append(f"private: {'yes' if self.private else 'no'}")
+            elif field == "distributor_invoiced_date":
+                parts.append(
+                    f"distributor invoiced: {self.distributor_invoiced_date or '—'}"
+                )
+            elif field == "distributor_paid_date":
+                parts.append(
+                    f"distributor paid: {self.distributor_paid_date or '—'}"
+                )
+            elif field == "distributor_paid_amount_gbp":
+                amount = self.distributor_paid_amount_gbp
+                parts.append(
+                    f"amount paid: {'£' + str(amount) if amount is not None else '—'}"
+                )
+        return "; ".join(parts)

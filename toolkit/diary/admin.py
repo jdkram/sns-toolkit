@@ -155,9 +155,13 @@ class EventTermsRevisionInline(admin.TabularInline):
     readonly_fields = (
         "saved_at",
         "saved_by",
+        "changed_fields",
         "terms_text",
         "outside_hire",
         "private",
+        "distributor_invoiced_date",
+        "distributor_paid_date",
+        "distributor_paid_amount_gbp",
     )
     can_delete = False
     ordering = ("-saved_at",)

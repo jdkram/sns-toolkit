@@ -1,0 +1,50 @@
+{% extends "form_base.html" %}
+{% block title %}Your past events{% endblock %}
+
+{% block body %}
+<h1>Your past events</h1>
+<p class="text-muted mb-3">
+  Every event where you're the named programmer, most recent first, with settlement
+  status if anything's outstanding. Looking for a different event?
+  <a href="{% url 'past-events-search' %}">Search all past events →</a>
+</p>
+
+{% include "bs_messages.html" %}
+
+{% if not has_volunteer %}
+<p class="text-muted">No volunteer record linked to your account.</p>
+{% elif not rows %}
+<p class="text-muted">No past events found where you're the named programmer.</p>
+{% else %}
+<table class="table table-sm">
+  <thead>
+    <tr>
+      <th>Event</th>
+      <th>Last showing</th>
+      <th>Settlement</th>
+      <th>Distributor payment</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for row in rows %}
+    <tr{% if row.settlement_status == "not_recorded" or row.settlement_status == "partial" %} class="table-warning"{% endif %}>
+      <td><a href="{% url 'edit-event-details-view' row.event.pk %}">{{ row.event.name }}</a></td>
+      <td>{{ row.latest_showing.start|date:"d/m/Y H:i" }}</td>
+      <td>
+        {% if row.settlement_status == "recorded" %}<span class="badge text-bg-success">Recorded</span>
+        {% elif row.settlement_status == "partial" %}<span class="badge text-bg-warning text-dark">Partial</span>
+        {% elif row.settlement_status == "not_recorded" %}<span class="badge text-bg-danger">Not recorded</span>
+        {% else %}<span class="text-muted small">—</span>{% endif %}
+      </td>
+      <td>
+        {% if row.distributor_payment_status == "paid" %}<span class="badge text-bg-success">Paid</span>
+        {% elif row.distributor_payment_status == "invoiced" %}<span class="badge text-bg-info">Invoiced</span>
+        {% elif row.distributor_payment_status == "outstanding" %}<span class="badge text-bg-secondary">Outstanding</span>
+        {% else %}<span class="text-muted small">—</span>{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

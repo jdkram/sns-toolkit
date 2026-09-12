@@ -874,6 +874,23 @@ class SiteConfiguration(models.Model):
         ),
     )
 
+    # --- Event settlement (9.171) ---
+    event_settlement_enabled = models.BooleanField(
+        default=False,
+        verbose_name="Event settlement records enabled (experimental)",
+        help_text=(
+            "Ship dormant, per this codebase's usual approach to speculative "
+            "features -- turn on once ready to trial with the Programming/"
+            "Finance Collective. When on: elapsed showings with financial "
+            "terms recorded (Event.has_financial_terms()) get a settlement "
+            "prompt on the Event Hub, a 'past events' dashboard card appears "
+            "for any volunteer set as a programmer, and the Event Hub's past "
+            "showings get more visual prominence when something's "
+            "outstanding. Obviates the archived sns-analysis project once "
+            "real data exists here -- see docs/EVENT_SETTLEMENT_SCOPING.md."
+        ),
+    )
+
     # --- Itemised budget lines ---
     budget_lines_enabled = models.BooleanField(
         default=False,
@@ -1072,6 +1089,9 @@ SITE_CONFIG_FIELD_GROUPS = {
     ],
     "Event programmer": [
         "programmer_required_for_financial_events",
+    ],
+    "Event settlement (experimental)": [
+        "event_settlement_enabled",
     ],
     "Itemised budget lines (experimental)": [
         "budget_lines_enabled",

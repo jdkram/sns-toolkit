@@ -43,6 +43,10 @@ from toolkit.diary.edit_views import (
     link_film,
     unlink_film,
     past_events_search,
+    showing_settlement_edit,
+    event_distributor_payment_edit,
+    programmer_past_events,
+    finance_settlement_review,
 )
 from toolkit.diary.public_views import (
     ArchiveIndex,
@@ -198,6 +202,12 @@ diary_urls = [
         past_events_search,
         name="past-events-search",
     ),
+    # A programmer's own past events with settlement status (9.171)
+    re_path(
+        r"^edit/events/mine/past/$",
+        programmer_past_events,
+        name="programmer-past-events",
+    ),
     # Edit an event: view event before editing
     re_path(
         r"^edit/event/id/(?P<event_id>\d+)/view/$",
@@ -253,6 +263,24 @@ diary_urls = [
         r"^edit/showing/id/(?P<showing_id>\d+)/status$",
         update_showing_status,
         name="update-showing-status",
+    ),
+    # Settlement actuals for a showing (9.171)
+    re_path(
+        r"^edit/showing/id/(?P<showing_id>\d+)/settlement/$",
+        showing_settlement_edit,
+        name="edit-showing-settlement",
+    ),
+    # Distributor payment outcome for an event (9.171)
+    re_path(
+        r"^edit/event/id/(?P<event_id>\d+)/distributor-payment/$",
+        event_distributor_payment_edit,
+        name="edit-distributor-payment",
+    ),
+    # Finance's date-ranged settlement/distributor-payment review (9.171)
+    re_path(
+        r"^edit/events/finance-review/$",
+        finance_settlement_review,
+        name="finance-settlement-review",
     ),
     # Edit ideas
     re_path(

@@ -39,12 +39,19 @@ from .printed_programme import (
 )
 from .misc import DiaryIdeaForm, MailoutForm, SearchForm
 from .site_config import SiteConfigurationForm
+from .finance import (
+    DistributorPaymentForm,
+    SettlementLineItemForm,
+    SettlementLineItemFormSet,
+    ShowingSettlementForm,
+)
 
 __all__ = [
     "BatchAddShowingsForm",
     "CloneEventForm",
     "CloneShowingForm",
     "DiaryIdeaForm",
+    "DistributorPaymentForm",
     "EditPrintedProgrammeSeasonForm",
     "EventBudgetLineForm",
     "EventBudgetLineInlineFormSet",
@@ -69,9 +76,12 @@ __all__ = [
     "RoomBookingInlineFormSet",
     "RoomForm",
     "SearchForm",
+    "SettlementLineItemForm",
+    "SettlementLineItemFormSet",
     "ShowingForm",
     "ShowingFormSet",
     "ShowingRotaNotesForm",
+    "ShowingSettlementForm",
     "SiteConfigurationForm",
     "rota_form_factory",
 ]

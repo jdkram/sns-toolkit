@@ -1,0 +1,45 @@
+{% extends "form_base.html" %}
+{% block title %}Distributor payment: {{ event.name }}{% endblock %}
+
+{% block body %}
+<h1>Distributor payment</h1>
+<p class="text-muted mb-3"><strong>{{ event.name }}</strong></p>
+
+{% include "bs_messages.html" %}
+
+<p class="mb-3">
+  Separate from ticket/bar takings — this is the outcome of the deal itself
+  (whether the distributor/performer has been invoiced and paid).
+</p>
+
+<form method="post">
+  {% csrf_token %}
+
+  <div class="row mb-3">
+    <div class="col-md-4">
+      <label class="form-label" for="{{ form.distributor_invoiced_date.id_for_label }}">{{ form.distributor_invoiced_date.label }}</label>
+      {{ form.distributor_invoiced_date }}
+      <div class="form-text">{{ form.distributor_invoiced_date.help_text }}</div>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="{{ form.distributor_paid_date.id_for_label }}">{{ form.distributor_paid_date.label }}</label>
+      {{ form.distributor_paid_date }}
+      <div class="form-text">{{ form.distributor_paid_date.help_text }}</div>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="{{ form.distributor_paid_amount_gbp.id_for_label }}">{{ form.distributor_paid_amount_gbp.label }}</label>
+      {{ form.distributor_paid_amount_gbp }}
+      <div class="form-text">{{ form.distributor_paid_amount_gbp.help_text }}</div>
+    </div>
+  </div>
+
+  <div class="mt-2">
+    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+    <a href="{% url 'edit-event-details-view' event.pk %}#showings-heading" class="btn btn-secondary btn-sm ms-1">Cancel</a>
+  </div>
+</form>
+
+<p class="mt-4 small text-muted">
+  <a href="{% url 'edit-event-details-view' event.pk %}#showings-heading">&larr; Back to event hub</a>
+</p>
+{% endblock %}

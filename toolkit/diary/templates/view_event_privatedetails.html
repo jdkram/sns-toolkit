@@ -3,6 +3,7 @@
 {% load thumbnail_l %}
 {% load static %}
 {% load noprefix_url %}
+{% load hash_filter %}
 {% block title %}
 {{ event.name }}
 {% endblock %}
@@ -34,6 +35,14 @@
     }
     .event-details-dl dt {
         font-weight: 600;
+    }
+    .settlement-outstanding {
+        border-left: 4px solid #dc3545;
+        background: #fff8f8;
+    }
+    .settlement-outstanding .card-body {
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
     }
     .event-details-dl dd {
         margin-bottom: 0.5rem;
@@ -176,6 +185,27 @@ function hideAddShowingForm() {
 </div>
 {% endif %}
 {% endwith %}
+
+{# ── Settlement summary (9.171) — shown once the event has elapsed showings needing one #}
+{% if settlement_enabled and event_settlement_status and event_settlement_status != "recorded" %}
+<div class="alert {% if event_settlement_status == 'not_recorded' %}alert-danger{% else %}alert-warning{% endif %} d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 py-2">
+  <span>
+    <strong>Settlement {% if event_settlement_status == "not_recorded" %}not recorded{% else %}partially recorded{% endif %}</strong>
+    — {% if event_settlement_status == "not_recorded" %}none of this event's past {{ site_config.occurrence_noun_plural }} have attendance/income entered yet.{% else %}some past {{ site_config.occurrence_noun_plural }} still need attendance/income entered.{% endif %}
+    See the {{ site_config.occurrence_noun_plural }} list below.
+  </span>
+  {% if event.cost_type and event.cost_type != "tbc" %}
+  <a href="{% url 'edit-distributor-payment' event.pk %}" class="btn btn-sm btn-outline-secondary">Distributor payment: {{ distributor_payment_status|default:"outstanding"|capfirst }} →</a>
+  {% endif %}
+</div>
+{% elif settlement_enabled and event_settlement_status == "recorded" %}
+<div class="alert alert-success d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 py-2">
+  <span><strong>✓ Settlement recorded</strong> for every past {{ site_config.occurrence_noun }}.</span>
+  {% if event.cost_type and event.cost_type != "tbc" %}
+  <a href="{% url 'edit-distributor-payment' event.pk %}" class="btn btn-sm btn-outline-secondary">Distributor payment: {{ distributor_payment_status|default:"outstanding"|capfirst }} →</a>
+  {% endif %}
+</div>
+{% endif %}
 
 {# ── Audit trail (9.163) — Panopticon only, same tier as the email/deletion logs #}
 {% if user.is_superuser %}
@@ -480,9 +510,7 @@ function hideAddShowingForm() {
         <li>
           <strong>{{ rev.saved_at|date:"j M Y H:i" }}</strong>
           {% if rev.saved_by %}by {{ rev.saved_by.get_full_name|default:rev.saved_by.username }}{% endif %}
-          &mdash; outside hire: {{ rev.outside_hire|yesno }};
-          private: {{ rev.private|yesno }};
-          terms: <em>{{ rev.terms_text|truncatechars:100 }}</em>
+          &mdash; {{ rev.summary }}
         </li>
         {% endfor %}
       </ul>
@@ -672,7 +700,11 @@ function hideAddShowingForm() {
 {% endfor %}
 
 {% if past_showings %}
-<details class="mb-3">
+{# Elapsed events get more prominence (9.171): expanded by default, not #}
+{# collapsed behind a <summary>, whenever settlement is on and something's #}
+{# outstanding -- a tired click-to-expand is exactly the kind of friction #}
+{# that makes settlement data go unrecorded in the first place. #}
+<details class="mb-3" {% if settlement_enabled and event_settlement_status and event_settlement_status != "recorded" %}open{% endif %}>
   <summary>Past {{ site_config.occurrence_noun_plural }} ({{ past_showings|length }})</summary>
   <table class="table table-sm mt-2">
     <thead>
@@ -681,11 +713,13 @@ function hideAddShowingForm() {
         {% if MULTIROOM_ENABLED %}<th>Room</th>{% endif %}
         <th>Booked by</th>
         <th>Status</th>
+        {% if settlement_enabled %}<th>Settlement</th>{% endif %}
       </tr>
     </thead>
     <tbody>
     {% for showing in past_showings %}
-      <tr>
+      {% with sstatus=showing_settlement_statuses|lookup:showing.pk %}
+      <tr{% if sstatus == "not_recorded" or sstatus == "partial" %} class="settlement-outstanding"{% endif %}>
         <td>{{ showing.start|date:"d/m/Y H:i" }}</td>
         {% if MULTIROOM_ENABLED %}<td>{{ showing.rooms_display }}</td>{% endif %}
         <td>{{ showing.booked_by }}</td>
@@ -694,7 +728,20 @@ function hideAddShowingForm() {
           {% elif showing.confirmed %}<span class="badge text-bg-success">Confirmed</span>
           {% else %}<span class="badge text-bg-secondary">Unconfirmed</span>{% endif %}
         </td>
+        {% if settlement_enabled %}
+        <td>
+          {% if not sstatus or sstatus == "not_applicable" %}
+          <span class="text-muted small">—</span>
+          {% else %}
+          {% if sstatus == "recorded" %}<span class="badge text-bg-success">Recorded</span>
+          {% elif sstatus == "partial" %}<span class="badge text-bg-warning text-dark">Partial</span>
+          {% else %}<span class="badge text-bg-danger">Not recorded</span>{% endif %}
+          <a href="{% url 'edit-showing-settlement' showing.pk %}" class="ms-1">{% if sstatus == "not_recorded" %}Record →{% else %}Edit →{% endif %}</a>
+          {% endif %}
+        </td>
+        {% endif %}
       </tr>
+      {% endwith %}
     {% endfor %}
     </tbody>
   </table>

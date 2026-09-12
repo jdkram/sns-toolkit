@@ -313,6 +313,28 @@ class Showing(models.Model):
     def in_past(self):
         return self.start and (self.start < django.utils.timezone.now())
 
+    def settlement_status(self):
+        """Derived per-showing settlement status (9.171): 'not_applicable',
+        'not_recorded', 'partial', or 'recorded'. Not stored -- see
+        Event.settlement_status() for the event-level rollup this feeds.
+
+        Uses getattr rather than importing ShowingSettlement, since the
+        reverse one-to-one accessor ("settlement") is registered by Django
+        at app-loading time regardless of import order between this module
+        and diary.models.finance.
+        """
+        if not self.event.has_financial_terms():
+            return "not_applicable"
+        settlement = getattr(self, "settlement", None)
+        if settlement is None or not settlement.has_any_data():
+            return "not_recorded"
+        if (
+            settlement.attendance is not None
+            and settlement.line_items.exists()
+        ):
+            return "recorded"
+        return "partial"
+
     def original_start_in_past(self):
         return (
             self._original_start

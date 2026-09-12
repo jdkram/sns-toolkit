@@ -20,6 +20,7 @@ from django.views.decorators.http import require_POST
 from django.views.generic import ListView
 
 from toolkit.diary.models import (
+    Event,
     RotaEntry,
     Showing,
     VolunteerEventMark,
@@ -160,6 +161,58 @@ def _available_links(user):
             continue
         result.append({**item, "url": reverse(item["url_name"])})
     return result
+
+
+def _outstanding_settlements_for(volunteer, now):
+    """Rows for the dashboard's "Your past events" settlement widget (9.171):
+    this volunteer's events with an elapsed showing still needing settlement,
+    most recent first, capped at 8 -- or [] if the feature's off. Split out
+    of get_context_data purely to keep that method under the complexity gate
+    (docs/QUALITY_RUBRIC.md); folding the event_settlement_enabled check in
+    here too (rather than as a second condition at the call site) keeps that
+    method's own branch count down to the one "if volunteer" it already had.
+    """
+    if volunteer is None or not get_site_config().event_settlement_enabled:
+        return []
+    programmed_events = (
+        Event.objects.filter(programmer=volunteer)
+        .prefetch_related("showings")
+        .distinct()
+    )
+    rows = []
+    for event in programmed_events:
+        status = event.settlement_status()
+        if status not in ("not_recorded", "partial"):
+            continue
+        elapsed = [
+            s
+            for s in event.showings.all()
+            if s.start <= now and not s.cancelled
+        ]
+        rows.append(
+            {
+                "event": event,
+                "latest_showing": max(elapsed, key=lambda s: s.start),
+                "status": status,
+            }
+        )
+    rows.sort(key=lambda r: r["latest_showing"].start, reverse=True)
+    return rows[:8]
+
+
+def _finance_settlement_review_url_for(user):
+    """The dashboard's standing link to the Finance settlement review
+    (9.171), or None -- gated on toolkit.write (this codebase has no
+    separate Finance permission tier) and the feature flag. Split out
+    alongside _outstanding_settlements_for to keep get_context_data's
+    branch count down (docs/QUALITY_RUBRIC.md).
+    """
+    if (
+        not user.has_perm("toolkit.write")
+        or not get_site_config().event_settlement_enabled
+    ):
+        return None
+    return reverse("finance-settlement-review")
 
 
 class ToolkitIndexView(ListView):
@@ -391,6 +444,25 @@ class ToolkitIndexView(ListView):
             context["upcoming_maintenance"] = upcoming_maintenance
             context["MAINT_STATUS_OVERDUE"] = MaintenanceTask.STATUS_OVERDUE
             context["MAINT_STATUS_DUE_SOON"] = MaintenanceTask.STATUS_DUE_SOON
+
+        # Settlement outstanding widget (9.171): automatically appears for
+        # any volunteer set as Event.programmer on at least one event --
+        # no opt-in needed, matching how new_showings/unconfirmed_showings
+        # above are automatic for anyone with toolkit.write. Feature-flagged
+        # off by default (the flag check lives inside the helper, so this
+        # method only gains the one "if volunteer" branch it already had).
+        outstanding_settlements = _outstanding_settlements_for(volunteer, now)
+        if outstanding_settlements:
+            context["outstanding_settlements"] = outstanding_settlements
+
+        # Finance's monthly settlement review (9.171): a standing link, not
+        # a data-bearing card -- the review page itself does the querying,
+        # so this costs nothing beyond a permission check and a flag read.
+        # Unconditional assignment (rather than an "if" here) to keep this
+        # method's branch count under the complexity gate.
+        context["finance_settlement_review_url"] = (
+            _finance_settlement_review_url_for(user)
+        )
 
         return context
 

@@ -1,0 +1,156 @@
+{% extends "form_base.html" %}
+{% block title %}Settlement: {{ event.name }}{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+    .line-item-row { border: 1px solid #dee2e6; border-radius: 4px; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem; background: #fff; }
+    .line-item-row--delete { background: #fff8f8; opacity: 0.6; }
+    .line-item-delete-label { font-size: 0.85em; color: #dc3545; }
+    .settlement-total { font-size: 0.9em; color: #495057; }
+</style>
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+<script>
+"use strict";
+(function () {
+    document.addEventListener("DOMContentLoaded", function () {
+        var addBtn = document.getElementById("add-line-item-btn");
+        var container = document.getElementById("line-items-container");
+        var totalForms = document.getElementById("id_line_items-TOTAL_FORMS");
+        if (!addBtn || !container || !totalForms) { return; }
+        addBtn.addEventListener("click", function () {
+            var forms = container.querySelectorAll(".line-item-row");
+            var lastForm = forms[forms.length - 1];
+            var newIndex = forms.length;
+            var newForm = lastForm.cloneNode(true);
+            newForm.innerHTML = newForm.innerHTML.replace(
+                new RegExp("line_items-" + (newIndex - 1) + "-", "g"),
+                "line_items-" + newIndex + "-"
+            );
+            // Clear values in the cloned row
+            newForm.querySelectorAll("input[type=text], input[type=number]").forEach(function (el) {
+                if (!el.name.endsWith("-id") && !el.name.endsWith("-order")) { el.value = ""; }
+            });
+            container.appendChild(newForm);
+            totalForms.value = newIndex + 1;
+        });
+    });
+})();
+</script>
+{% endblock %}
+
+{% block body %}
+<h1>Settlement</h1>
+<p class="text-muted mb-1">
+  <strong>{{ event.name }}</strong> — {{ showing.start|date:"D j M Y, H:i" }}
+</p>
+
+{% include "bs_messages.html" %}
+
+<p class="mb-3">
+  Enter what you've got. A rough attendance guess is fine, ticket sales as free-text rows
+  (no fixed columns), and the bar figure can be left blank if that's not your job tonight —
+  none of this blocks submitting.
+</p>
+
+<form method="post">
+  {% csrf_token %}
+
+  <div class="row mb-3">
+    <div class="col-md-4">
+      <label class="form-label" for="{{ form.attendance.id_for_label }}">{{ form.attendance.label }}</label>
+      {{ form.attendance }}
+      {% if form.attendance.errors %}<div class="text-danger small">{{ form.attendance.errors }}</div>{% endif %}
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="{{ form.bar_contribution_gbp.id_for_label }}">{{ form.bar_contribution_gbp.label }}</label>
+      {{ form.bar_contribution_gbp }}
+      <div class="form-text">{{ form.bar_contribution_gbp.help_text }}</div>
+      {% if form.bar_contribution_gbp.errors %}<div class="text-danger small">{{ form.bar_contribution_gbp.errors }}</div>{% endif %}
+    </div>
+  </div>
+
+  <h5>Ticket sales</h5>
+  <p class="text-muted small mb-2">
+    Free text — describe it however it was actually counted. Category is optional, useful for Finance later, never required.
+  </p>
+
+  {{ formset.management_form }}
+  {% if formset.non_form_errors %}
+  <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
+  {% endif %}
+
+  <div id="line-items-container">
+    {% for lform in formset %}
+    <div class="line-item-row{% if lform.instance.pk and lform.cleaned_data.DELETE %} line-item-row--delete{% endif %}">
+      {% if lform.non_field_errors %}
+      <div class="text-danger small mb-1">{{ lform.non_field_errors }}</div>
+      {% endif %}
+      <div class="row align-items-end g-2">
+        <div class="col-md-4">
+          <label class="small fw-bold">Description</label>
+          {{ lform.description }}
+        </div>
+        <div class="col-md-2">
+          <label class="small fw-bold">Category</label>
+          {{ lform.category }}
+        </div>
+        <div class="col-md-2">
+          <label class="small fw-bold">Count</label>
+          {{ lform.count }}
+        </div>
+        <div class="col-md-2">
+          <label class="small fw-bold">Unit price (£)</label>
+          {{ lform.unit_price_gbp }}
+        </div>
+        {% if lform.instance.pk %}
+        <div class="col-md-2">
+          <label class="line-item-delete-label">{{ lform.DELETE }} Delete</label>
+        </div>
+        {% endif %}
+      </div>
+      {% for hidden in lform.hidden_fields %}{{ hidden }}{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <button id="add-line-item-btn" type="button" class="btn btn-sm btn-outline-secondary mb-3">+ Add another row</button>
+
+  <p class="settlement-total">Ticket income recorded so far: <strong>£{{ ticket_income_total }}</strong></p>
+
+  <div class="mb-3">
+    <label class="form-label" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+    {{ form.notes }}
+    <div class="form-text">{{ form.notes.help_text }}</div>
+  </div>
+
+  <div class="mt-2">
+    <button type="submit" class="btn btn-primary btn-sm">Save settlement</button>
+    <a href="{% url 'edit-event-details-view' event.pk %}#showings-heading" class="btn btn-secondary btn-sm ms-1">Cancel</a>
+  </div>
+</form>
+
+{% if showing.settlement.revisions.exists %}
+<details class="mt-4">
+  <summary class="small text-muted">Change history ({{ showing.settlement.revisions.count }} correction{{ showing.settlement.revisions.count|pluralize }})</summary>
+  <ul class="small mt-2 ps-3">
+    {% for rev in showing.settlement.revisions.all|slice:":10" %}
+    <li>
+      <strong>{{ rev.saved_at|date:"j M Y H:i" }}</strong>
+      {% if rev.saved_by %}by {{ rev.saved_by.get_full_name|default:rev.saved_by.username }}{% endif %}
+      &mdash; previously: attendance {{ rev.attendance|default:"—" }};
+      bar {% if rev.bar_contribution_gbp %}£{{ rev.bar_contribution_gbp }}{% else %}—{% endif %};
+      {{ rev.line_items_snapshot|length }} ticket line{{ rev.line_items_snapshot|length|pluralize }}
+    </li>
+    {% endfor %}
+  </ul>
+</details>
+{% endif %}
+
+<p class="mt-4 small text-muted">
+  <a href="{% url 'edit-event-details-view' event.pk %}#showings-heading">&larr; Back to event hub</a>
+</p>
+{% endblock %}

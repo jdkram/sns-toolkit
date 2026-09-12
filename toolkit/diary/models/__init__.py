@@ -28,6 +28,11 @@ from .budget import (
     EventBudgetLine,
     sync_budget_lines_for_event,
 )
+from .finance import (
+    SettlementLineItem,
+    SettlementRevision,
+    ShowingSettlement,
+)
 from .rota import (
     EventTemplate,
     EventTemplateRole,
@@ -77,8 +82,11 @@ __all__ = [
     "RoomBooking",
     "RotaEntry",
     "SITE_CONFIG_FIELD_GROUPS",
+    "SettlementLineItem",
+    "SettlementRevision",
     "Showing",
     "ShowingQuerySet",
+    "ShowingSettlement",
     "SiteConfiguration",
     "VolunteerEventMark",
     "get_site_config",

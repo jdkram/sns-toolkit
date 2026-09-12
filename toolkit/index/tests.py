@@ -708,3 +708,110 @@ class TestUpcomingMaintenanceWidget(TestCase):
             )
         response = self.client.get(self.url)
         self.assertEqual(len(response.context["upcoming_maintenance"]), 5)
+
+
+class TestSettlementWidget(TestCase):
+    """9.171 — Dashboard widget: past events needing settlement, auto-shown
+    to any volunteer set as Event.programmer, gated on
+    SiteConfiguration.event_settlement_enabled."""
+
+    def setUp(self):
+        self.url = reverse("toolkit-index")
+        SiteConfiguration.objects.update_or_create(
+            pk=1, defaults={"event_settlement_enabled": True}
+        )
+
+    def _make_past_showing_event(self, cost_type=Event.COST_TYPE_FILM_LICENSE):
+        event = Event.objects.create(name="Past gig", cost_type=cost_type)
+        showing = Showing.objects.create(
+            event=event, start=timezone.now() + timedelta(days=1)
+        )
+        Showing.objects.filter(pk=showing.pk).update(
+            start=timezone.now() - timedelta(days=2)
+        )
+        return event
+
+    def test_not_shown_when_flag_off(self):
+        SiteConfiguration.objects.update_or_create(
+            pk=1, defaults={"event_settlement_enabled": False}
+        )
+        user, volunteer = _make_volunteer_user("progA")
+        event = self._make_past_showing_event()
+        event.programmer = volunteer
+        event.save()
+        self.client.login(username="progA", password="T3stPassword!")
+        response = self.client.get(self.url)
+        self.assertNotIn("outstanding_settlements", response.context)
+
+    def test_not_shown_without_programmed_events(self):
+        user, _volunteer = _make_volunteer_user("progB")
+        self.client.login(username="progB", password="T3stPassword!")
+        response = self.client.get(self.url)
+        self.assertNotIn("outstanding_settlements", response.context)
+
+    def test_shown_for_programmer_with_unrecorded_settlement(self):
+        user, volunteer = _make_volunteer_user("progC")
+        event = self._make_past_showing_event()
+        event.programmer = volunteer
+        event.save()
+        self.client.login(username="progC", password="T3stPassword!")
+        response = self.client.get(self.url)
+        self.assertIn("outstanding_settlements", response.context)
+        rows = response.context["outstanding_settlements"]
+        self.assertEqual(rows[0]["event"], event)
+        self.assertEqual(rows[0]["status"], "not_recorded")
+
+    def test_not_applicable_events_excluded(self):
+        user, volunteer = _make_volunteer_user("progD")
+        event = self._make_past_showing_event(cost_type=None)
+        event.programmer = volunteer
+        event.save()
+        self.client.login(username="progD", password="T3stPassword!")
+        response = self.client.get(self.url)
+        self.assertNotIn("outstanding_settlements", response.context)
+
+
+class TestFinanceSettlementReviewLink(TestCase):
+    """9.171 — Dashboard's standing link to the Finance settlement review,
+    gated on toolkit.write (no separate Finance permission tier exists) and
+    SiteConfiguration.event_settlement_enabled."""
+
+    def setUp(self):
+        self.url = reverse("toolkit-index")
+        SiteConfiguration.objects.update_or_create(
+            pk=1, defaults={"event_settlement_enabled": True}
+        )
+        ct = contenttypes.models.ContentType.objects.get_or_create(
+            model="", app_label="toolkit"
+        )[0]
+        self.write_perm = auth_models.Permission.objects.get_or_create(
+            name="Write access to all toolkit content",
+            content_type=ct,
+            codename="write",
+        )[0]
+
+    def test_not_shown_without_write_permission(self):
+        user, _volunteer = _make_volunteer_user("readonlyvol")
+        self.client.login(username="readonlyvol", password="T3stPassword!")
+        response = self.client.get(self.url)
+        self.assertIsNone(response.context["finance_settlement_review_url"])
+
+    def test_not_shown_when_flag_off(self):
+        SiteConfiguration.objects.update_or_create(
+            pk=1, defaults={"event_settlement_enabled": False}
+        )
+        user, _volunteer = _make_volunteer_user("progE")
+        user.user_permissions.add(self.write_perm)
+        self.client.login(username="progE", password="T3stPassword!")
+        response = self.client.get(self.url)
+        self.assertIsNone(response.context["finance_settlement_review_url"])
+
+    def test_shown_for_write_user_when_enabled(self):
+        user, _volunteer = _make_volunteer_user("progF")
+        user.user_permissions.add(self.write_perm)
+        self.client.login(username="progF", password="T3stPassword!")
+        response = self.client.get(self.url)
+        self.assertEqual(
+            response.context["finance_settlement_review_url"],
+            reverse("finance-settlement-review"),
+        )

@@ -277,17 +277,15 @@ questions" list; kept in the same grouping for continuity.
 
 1. Read this file in full before doing anything else, then
    [docs/EVENT_SETTLEMENT_USER_STORIES.md](EVENT_SETTLEMENT_USER_STORIES.md).
-2. Scoping and the user-stories pass are both complete — the next step is a proper task-file
-   entry: a new `docs/tasks/finance.md` domain file, next available `9.X` number, sized per the
-   existing convention (🟢 XS – 🔴 XL), derived from the user-stories pass above, not lifted
-   directly from this file's raw evidence.
-3. That task-file entry should specify: the showing-level settlement model with flexible
-   price-band line items, the three-shape split (film/gig/hire), the feature flag + Site Settings
-   visibility control, and how it hooks into the existing `EventTermsRevision`/`EventAuditLog`
-   audit precedents. `Event.no_financial_activity` already exists (built 2026-09-10 as part of
-   9.169, `docs/tasks/events-and-rota.md`) — treat it as available, not something to design; wire
-   the settlement-actuals requirement to key off it rather than adding a second flag.
-4. This file is linked from `CLAUDE.md`'s "Also queued" line — keep that pointer current once the
-   task-file entry exists. As of 2026-09-10, `CLAUDE.md`'s primary "resume here" pointer is
-   `docs/tasks/volunteers.md` 9.170 instead — this finance.md work is queued behind it, not the
-   active resume target.
+2. ✅ Done 2026-09-12 — the task-file entry exists:
+   [docs/tasks/finance.md](tasks/finance.md) 9.171. Scoping and the user-stories pass fed
+   directly into it; this file and `EVENT_SETTLEMENT_USER_STORIES.md` remain the design trail,
+   not duplicated content — read them before touching 9.171 itself.
+3. What 9.171 specifies: the showing-level settlement model with flexible line items (optional
+   category tag, never required), the Persona A/B entry-vs-review split, the distributor-payment
+   outcome fields, the feature flag + Site Settings visibility control, and how it hooks into the
+   existing `EventTermsRevision`/`EventAuditLog` audit precedents. `Event.no_financial_activity`
+   (built 2026-09-10 as part of 9.169) is wired in as-is, not duplicated with a second flag.
+4. ✅ 9.171 shipped complete 2026-09-12 (all pieces, including the Finance-facing review screen).
+   `CLAUDE.md` now points at browser verification as the only queued work — this file has no
+   further resume protocol to hand off.

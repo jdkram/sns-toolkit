@@ -94,6 +94,13 @@ from .film import (
     unlink_film,
 )
 
+from .finance import (
+    showing_settlement_edit,
+    event_distributor_payment_edit,
+    programmer_past_events,
+    finance_settlement_review,
+)
+
 __all__ = [
     "_return_to_editindex",
     "_create_room_booking",
@@ -148,4 +155,8 @@ __all__ = [
     "unlink_film",
     "_film_json",
     "past_events_search",
+    "showing_settlement_edit",
+    "event_distributor_payment_edit",
+    "programmer_past_events",
+    "finance_settlement_review",
 ]
