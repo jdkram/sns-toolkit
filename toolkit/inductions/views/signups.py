@@ -59,6 +59,7 @@ def _create_volunteer_from_signup(signup: InductionSignup) -> Volunteer:
     volunteer = Volunteer(
         user=user,
         member=member,
+        display_name=signup.display_name,
         consent_policy_version=InductionsSettings.load().privacy_policy_version,
     )
     volunteer.save()

@@ -98,6 +98,33 @@ def get_default_membership_expiry():
     return timezone_now().date() + datetime.timedelta(days=days)
 
 
+# Shared between Volunteer.display_name (self-service edit + induction
+# sign-up) so the guidance can't drift out of sync between the two forms.
+# States where the name is seen and leaves what's appropriate to the
+# volunteer, rather than a "don't pick anything offensive" instruction --
+# see 9.170.
+DISPLAY_NAME_HELP_TEXT = (
+    "This is the name most other volunteers will see — on the rota, and if "
+    "you're credited as an event's programmer. Panopticon admins can still "
+    "look up your full name for membership and legal purposes. First name + "
+    "last initial (e.g. “Jonny K”) strikes a good balance between "
+    "privacy and other volunteers being able to tell who's who — most "
+    "people go with that. Leave blank to use this automatically."
+)
+
+
+def _first_name_and_initial(full_name):
+    """Turn "Jonny Kram" into "Jonny K." Falls back to the name as-is if
+    it's a single word. Shared by Volunteer.directory_display_name (9.86)
+    and Volunteer.display_name_or_default (9.170) -- same "first name +
+    last initial" convention in both places.
+    """
+    parts = (full_name or "").split()
+    if len(parts) >= 2:
+        return f"{parts[0]} {parts[-1][0]}."
+    return full_name or ""
+
+
 class Member(models.Model):
 
     # This is the primary key used in the old perl/bdb system, used as the
@@ -276,6 +303,17 @@ class Volunteer(models.Model):
 
     notes = models.TextField(blank=True)
 
+    # Public-facing name shown on the rota and as Event.programmer -- kept
+    # separate from Member.name (the private canonical name, Panopticon-
+    # visible for membership/GDPR purposes). Blank means "use the
+    # first-name + last-initial fallback" (display_name_or_default), not
+    # "no name" -- see 9.170.
+    display_name = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=DISPLAY_NAME_HELP_TEXT,
+    )
+
     # When True, this volunteer is never included in purge_candidates() regardless
     # of status or last-activity date. Use for volunteers who have a long-term
     # connection to the venue but may not log in regularly (e.g. founding members).
@@ -305,6 +343,13 @@ class Volunteer(models.Model):
     def is_active(self):
         """On the rota and receiving mailouts. Derived from `status`."""
         return self.status == self.STATUS_ACTIVE
+
+    @property
+    def display_name_or_default(self):
+        """What to render anywhere a volunteer's identity is shown publicly
+        (rota, Event.programmer) -- never Member.name directly, see 9.170.
+        """
+        return self.display_name or _first_name_and_initial(self.member.name)
 
     @property
     def consent_overdue(self):
@@ -649,9 +694,7 @@ class Volunteer(models.Model):
         if not self.dir_share_listed:
             return ""
         if self.dir_share_name_style == self.NAME_STYLE_INITIAL:
-            parts = self.member.name.split()
-            if len(parts) >= 2:
-                return f"{parts[0]} {parts[-1][0]}."
+            return _first_name_and_initial(self.member.name)
         return self.member.name
 
     def is_old(self):

@@ -48,6 +48,7 @@ def signup(request, slug):
             new_signup = InductionSignup.objects.create(
                 session=session,
                 name=form.get_name(),
+                display_name=form.cleaned_data.get("display_name", ""),
                 email=form.cleaned_data["email"],
                 phone=form.cleaned_data.get("phone", ""),
                 address=form.cleaned_data.get("address", ""),

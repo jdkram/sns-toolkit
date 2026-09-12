@@ -366,7 +366,7 @@ function hideAddShowingForm() {
           title="Who owns this event -- who to contact about it.">ⓘ</span>
   </dt>
   <dd class="col-sm-9">
-    {% if event.programmer %}{{ event.programmer.member.name }}
+    {% if event.programmer %}{{ event.programmer.display_name_or_default }}
     {% else %}<span class="text-muted">Not set</span>{% endif %}
   </dd>
 

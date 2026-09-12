@@ -4,6 +4,8 @@ from django import forms
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 
+from toolkit.members.models import DISPLAY_NAME_HELP_TEXT
+
 from .models import InductionRequest, InductionSession, InductionsSettings
 
 
@@ -12,6 +14,12 @@ class SignupForm(forms.Form):
 
     first_name = forms.CharField(max_length=100, label="First name")
     last_name = forms.CharField(max_length=100, label="Last name")
+    display_name = forms.CharField(
+        max_length=100,
+        required=False,
+        label="Display name",
+        help_text=DISPLAY_NAME_HELP_TEXT,
+    )
     email = forms.EmailField(label="Email address")
     phone = forms.CharField(
         max_length=64, required=False, label="Phone number"

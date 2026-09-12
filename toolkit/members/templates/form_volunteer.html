@@ -267,6 +267,17 @@ $(document).ready(function() {
       <table>{{ mem_form.as_table }}</table>
     </div>
 
+    <!-- Display name -->
+    <div class="vol-section" id="vol-display-name">
+      <h4>Display name</h4>
+      {{ vol_form.display_name.errors }}
+      {{ vol_form.display_name }}
+      <p style="font-size:0.88em; color:#555; margin:0.4rem 0 0;">{{ vol_form.display_name.help_text }}</p>
+      {% if not volunteer.display_name %}
+      <p style="font-size:0.88em; color:#555; margin:0.25rem 0 0;">Currently shown as: <strong>{{ volunteer.display_name_or_default }}</strong></p>
+      {% endif %}
+    </div>
+
     <!-- Notes -->
     <div class="vol-section" id="vol-notes">
       <h4>Notes</h4>

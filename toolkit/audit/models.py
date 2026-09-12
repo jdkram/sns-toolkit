@@ -181,6 +181,62 @@ def log_event_action(event, action, actor=None, detail=""):
         )
 
 
+class VolunteerDisplayNameChangeLog(models.Model):
+    """One row per change to Volunteer.display_name (9.170).
+
+    No rate limit on changing display_name -- FK-based linkage (rota
+    sign-ups, Event.programmer) already makes a rename harmless to data
+    integrity, so this is a plain history log for review, not a gate.
+    volunteer is a string FK to avoid toolkit.members importing
+    toolkit.audit at module level while this module stays import-free of
+    toolkit.members (mirrors the "diary.Event" string FK on EventAuditLog
+    above).
+    """
+
+    volunteer = models.ForeignKey(
+        "members.Volunteer",
+        on_delete=models.CASCADE,
+        related_name="display_name_changes",
+    )
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        help_text="The logged-in user who made the change -- the volunteer "
+        "themselves, or a Panopticon editing on their behalf.",
+    )
+    old_value = models.CharField(max_length=100, blank=True)
+    new_value = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        ordering = ["-timestamp"]
+
+    def __str__(self):
+        return (
+            f"{self.timestamp:%Y-%m-%d %H:%M} volunteer pk={self.volunteer_id}: "
+            f"'{self.old_value}' -> '{self.new_value}'"
+        )
+
+
+def log_display_name_change(volunteer, old_value, new_value, changed_by=None):
+    """Write a VolunteerDisplayNameChangeLog row; never let a logging
+    failure block the save."""
+    try:
+        VolunteerDisplayNameChangeLog.objects.create(
+            volunteer=volunteer,
+            old_value=old_value,
+            new_value=new_value,
+            changed_by=changed_by,
+        )
+    except Exception:
+        logger.exception(
+            "Failed to write VolunteerDisplayNameChangeLog row for "
+            f"volunteer pk={volunteer.pk}"
+        )
+
+
 # --- Trigger tracking ------------------------------------------------------
 #
 # LoggingEmailBackend sits below every send call in the codebase and has no

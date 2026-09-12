@@ -358,6 +358,13 @@ class InductionSignup(models.Model):
         related_name="signups",
     )
     name = models.CharField(max_length=200, blank=True)
+    display_name = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Carried through to Volunteer.display_name on activation. "
+        "Blank means the new volunteer gets the first-name + last-initial "
+        "fallback (see Volunteer.display_name_or_default).",
+    )
     email = models.EmailField(blank=True)
     custom_responses = models.JSONField(default=dict, blank=True)
     status = models.CharField(

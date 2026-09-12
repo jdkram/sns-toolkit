@@ -58,6 +58,28 @@ class PublicSignup(InductionsTestsMixin, TestCase):
         self.assertEqual(signup.name, "Bob Jones")
         self.assertEqual(signup.status, InductionSignup.STATUS_PENDING)
 
+    def test_display_name_optional_and_stored(self):
+        """9.170: display_name is optional on the public sign-up form, and
+        stored on the InductionSignup when given."""
+        from django.urls import reverse
+
+        url = reverse("inductions:signup", args=[self.session.slug])
+        resp = self.client.post(
+            url, self.valid_signup_post(display_name="Bobby")
+        )
+        self.assertEqual(resp.status_code, 302)
+        signup = self.session.signups.get(email="bob@test.example")
+        self.assertEqual(signup.display_name, "Bobby")
+
+    def test_display_name_blank_when_omitted(self):
+        from django.urls import reverse
+
+        url = reverse("inductions:signup", args=[self.session.slug])
+        resp = self.client.post(url, self.valid_signup_post())
+        self.assertEqual(resp.status_code, 302)
+        signup = self.session.signups.get(email="bob@test.example")
+        self.assertEqual(signup.display_name, "")
+
     def test_consent_required(self):
         from django.urls import reverse
 
@@ -298,6 +320,25 @@ class UsernameGeneration(InductionsTestsMixin, TestCase):
         s.save()
         v = _create_volunteer_from_signup(s)
         self.assertEqual(v.user.username, "johnny")
+
+
+class DisplayNameCarryThrough(InductionsTestsMixin, TestCase):
+    """9.170: a display name chosen at sign-up carries onto the created
+    Volunteer; leaving it blank leaves display_name blank (the
+    first-name + initial fallback is computed, not stored)."""
+
+    def test_display_name_carried_through(self):
+        s = _mk_signup(self.session, "John Doe", "jd@test.example")
+        s.display_name = "Johnny D"
+        s.save()
+        v = _create_volunteer_from_signup(s)
+        self.assertEqual(v.display_name, "Johnny D")
+
+    def test_blank_display_name_stays_blank(self):
+        s = _mk_signup(self.session, "John Doe", "jd@test.example")
+        v = _create_volunteer_from_signup(s)
+        self.assertEqual(v.display_name, "")
+        self.assertEqual(v.display_name_or_default, "John D.")
 
 
 class Attendance(InductionsTestsMixin, TestCase):

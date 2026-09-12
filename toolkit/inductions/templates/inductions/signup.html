@@ -173,15 +173,22 @@
           <label for="{{ form.first_name.id_for_label }}">First name <span aria-hidden="true">*</span></label>
           {{ form.first_name }}
           {% for error in form.first_name.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
-          <p class="rota-preview" id="rota-name-preview" style="display:none;">
-            Rota name: <strong id="rota-name-display"></strong>
-          </p>
         </div>
         <div class="signup-field">
           <label for="{{ form.last_name.id_for_label }}">Last name <span aria-hidden="true">*</span></label>
           {{ form.last_name }}
           {% for error in form.last_name.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
         </div>
+      </div>
+
+      <div class="signup-field">
+        <label for="{{ form.display_name.id_for_label }}">Display name</label>
+        {{ form.display_name }}
+        <p class="help-text">{{ form.display_name.help_text }}</p>
+        {% for error in form.display_name.errors %}<p class="error-text">{{ error }}</p>{% endfor %}
+        <p class="rota-preview" id="rota-name-preview" style="display:none;">
+          Will show on the rota as: <strong id="rota-name-display"></strong>
+        </p>
       </div>
 
       <div class="signup-field">
@@ -211,7 +218,7 @@
 
       {# Custom questions from session config #}
       {% for field in form %}
-        {% if field.name != "first_name" and field.name != "last_name" and field.name != "email" and field.name != "phone" and field.name != "address" and field.name != "postcode" and field.name != "age_confirm" and field.name != "consent" %}
+        {% if field.name != "first_name" and field.name != "last_name" and field.name != "display_name" and field.name != "email" and field.name != "phone" and field.name != "address" and field.name != "postcode" and field.name != "age_confirm" and field.name != "consent" %}
         <div class="signup-field">
           <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>
           {{ field }}
@@ -255,20 +262,28 @@
 (function () {
   var firstEl = document.getElementById('id_first_name');
   var lastEl = document.getElementById('id_last_name');
+  var displayEl = document.getElementById('id_display_name');
   var preview = document.getElementById('rota-name-preview');
   var display = document.getElementById('rota-name-display');
   if (!firstEl || !lastEl || !preview || !display) return;
 
   function updatePreview() {
+    var custom = displayEl ? displayEl.value.trim() : '';
+    if (custom) {
+      display.textContent = custom;
+      preview.style.display = '';
+      return;
+    }
     var first = firstEl.value.trim();
     var last = lastEl.value.trim();
     if (!first && !last) { preview.style.display = 'none'; return; }
-    display.textContent = first + (last ? ' ' + last : '');
+    display.textContent = last ? (first + ' ' + last.charAt(0) + '.') : first;
     preview.style.display = '';
   }
 
   firstEl.addEventListener('input', updatePreview);
   lastEl.addEventListener('input', updatePreview);
+  if (displayEl) displayEl.addEventListener('input', updatePreview);
   updatePreview();
 
   // Style error fields

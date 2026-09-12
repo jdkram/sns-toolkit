@@ -229,6 +229,7 @@ class VolunteerForm(forms.ModelForm):
         model = toolkit.members.models.Volunteer
         fields = (
             "portrait",
+            "display_name",
             "notes",
             "status",
             "retention_exempt",

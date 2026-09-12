@@ -14,6 +14,7 @@ from django.shortcuts import (
     render,
 )
 from django.views.decorators.http import require_POST
+from toolkit.audit.models import log_display_name_change
 from toolkit.diary.models import get_site_config
 from toolkit.members.forms import (
     MemberFormWithoutNotes,
@@ -45,6 +46,18 @@ from ._common import (
 )
 
 
+def _log_display_name_change_if_changed(
+    request, volunteer, old_display_name, create_new
+):
+    if not create_new and volunteer.display_name != old_display_name:
+        log_display_name_change(
+            volunteer,
+            old_display_name,
+            volunteer.display_name,
+            changed_by=request.user,
+        )
+
+
 @login_required
 def edit_volunteer(request, volunteer_id, create_new=False):
     # If called from the "add" url, then create_new will be True. If called
@@ -70,6 +83,8 @@ def edit_volunteer(request, volunteer_id, create_new=False):
         # Remember suspension state so we can flag the safeguarding side-effects
         # (login disabled, shifts cleared) to the operator after saving.
         was_suspended = volunteer.status == Volunteer.STATUS_SUSPENDED
+        # Remember the pre-edit display name to log a change after saving (9.170).
+        old_display_name = volunteer.display_name
     else:
         # Called from "add" url — Panopticon only
         if not is_panopticon:
@@ -79,6 +94,7 @@ def edit_volunteer(request, volunteer_id, create_new=False):
         volunteer.member = Member()
         new_training_record = None
         user = None
+        old_display_name = ""
 
     # Now, if the view was loaded with "GET" then display the edit form, and
     # if it was called with POST then read the updated volunteer data from the
@@ -123,6 +139,10 @@ def edit_volunteer(request, volunteer_id, create_new=False):
                 volunteer.user = user
 
             vol_form.save()
+
+            _log_display_name_change_if_changed(
+                request, volunteer, old_display_name, create_new
+            )
 
             if not create_new and volunteer.is_active != was_active:
                 logger.info(

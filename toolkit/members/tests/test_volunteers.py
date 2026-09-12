@@ -889,6 +889,53 @@ class TestVolunteerEdit(MembersTestsMixin, TestCase):
         self.assertEqual(vol.portrait.name, initial_portrait)
 
 
+class TestVolunteerEditDisplayName(MembersTestsMixin, TestCase):
+    """9.170: editing display_name via the volunteer edit form logs a
+    VolunteerDisplayNameChangeLog row, and only when it actually changes."""
+
+    def setUp(self):
+        super().setUp()
+        self.assertTrue(
+            self.client.login(username="admin", password="T3stPassword!")
+        )
+
+    def _post(self, display_name):
+        url = reverse("edit-volunteer", kwargs={"volunteer_id": 1})
+        return self.client.post(
+            url,
+            data={
+                "mem-name": self.vol_1.member.name,
+                "mem-email": self.vol_1.member.email,
+                "vol-status": "active",
+                "vol-display_name": display_name,
+            },
+            follow=True,
+        )
+
+    def test_setting_display_name_is_saved(self):
+        self._post("Vee")
+        self.vol_1.refresh_from_db()
+        self.assertEqual(self.vol_1.display_name, "Vee")
+
+    def test_setting_display_name_logs_change(self):
+        from toolkit.audit.models import VolunteerDisplayNameChangeLog
+
+        self._post("Vee")
+        log = VolunteerDisplayNameChangeLog.objects.get(volunteer=self.vol_1)
+        self.assertEqual(log.old_value, "")
+        self.assertEqual(log.new_value, "Vee")
+
+    def test_unchanged_display_name_logs_nothing(self):
+        from toolkit.audit.models import VolunteerDisplayNameChangeLog
+
+        self._post("")
+        self.assertFalse(
+            VolunteerDisplayNameChangeLog.objects.filter(
+                volunteer=self.vol_1
+            ).exists()
+        )
+
+
 class TestAddTraining(MembersTestsMixin, TestCase):
     def setUp(self):
         super().setUp()
@@ -1703,6 +1750,24 @@ class TestVolunteerDirectoryDisplayName(MembersTestsMixin, TestCase):
     def test_none_returns_empty(self):
         self.vol_1.dir_share_listed = False
         self.assertEqual(self.vol_1.directory_display_name(), "")
+
+
+class TestVolunteerDisplayNameOrDefault(MembersTestsMixin, TestCase):
+    """9.170: display_name_or_default is what rota/Event.programmer render."""
+
+    def test_uses_set_display_name(self):
+        self.vol_1.display_name = "Vee"
+        self.assertEqual(self.vol_1.display_name_or_default, "Vee")
+
+    def test_falls_back_to_first_name_and_initial(self):
+        self.vol_1.display_name = ""
+        self.assertEqual(self.vol_1.display_name_or_default, "Volunteer O.")
+
+    def test_fallback_single_word_name(self):
+        self.mem_4.name = "Mononym"
+        self.mem_4.save()
+        self.vol_1.display_name = ""
+        self.assertEqual(self.vol_1.display_name_or_default, "Mononym")
 
 
 class TestVolunteerPIIPermissionBoundary(MembersTestsMixin, TestCase):
