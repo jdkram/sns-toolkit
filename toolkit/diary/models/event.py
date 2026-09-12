@@ -750,6 +750,19 @@ class Event(models.Model):
             return "invoiced"
         return "outstanding"
 
+    def prs_relevant(self):
+        """True when this event's financial shape could plausibly need a
+        PRS/PPL performer-registration record (9.171): a paid gig, or an
+        outside hire where the hirer's own performers are playing. Film
+        licences (no live performers), internal/volunteer bookings, and
+        TBC deals never had a paper PRS form either -- see the scoping
+        doc's three-shape split.
+        """
+        return self.cost_type in (
+            self.COST_TYPE_PERFORMER_FEE,
+            self.COST_TYPE_VENUE_HIRE,
+        )
+
 
 class EventLink(models.Model):
     """A named clickable link attached to an event (max 3 per event).

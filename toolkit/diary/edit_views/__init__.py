@@ -99,6 +99,8 @@ from .finance import (
     event_distributor_payment_edit,
     programmer_past_events,
     finance_settlement_review,
+    event_prs_registration_edit,
+    prs_report,
 )
 
 __all__ = [
@@ -159,4 +161,6 @@ __all__ = [
     "event_distributor_payment_edit",
     "programmer_past_events",
     "finance_settlement_review",
+    "event_prs_registration_edit",
+    "prs_report",
 ]

@@ -41,6 +41,9 @@ from .misc import DiaryIdeaForm, MailoutForm, SearchForm
 from .site_config import SiteConfigurationForm
 from .finance import (
     DistributorPaymentForm,
+    PerformerRegistrationForm,
+    PRSPerformerEntryForm,
+    PRSPerformerEntryFormSet,
     SettlementLineItemForm,
     SettlementLineItemFormSet,
     ShowingSettlementForm,
@@ -69,6 +72,9 @@ __all__ = [
     "MediaItemForm",
     "NewEventForm",
     "NewPrintedProgrammeForm",
+    "PRSPerformerEntryForm",
+    "PRSPerformerEntryFormSet",
+    "PerformerRegistrationForm",
     "PrintedProgrammeSeasonFormMixin",
     "QuickCreateOpenSessionForm",
     "RoleForm",

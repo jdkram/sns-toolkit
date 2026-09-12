@@ -7,6 +7,8 @@ from django.forms import inlineformset_factory
 
 from toolkit.diary.models import (
     Event,
+    PerformerRegistration,
+    PRSPerformerEntry,
     SettlementLineItem,
     ShowingSettlement,
 )
@@ -102,3 +104,53 @@ class DistributorPaymentForm(forms.ModelForm):
                 attrs={"class": "form-control", "step": "0.01", "min": "0"}
             ),
         }
+
+
+class PerformerRegistrationForm(forms.ModelForm):
+    """Event-level PRS/PPL record -- entirely optional (task 9.171); see
+    PerformerRegistration's docstring for why this is never required."""
+
+    class Meta:
+        model = PerformerRegistration
+        fields = ("filled_in_by", "vat_on_tickets", "notes")
+        widgets = {
+            "filled_in_by": forms.TextInput(attrs={"class": "form-control"}),
+            "vat_on_tickets": forms.NullBooleanSelect(
+                attrs={"class": "form-select"}
+            ),
+            "notes": forms.Textarea(
+                attrs={"class": "form-control", "rows": 2}
+            ),
+        }
+
+
+class PRSPerformerEntryForm(forms.ModelForm):
+    class Meta:
+        model = PRSPerformerEntry
+        fields = ("name", "registered", "is_volunteer_or_amateur", "order")
+        widgets = {
+            "name": forms.TextInput(
+                attrs={
+                    "class": "form-control form-control-sm",
+                    "placeholder": "Performer/artist name",
+                }
+            ),
+            "registered": forms.Select(
+                attrs={"class": "form-select form-select-sm"}
+            ),
+            "is_volunteer_or_amateur": forms.NullBooleanSelect(
+                attrs={"class": "form-select form-select-sm"}
+            ),
+            "order": forms.HiddenInput(),
+        }
+
+
+# Free-text, unbounded performer rows, same shape as SettlementLineItemFormSet
+# -- no max_num, extra=1 gives one blank row to start.
+PRSPerformerEntryFormSet = inlineformset_factory(
+    PerformerRegistration,
+    PRSPerformerEntry,
+    form=PRSPerformerEntryForm,
+    extra=1,
+    can_delete=True,
+)

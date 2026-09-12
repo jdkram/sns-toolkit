@@ -223,11 +223,16 @@ def event_detail_view(request, event_id):
     settlement_enabled = get_site_config().event_settlement_enabled
     showing_settlement_statuses = {}
     event_settlement_status = None
+    prs_relevant = False
+    prs_recorded = False
     if settlement_enabled:
         showing_settlement_statuses = {
             s.pk: s.settlement_status() for s in past_showings
         }
         event_settlement_status = event.settlement_status()
+        prs_relevant = event.prs_relevant()
+        registration = getattr(event, "performer_registration", None)
+        prs_recorded = bool(registration and registration.has_any_data())
 
     # Audit trail (9.163) shows who created/changed things -- the same
     # category of personal-activity data as the email/deletion logs, which
@@ -261,6 +266,8 @@ def event_detail_view(request, event_id):
                 if settlement_enabled
                 else None
             ),
+            "prs_relevant": prs_relevant,
+            "prs_recorded": prs_recorded,
         },
     )
 

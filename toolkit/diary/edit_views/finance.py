@@ -15,14 +15,20 @@ finance-facing review of both:
 - ``finance_settlement_review`` -- a date-ranged index of every event's
   settlement/distributor-payment status, for Finance's monthly rhythm.
   Links out to the two edit views above rather than duplicating them.
+- ``event_prs_registration_edit`` -- optional PRS/PPL performer-registration
+  record for one event, reached from the Hub alongside distributor payment.
+- ``prs_report`` -- CSV export of the above across a date range, draft
+  material for whoever submits the actual PRS/PPL return.
 """
 
+import csv
 import datetime
+from decimal import Decimal
 from functools import wraps
 
 from django.contrib import messages
 from django.db.models import Max
-from django.http import Http404, HttpResponseRedirect
+from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
@@ -31,6 +37,7 @@ from django.views.decorators.http import require_http_methods
 import toolkit.diary.forms as diary_forms
 from toolkit.diary.models import (
     Event,
+    PerformerRegistration,
     SettlementRevision,
     Showing,
     ShowingSettlement,
@@ -175,6 +182,50 @@ def event_distributor_payment_edit(request, event_id):
 
 @write_required
 @_settlement_enabled_or_404
+@require_http_methods(["GET", "POST"])
+def event_prs_registration_edit(request, event_id):
+    """Optional PRS/PPL performer-registration record for one event
+    (9.171). Never a blocker -- see PerformerRegistration's docstring --
+    so unlike showing_settlement_edit this has no "prior data" revision
+    tracking: a low-stakes, freely-editable record, not one Persona B
+    needs protected from being overwritten.
+    """
+    event = get_object_or_404(Event, pk=event_id)
+    registration, _ = PerformerRegistration.objects.get_or_create(event=event)
+
+    if request.method == "POST":
+        form = diary_forms.PerformerRegistrationForm(
+            request.POST, instance=registration
+        )
+        formset = diary_forms.PRSPerformerEntryFormSet(
+            request.POST, instance=registration
+        )
+        if form.is_valid() and formset.is_valid():
+            registration = form.save(commit=False)
+            registration.updated_by = request.user
+            registration.save()
+            formset.instance = registration
+            formset.save()
+            messages.success(request, "PRS/PPL registration saved.")
+            return HttpResponseRedirect(
+                reverse(
+                    "edit-event-details-view", kwargs={"event_id": event_id}
+                )
+                + "#showings-heading"
+            )
+    else:
+        form = diary_forms.PerformerRegistrationForm(instance=registration)
+        formset = diary_forms.PRSPerformerEntryFormSet(instance=registration)
+
+    return render(
+        request,
+        "edit_prs_registration.html",
+        {"event": event, "form": form, "formset": formset},
+    )
+
+
+@write_required
+@_settlement_enabled_or_404
 @require_http_methods(["GET"])
 def programmer_past_events(request):
     """A programmer's own past events, with settlement status surfaced.
@@ -236,6 +287,52 @@ def _current_month_range(today):
     return start, end
 
 
+def _date_range_from_request(request):
+    now = timezone.now()
+    default_from, default_to = _current_month_range(now.date())
+    date_from = _parse_date(request.GET.get("date_from", "")) or default_from
+    date_to = _parse_date(request.GET.get("date_to", "")) or default_to
+    return now, date_from, date_to
+
+
+def _events_with_elapsed_showings_in_range(
+    date_from, date_to, now, extra_filters=None
+):
+    """Every event with at least one elapsed, non-cancelled showing whose
+    *latest* showing falls in the range, paired with that event's sorted
+    elapsed showings -- the shared query behind finance_settlement_review
+    and prs_report (9.171), so the two never drift on what counts as "in
+    range". `extra_filters` narrows further (e.g. prs_report's cost_type
+    scoping) without duplicating the base query.
+    """
+    events = (
+        Event.objects.annotate(latest_showing_start=Max("showings__start"))
+        .filter(
+            latest_showing_start__date__gte=date_from,
+            latest_showing_start__date__lte=date_to,
+            latest_showing_start__lte=now,
+            no_financial_activity=False,
+            **(extra_filters or {}),
+        )
+        .prefetch_related("showings")
+        .distinct()
+        .order_by("-latest_showing_start")
+    )
+
+    result = []
+    for event in events:
+        elapsed = [
+            s
+            for s in event.showings.all()
+            if s.start <= now and not s.cancelled
+        ]
+        if not elapsed:
+            continue
+        elapsed.sort(key=lambda s: s.start, reverse=True)
+        result.append((event, elapsed))
+    return result
+
+
 @write_required
 @_settlement_enabled_or_404
 @require_http_methods(["GET"])
@@ -250,35 +347,13 @@ def finance_settlement_review(request):
     month, matching Finance's existing paper-book rhythm, unlike
     past_events_search (9.149) which defaults to no filter at all.
     """
-    now = timezone.now()
-    default_from, default_to = _current_month_range(now.date())
-
-    date_from = _parse_date(request.GET.get("date_from", "")) or default_from
-    date_to = _parse_date(request.GET.get("date_to", "")) or default_to
-
-    events = (
-        Event.objects.annotate(latest_showing_start=Max("showings__start"))
-        .filter(
-            latest_showing_start__date__gte=date_from,
-            latest_showing_start__date__lte=date_to,
-            latest_showing_start__lte=now,
-            no_financial_activity=False,
-        )
-        .prefetch_related("showings")
-        .distinct()
-        .order_by("-latest_showing_start")
-    )
+    now, date_from, date_to = _date_range_from_request(request)
 
     rows = []
-    for event in events:
-        elapsed = [
-            s
-            for s in event.showings.all()
-            if s.start <= now and not s.cancelled
-        ]
-        if not elapsed:
-            continue
-        elapsed.sort(key=lambda s: s.start, reverse=True)
+    for event, elapsed in _events_with_elapsed_showings_in_range(
+        date_from, date_to, now
+    ):
+        registration = getattr(event, "performer_registration", None)
         rows.append(
             {
                 "event": event,
@@ -289,6 +364,10 @@ def finance_settlement_review(request):
                     {"showing": s, "status": s.settlement_status()}
                     for s in elapsed
                 ],
+                "prs_relevant": event.prs_relevant(),
+                "prs_recorded": bool(
+                    registration and registration.has_any_data()
+                ),
             }
         )
 
@@ -301,3 +380,105 @@ def finance_settlement_review(request):
             "date_to": date_to,
         },
     )
+
+
+def _prs_report_rows_for_event(event, elapsed):
+    attendance_total = 0
+    ticket_income_total = Decimal("0")
+    for showing in elapsed:
+        settlement = getattr(showing, "settlement", None)
+        if settlement is None:
+            continue
+        if settlement.attendance is not None:
+            attendance_total += settlement.attendance
+        ticket_income_total += settlement.ticket_income_total()
+
+    registration = getattr(event, "performer_registration", None)
+    performers = list(registration.performers.all()) if registration else []
+    common = [
+        event.name,
+        timezone.localtime(elapsed[0].start).strftime("%d/%m/%Y %H:%M"),
+        event.get_cost_type_display() if event.cost_type else "",
+        "Yes" if event.outside_hire else "No",
+        registration.filled_in_by if registration else "",
+        (
+            ""
+            if registration is None or registration.vat_on_tickets is None
+            else ("Yes" if registration.vat_on_tickets else "No")
+        ),
+    ]
+    tail = [str(attendance_total), str(ticket_income_total)]
+
+    if not performers:
+        return [common + ["", "", ""] + tail]
+    rows = []
+    for performer in performers:
+        rows.append(
+            common
+            + [
+                performer.name,
+                performer.get_registered_display(),
+                (
+                    ""
+                    if performer.is_volunteer_or_amateur is None
+                    else ("Yes" if performer.is_volunteer_or_amateur else "No")
+                ),
+            ]
+            + tail
+        )
+    return rows
+
+
+@write_required
+@_settlement_enabled_or_404
+@require_http_methods(["GET"])
+def prs_report(request):
+    """CSV export for whoever submits the PRS/PPL return (9.171): every
+    PRS-relevant event (Event.prs_relevant()) in the date range, one row
+    per performer -- or one blank-performer row for an event that hasn't
+    had anything entered yet, so it stays visible as needing follow-up
+    rather than silently vanishing from the export.
+
+    Draft material for a human to check against bank/till figures, not an
+    automated filing -- the scoping doc's evidence is explicit that
+    reconciliation is always manual, line-by-line, with cash/bank-verified
+    figures winning over any estimate every time.
+    """
+    now, date_from, date_to = _date_range_from_request(request)
+
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = (
+        f'attachment; filename="prs_report_{date_from}_{date_to}.csv"'
+    )
+    writer = csv.writer(response)
+    writer.writerow(
+        [
+            "Event",
+            "Last showing",
+            "Cost type",
+            "Outside hire",
+            "Filled in by",
+            "VAT on tickets",
+            "Performer",
+            "Registered",
+            "Volunteer/amateur",
+            "Attendance (elapsed showings in range)",
+            "Ticket income (elapsed showings in range, £)",
+        ]
+    )
+    events = _events_with_elapsed_showings_in_range(
+        date_from,
+        date_to,
+        now,
+        extra_filters={
+            "cost_type__in": (
+                Event.COST_TYPE_PERFORMER_FEE,
+                Event.COST_TYPE_VENUE_HIRE,
+            )
+        },
+    )
+    for event, elapsed in events:
+        for row in _prs_report_rows_for_event(event, elapsed):
+            writer.writerow(row)
+
+    return response

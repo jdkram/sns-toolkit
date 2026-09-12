@@ -27,6 +27,10 @@
   <div>
     <button type="submit" class="btn btn-sm btn-primary">Filter</button>
   </div>
+  <div>
+    <a href="{% url 'prs-report' %}?date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}"
+       class="btn btn-sm btn-outline-secondary">Download PRS/PPL report (CSV) &darr;</a>
+  </div>
 </form>
 
 {% if not rows %}
@@ -48,8 +52,15 @@
       {% elif row.distributor_payment_status == "invoiced" %}<span class="badge text-bg-info">Distributor invoiced</span>
       {% elif row.distributor_payment_status == "outstanding" %}<span class="badge text-bg-secondary">Distributor outstanding</span>
       {% endif %}
+      {% if row.prs_relevant %}
+      <span class="badge {% if row.prs_recorded %}text-bg-success{% else %}text-bg-light text-dark border{% endif %}">PRS/PPL {% if row.prs_recorded %}recorded{% else %}not recorded{% endif %}</span>
+      {% endif %}
       <a href="{% url 'edit-distributor-payment' event_id=row.event.pk %}"
          class="btn btn-sm btn-outline-secondary">Distributor payment &rarr;</a>
+      {% if row.prs_relevant %}
+      <a href="{% url 'edit-prs-registration' event_id=row.event.pk %}"
+         class="btn btn-sm btn-outline-secondary">PRS/PPL &rarr;</a>
+      {% endif %}
     </div>
   </div>
   <div class="card-body py-2">

@@ -2,6 +2,8 @@
 
 """Tests for task 9.171: event settlement records."""
 
+import csv
+import io
 from decimal import Decimal
 
 from django.test import TestCase
@@ -9,6 +11,8 @@ from django.urls import reverse
 
 from toolkit.diary.models import (
     Event,
+    PerformerRegistration,
+    PRSPerformerEntry,
     SettlementLineItem,
     SettlementRevision,
     Showing,
@@ -174,6 +178,53 @@ class DistributorPaymentStatusTests(TestCase):
         self.assertEqual(event.distributor_payment_status(), "paid")
 
 
+class EventPrsRelevantTests(TestCase):
+    def test_performer_fee_is_relevant(self):
+        event = Event(name="Gig", cost_type=Event.COST_TYPE_PERFORMER_FEE)
+        self.assertTrue(event.prs_relevant())
+
+    def test_venue_hire_is_relevant(self):
+        event = Event(name="Hire", cost_type=Event.COST_TYPE_VENUE_HIRE)
+        self.assertTrue(event.prs_relevant())
+
+    def test_film_license_not_relevant(self):
+        event = Event(name="Film", cost_type=Event.COST_TYPE_FILM_LICENSE)
+        self.assertFalse(event.prs_relevant())
+
+    def test_no_cost_type_not_relevant(self):
+        event = Event(name="TBC")
+        self.assertFalse(event.prs_relevant())
+
+
+class PerformerRegistrationModelTests(TestCase):
+    def setUp(self):
+        self.event = Event(name="Gig", cost_type=Event.COST_TYPE_PERFORMER_FEE)
+        self.event.save()
+
+    def test_no_data_is_false(self):
+        registration = PerformerRegistration.objects.create(event=self.event)
+        self.assertFalse(registration.has_any_data())
+
+    def test_filled_in_by_counts_as_data(self):
+        registration = PerformerRegistration.objects.create(
+            event=self.event, filled_in_by="Alex"
+        )
+        self.assertTrue(registration.has_any_data())
+
+    def test_vat_flag_counts_as_data(self):
+        registration = PerformerRegistration.objects.create(
+            event=self.event, vat_on_tickets=False
+        )
+        self.assertTrue(registration.has_any_data())
+
+    def test_performer_entry_counts_as_data(self):
+        registration = PerformerRegistration.objects.create(event=self.event)
+        PRSPerformerEntry.objects.create(
+            registration=registration, name="The Band"
+        )
+        self.assertTrue(registration.has_any_data())
+
+
 class SettlementViewsFeatureFlagTests(DiaryTestsMixin, TestCase):
     """The whole feature 404s when SiteConfiguration.event_settlement_enabled
     is off -- ships dormant, per the rest of this codebase's speculative
@@ -210,6 +261,22 @@ class SettlementViewsFeatureFlagTests(DiaryTestsMixin, TestCase):
         cfg.event_settlement_enabled = False
         cfg.save()
         resp = self.client.get(reverse("programmer-past-events"))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_prs_registration_edit_404s_when_disabled(self):
+        cfg = get_site_config()
+        cfg.event_settlement_enabled = False
+        cfg.save()
+        resp = self.client.get(
+            reverse("edit-prs-registration", kwargs={"event_id": self.e4.pk})
+        )
+        self.assertEqual(resp.status_code, 404)
+
+    def test_prs_report_404s_when_disabled(self):
+        cfg = get_site_config()
+        cfg.event_settlement_enabled = False
+        cfg.save()
+        resp = self.client.get(reverse("prs-report"))
         self.assertEqual(resp.status_code, 404)
 
 
@@ -314,6 +381,31 @@ class EventHubSettlementDisplayTests(DiaryTestsMixin, TestCase):
         )
         self.assertNotContains(resp, "Settlement not recorded")
 
+    def test_prs_link_shown_for_performer_fee_event(self):
+        resp = self.client.get(
+            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk})
+        )
+        self.assertContains(resp, "PRS/PPL registration")
+        self.assertNotContains(resp, "PRS/PPL registration (recorded)")
+
+    def test_prs_link_marks_recorded_once_data_entered(self):
+        registration = PerformerRegistration.objects.create(
+            event=self.e4, filled_in_by="Alex"
+        )
+        self.assertTrue(registration.has_any_data())
+        resp = self.client.get(
+            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk})
+        )
+        self.assertContains(resp, "PRS/PPL registration (recorded)")
+
+    def test_prs_link_hidden_for_film_license_event(self):
+        self.e4.cost_type = Event.COST_TYPE_FILM_LICENSE
+        self.e4.save()
+        resp = self.client.get(
+            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk})
+        )
+        self.assertNotContains(resp, "PRS/PPL registration")
+
 
 class ProgrammerPastEventsViewTests(DiaryTestsMixin, TestCase):
     def setUp(self):
@@ -402,6 +494,157 @@ class FinanceSettlementReviewViewTests(DiaryTestsMixin, TestCase):
             {"date_from": "2013-09-01", "date_to": "2013-09-30"},
         )
         self.assertNotContains(resp, self.e4.name)
+
+    def test_prs_badge_not_recorded_by_default(self):
+        resp = self.client.get(
+            reverse("finance-settlement-review"),
+            {"date_from": "2013-09-01", "date_to": "2013-09-30"},
+        )
+        self.assertContains(resp, "PRS/PPL not recorded")
+
+    def test_prs_badge_recorded_once_data_entered(self):
+        PerformerRegistration.objects.create(
+            event=self.e4, filled_in_by="Alex"
+        )
+        resp = self.client.get(
+            reverse("finance-settlement-review"),
+            {"date_from": "2013-09-01", "date_to": "2013-09-30"},
+        )
+        self.assertContains(resp, "PRS/PPL recorded")
+
+    def test_no_prs_badge_for_film_license_event(self):
+        self.e4.cost_type = Event.COST_TYPE_FILM_LICENSE
+        self.e4.save()
+        resp = self.client.get(
+            reverse("finance-settlement-review"),
+            {"date_from": "2013-09-01", "date_to": "2013-09-30"},
+        )
+        self.assertNotContains(resp, "PRS/PPL not recorded")
+        self.assertNotContains(resp, "PRS/PPL recorded")
+
+    def test_csv_download_link_present(self):
+        resp = self.client.get(
+            reverse("finance-settlement-review"),
+            {"date_from": "2013-09-01", "date_to": "2013-09-30"},
+        )
+        self.assertContains(resp, reverse("prs-report"))
+
+
+class EventPrsRegistrationEditViewTests(DiaryTestsMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        cfg = get_site_config()
+        cfg.event_settlement_enabled = True
+        cfg.save()
+        self.e4.cost_type = Event.COST_TYPE_PERFORMER_FEE
+        self.e4.save()
+        self.client.login(username="admin", password="T3stPassword!")
+
+    def test_get_renders_form(self):
+        resp = self.client.get(
+            reverse("edit-prs-registration", kwargs={"event_id": self.e4.pk})
+        )
+        self.assertEqual(resp.status_code, 200)
+
+    def test_post_creates_registration_and_performer(self):
+        url = reverse("edit-prs-registration", kwargs={"event_id": self.e4.pk})
+        resp = self.client.post(
+            url,
+            {
+                "filled_in_by": "Alex",
+                "vat_on_tickets": "true",
+                "notes": "",
+                "performers-TOTAL_FORMS": "1",
+                "performers-INITIAL_FORMS": "0",
+                "performers-MIN_NUM_FORMS": "0",
+                "performers-MAX_NUM_FORMS": "1000",
+                "performers-0-name": "The Band",
+                "performers-0-registered": PRSPerformerEntry.REGISTERED_YES,
+                "performers-0-is_volunteer_or_amateur": "unknown",
+                "performers-0-order": "0",
+            },
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.e4.refresh_from_db()
+        registration = self.e4.performer_registration
+        self.assertEqual(registration.filled_in_by, "Alex")
+        self.assertTrue(registration.vat_on_tickets)
+        performer = registration.performers.get()
+        self.assertEqual(performer.name, "The Band")
+        self.assertEqual(
+            performer.registered, PRSPerformerEntry.REGISTERED_YES
+        )
+        self.assertIsNone(performer.is_volunteer_or_amateur)
+
+    def test_never_gates_settlement_status(self):
+        """No PerformerRegistration exists at all -- settlement_status()
+        must not care, since this feature is deliberately optional."""
+        self.assertEqual(self.e4.settlement_status(), "not_recorded")
+
+
+class PrsReportViewTests(DiaryTestsMixin, TestCase):
+    """e4's showings: e4s3 9/6/13, e4s4 14/9/13 (both elapsed, matching
+    FinanceSettlementReviewViewTests above)."""
+
+    def setUp(self):
+        super().setUp()
+        cfg = get_site_config()
+        cfg.event_settlement_enabled = True
+        cfg.save()
+        self.e4.cost_type = Event.COST_TYPE_PERFORMER_FEE
+        self.e4.save()
+        self.client.login(username="admin", password="T3stPassword!")
+
+    def _rows(self, **params):
+        resp = self.client.get(reverse("prs-report"), params)
+        return resp, list(csv.reader(io.StringIO(resp.content.decode())))
+
+    def test_csv_content_type_and_filename(self):
+        resp, _ = self._rows(date_from="2013-09-01", date_to="2013-09-30")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp["Content-Type"], "text/csv")
+        self.assertIn("attachment", resp["Content-Disposition"])
+
+    def test_event_without_performers_gets_blank_row(self):
+        _, rows = self._rows(date_from="2013-09-01", date_to="2013-09-30")
+        data_row = rows[1]
+        self.assertEqual(data_row[0], self.e4.name)
+        self.assertEqual(data_row[6], "")  # Performer
+        self.assertEqual(data_row[7], "")  # Registered
+
+    def test_performer_row_data(self):
+        registration = PerformerRegistration.objects.create(
+            event=self.e4, filled_in_by="Alex", vat_on_tickets=True
+        )
+        PRSPerformerEntry.objects.create(
+            registration=registration,
+            name="The Band",
+            registered=PRSPerformerEntry.REGISTERED_YES,
+        )
+        _, rows = self._rows(date_from="2013-09-01", date_to="2013-09-30")
+        data_row = rows[1]
+        self.assertEqual(data_row[0], self.e4.name)
+        self.assertEqual(data_row[4], "Alex")
+        self.assertEqual(data_row[5], "Yes")
+        self.assertEqual(data_row[6], "The Band")
+        self.assertEqual(data_row[7], "Registered")
+
+    def test_film_license_events_excluded(self):
+        film_event = Event(
+            name="Some Film", cost_type=Event.COST_TYPE_FILM_LICENSE
+        )
+        film_event.save()
+        Showing(event=film_event, start="2013-09-05T19:00:00+00:00").save(
+            force=True
+        )
+        _, rows = self._rows(date_from="2013-09-01", date_to="2013-09-30")
+        names = [row[0] for row in rows[1:]]
+        self.assertIn(self.e4.name, names)
+        self.assertNotIn("Some Film", names)
+
+    def test_out_of_range_events_excluded(self):
+        _, rows = self._rows(date_from="2013-01-01", date_to="2013-02-28")
+        self.assertEqual(len(rows), 1)  # header only
 
 
 class SettlementRevisionTests(DiaryTestsMixin, TestCase):

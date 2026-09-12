@@ -1,0 +1,124 @@
+{% extends "form_base.html" %}
+{% block title %}PRS/PPL registration: {{ event.name }}{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+    .performer-row { border: 1px solid #dee2e6; border-radius: 4px; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem; background: #fff; }
+    .performer-row--delete { background: #fff8f8; opacity: 0.6; }
+    .performer-delete-label { font-size: 0.85em; color: #dc3545; }
+</style>
+{% endblock %}
+
+{% block script %}
+{{ block.super }}
+<script>
+"use strict";
+(function () {
+    document.addEventListener("DOMContentLoaded", function () {
+        var addBtn = document.getElementById("add-performer-btn");
+        var container = document.getElementById("performers-container");
+        var totalForms = document.getElementById("id_performers-TOTAL_FORMS");
+        if (!addBtn || !container || !totalForms) { return; }
+        addBtn.addEventListener("click", function () {
+            var forms = container.querySelectorAll(".performer-row");
+            var lastForm = forms[forms.length - 1];
+            var newIndex = forms.length;
+            var newForm = lastForm.cloneNode(true);
+            newForm.innerHTML = newForm.innerHTML.replace(
+                new RegExp("performers-" + (newIndex - 1) + "-", "g"),
+                "performers-" + newIndex + "-"
+            );
+            newForm.querySelectorAll("input[type=text]").forEach(function (el) {
+                if (!el.name.endsWith("-id") && !el.name.endsWith("-order")) { el.value = ""; }
+            });
+            newForm.querySelectorAll("select").forEach(function (el) { el.selectedIndex = 0; });
+            container.appendChild(newForm);
+            totalForms.value = newIndex + 1;
+        });
+    });
+})();
+</script>
+{% endblock %}
+
+{% block body %}
+<h1>PRS/PPL registration</h1>
+<p class="text-muted mb-1"><strong>{{ event.name }}</strong></p>
+
+{% include "bs_messages.html" %}
+
+<p class="mb-3">
+  Entirely optional &mdash; nothing here blocks anything else. If you don't know a performer's
+  registration status, leave it as "don't know" rather than guessing.
+</p>
+
+<form method="post">
+  {% csrf_token %}
+
+  <div class="row mb-3">
+    <div class="col-md-4">
+      <label class="form-label" for="{{ form.filled_in_by.id_for_label }}">{{ form.filled_in_by.label }}</label>
+      {{ form.filled_in_by }}
+      <div class="form-text">{{ form.filled_in_by.help_text }}</div>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="{{ form.vat_on_tickets.id_for_label }}">{{ form.vat_on_tickets.label }}</label>
+      {{ form.vat_on_tickets }}
+      <div class="form-text">{{ form.vat_on_tickets.help_text }}</div>
+    </div>
+  </div>
+
+  <h5>Performers</h5>
+
+  {{ formset.management_form }}
+  {% if formset.non_form_errors %}
+  <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
+  {% endif %}
+
+  <div id="performers-container">
+    {% for pform in formset %}
+    <div class="performer-row{% if pform.instance.pk and pform.cleaned_data.DELETE %} performer-row--delete{% endif %}">
+      {% if pform.non_field_errors %}
+      <div class="text-danger small mb-1">{{ pform.non_field_errors }}</div>
+      {% endif %}
+      <div class="row align-items-end g-2">
+        <div class="col-md-4">
+          <label class="small fw-bold">Name</label>
+          {{ pform.name }}
+        </div>
+        <div class="col-md-3">
+          <label class="small fw-bold">Registered</label>
+          {{ pform.registered }}
+        </div>
+        <div class="col-md-3">
+          <label class="small fw-bold">Volunteer/amateur?</label>
+          {{ pform.is_volunteer_or_amateur }}
+        </div>
+        {% if pform.instance.pk %}
+        <div class="col-md-2">
+          <label class="performer-delete-label">{{ pform.DELETE }} Delete</label>
+        </div>
+        {% endif %}
+      </div>
+      {% for hidden in pform.hidden_fields %}{{ hidden }}{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <button id="add-performer-btn" type="button" class="btn btn-sm btn-outline-secondary mb-3">+ Add another performer</button>
+
+  <div class="mb-3">
+    <label class="form-label" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+    {{ form.notes }}
+  </div>
+
+  <div class="mt-2">
+    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+    <a href="{% url 'edit-event-details-view' event.pk %}#showings-heading" class="btn btn-secondary btn-sm ms-1">Cancel</a>
+  </div>
+</form>
+
+<p class="mt-4 small text-muted">
+  <a href="{% url 'edit-event-details-view' event.pk %}#showings-heading">&larr; Back to event hub</a>
+</p>
+{% endblock %}

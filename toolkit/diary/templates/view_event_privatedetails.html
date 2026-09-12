@@ -194,16 +194,26 @@ function hideAddShowingForm() {
     — {% if event_settlement_status == "not_recorded" %}none of this event's past {{ site_config.occurrence_noun_plural }} have attendance/income entered yet.{% else %}some past {{ site_config.occurrence_noun_plural }} still need attendance/income entered.{% endif %}
     See the {{ site_config.occurrence_noun_plural }} list below.
   </span>
+  <span class="d-flex gap-2">
   {% if event.cost_type and event.cost_type != "tbc" %}
   <a href="{% url 'edit-distributor-payment' event.pk %}" class="btn btn-sm btn-outline-secondary">Distributor payment: {{ distributor_payment_status|default:"outstanding"|capfirst }} →</a>
   {% endif %}
+  {% if prs_relevant %}
+  <a href="{% url 'edit-prs-registration' event.pk %}" class="btn btn-sm btn-outline-secondary">PRS/PPL registration{% if prs_recorded %} (recorded){% endif %} →</a>
+  {% endif %}
+  </span>
 </div>
 {% elif settlement_enabled and event_settlement_status == "recorded" %}
 <div class="alert alert-success d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 py-2">
   <span><strong>✓ Settlement recorded</strong> for every past {{ site_config.occurrence_noun }}.</span>
+  <span class="d-flex gap-2">
   {% if event.cost_type and event.cost_type != "tbc" %}
   <a href="{% url 'edit-distributor-payment' event.pk %}" class="btn btn-sm btn-outline-secondary">Distributor payment: {{ distributor_payment_status|default:"outstanding"|capfirst }} →</a>
   {% endif %}
+  {% if prs_relevant %}
+  <a href="{% url 'edit-prs-registration' event.pk %}" class="btn btn-sm btn-outline-secondary">PRS/PPL registration{% if prs_recorded %} (recorded){% endif %} →</a>
+  {% endif %}
+  </span>
 </div>
 {% endif %}
 

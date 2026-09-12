@@ -29,6 +29,8 @@ from .budget import (
     sync_budget_lines_for_event,
 )
 from .finance import (
+    PerformerRegistration,
+    PRSPerformerEntry,
     SettlementLineItem,
     SettlementRevision,
     ShowingSettlement,
@@ -75,6 +77,8 @@ __all__ = [
     "FutureDateTimeField",
     "INCOME_CATEGORY_TEMPLATE",
     "MediaItem",
+    "PRSPerformerEntry",
+    "PerformerRegistration",
     "PrintedProgramme",
     "PrintedProgrammeQuerySet",
     "Role",

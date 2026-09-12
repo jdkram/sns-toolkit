@@ -47,6 +47,8 @@ from toolkit.diary.edit_views import (
     event_distributor_payment_edit,
     programmer_past_events,
     finance_settlement_review,
+    event_prs_registration_edit,
+    prs_report,
 )
 from toolkit.diary.public_views import (
     ArchiveIndex,
@@ -281,6 +283,18 @@ diary_urls = [
         r"^edit/events/finance-review/$",
         finance_settlement_review,
         name="finance-settlement-review",
+    ),
+    # PRS/PPL report export for the review screen's date range (9.171)
+    re_path(
+        r"^edit/events/finance-review/prs-report/$",
+        prs_report,
+        name="prs-report",
+    ),
+    # Optional PRS/PPL performer-registration record for an event (9.171)
+    re_path(
+        r"^edit/event/id/(?P<event_id>\d+)/prs-registration/$",
+        event_prs_registration_edit,
+        name="edit-prs-registration",
     ),
     # Edit ideas
     re_path(

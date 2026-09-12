@@ -203,3 +203,109 @@ class SettlementRevision(models.Model):
         return (
             f"Revision of settlement {self.settlement_id} at {self.saved_at}"
         )
+
+
+class PerformerRegistration(models.Model):
+    """PRS/PPL performer-registration record for one Event (task 9.171).
+
+    Deliberately optional and never a blocker on the settlement critical
+    path -- docs/tasks/finance.md's "deliberately open" decision, resolved
+    2026-09-12: PRS/PPL reporting has already stalled on paper (see the
+    scoping doc's Evidence B), so a mandatory structured field here would
+    just move the same compliance gap into an equally skippable digital
+    one. This exists so whoever *does* want to keep it running -- the
+    volunteer who expressed interest in Evidence B -- has somewhere to put
+    it, and so prs_report() (edit_views/finance.py) has something to draw
+    on.
+
+    One row per Event, not per Showing, matching the paper form: the
+    scoping doc's six real examples were all recorded once per event
+    regardless of how many showings it covered.
+    """
+
+    event = models.OneToOneField(
+        "diary.Event",
+        on_delete=models.CASCADE,
+        related_name="performer_registration",
+    )
+    filled_in_by = models.CharField(
+        max_length=128,
+        blank=True,
+        help_text=(
+            "Who filled this in -- the programmer, an outside hirer, or "
+            "whoever reconciled it after the fact."
+        ),
+    )
+    vat_on_tickets = models.BooleanField(
+        null=True,
+        blank=True,
+        verbose_name="VAT charged on tickets?",
+        help_text="Mainly relevant for outside hires -- leave blank if unknown or not applicable.",
+    )
+    notes = models.TextField(max_length=2048, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+
+    class Meta:
+        db_table = "PerformerRegistrations"
+
+    def __str__(self):
+        return f"Performer registration for event {self.event_id}"
+
+    def has_any_data(self):
+        return (
+            bool(self.filled_in_by.strip())
+            or self.vat_on_tickets is not None
+            or bool(self.notes.strip())
+            or self.performers.exists()
+        )
+
+
+class PRSPerformerEntry(models.Model):
+    """One performer/artist line on a PerformerRegistration (task 9.171).
+
+    registered is a tri-state choice rather than a nullable boolean --
+    "don't know" was a real, common answer in the scoping doc's six real
+    paper examples, not an edge case a yes/no checkbox can represent
+    honestly.
+    """
+
+    REGISTERED_YES = "yes"
+    REGISTERED_NO = "no"
+    REGISTERED_UNKNOWN = "unknown"
+    REGISTERED_CHOICES = [
+        (REGISTERED_UNKNOWN, "Don't know"),
+        (REGISTERED_YES, "Registered"),
+        (REGISTERED_NO, "Not registered"),
+    ]
+
+    registration = models.ForeignKey(
+        PerformerRegistration,
+        on_delete=models.CASCADE,
+        related_name="performers",
+    )
+    name = models.CharField(max_length=128)
+    registered = models.CharField(
+        max_length=16,
+        choices=REGISTERED_CHOICES,
+        default=REGISTERED_UNKNOWN,
+    )
+    is_volunteer_or_amateur = models.BooleanField(
+        null=True,
+        blank=True,
+        verbose_name="Volunteer/amateur performer?",
+    )
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        db_table = "PRSPerformerEntries"
+        ordering = ["order", "pk"]
+
+    def __str__(self):
+        return f"{self.name} ({self.registration_id})"

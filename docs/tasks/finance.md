@@ -65,7 +65,24 @@ the Event Hub's existing Panopticon-only audit trail panel, and the settlement f
 ruff/black clean. Not browser-verified (test-client only, same caveat as the rest of 9.171). Full
 detail in `docs/SPEC.md`'s ShowingSettlement/SettlementLineItem section.
 
-Still open: the PRS/PPL scope decision.
+**PRS/PPL performer registration + report generator — shipped 2026-09-12, on direct request to
+build out the process rather than leave it out of scope.** New `PerformerRegistration` (one per
+Event, matching the paper form) + `PRSPerformerEntry` (flexible performer rows: name, a tri-state
+`registered` yes/no/don't-know, an optional volunteer/amateur flag) — see
+`toolkit/diary/models/finance.py`. `Event.prs_relevant()` scopes this to `performer_fee`/
+`venue_hire` cost types only, matching the scoping doc's three-shape split (film licences never
+had a paper PRS form either). Entry form `event_prs_registration_edit`
+(`/edit/event/id/<id>/prs-registration/`), reached from the Event Hub next to the distributor-
+payment link, and surfaced (with a plain, non-alarming badge, never a red "outstanding" banner) on
+the Finance review screen too. Deliberately kept exactly as optional as the earlier decision
+required: no revision history, no completeness gate, nothing here can block a settlement or event.
+New `prs_report` CSV export (`/edit/events/finance-review/prs-report/`), one row per performer (or
+one blank-performer row for an event that hasn't had anything entered, so it stays visible rather
+than vanishing) — draft material for whoever compiles the actual PRS/PPL return to check against
+bank/till figures, not an automated filing. 25 new tests, full suite green (diary 622, index 94; a
+manual smoke test against the real dev DB also confirmed the Hub link, review-screen badge, and CSV
+export all render correctly end to end), ruff/black clean. Migration `0050`. Not browser-verified
+(same caveat as the rest of 9.171).
 
 ---
 
@@ -255,11 +272,9 @@ granularity, per the scoping doc's "Non-questions" section):
 
 #### Deliberately open, not decided by this entry
 
-- **Whether PRS/PPL performer-registration status is in scope for MVP.** The user-stories doc
-  flags this explicitly as unresolved rather than defaulting either way: PRS/PPL reporting has
-  already stalled on paper, so a mandatory structured field here might just move the same gap
-  into a different, equally skippable place. If built at all, it should be optional, not a
-  blocker in the settlement critical path. Decide at implementation time, not in this spec.
+- **Whether PRS/PPL performer-registration status is in scope for MVP** — resolved 2026-09-12,
+  built as described above: optional, never a blocker, exactly as this section originally
+  specified. See "PRS/PPL performer registration + report generator — shipped 2026-09-12" above.
 - The exact shape of the category-tag picklist for ticket line items (a starting list is given
   above — advance / door / concession / guest list / other — treat it as a draft, not final).
 - Whether "settlement recorded" status surfaces anywhere on the public or volunteer-facing side,
