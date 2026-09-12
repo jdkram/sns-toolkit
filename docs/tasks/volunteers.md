@@ -1526,7 +1526,27 @@ If blank, show nothing. No default — forces an explicit decision.
 
 ---
 
-### 9.170 — Volunteer display names + surname privacy 🟡 M (unscoped past direction below)
+### 9.170 — Volunteer display names + surname privacy 🟡 M — ✅ DONE 2026-09-12
+
+> **Shipped.** `Volunteer.display_name` (blank = first-name + last-initial
+> fallback via `display_name_or_default`), captured on the induction
+> `SignupForm` and the self-service/Panopticon volunteer edit form, both
+> sharing one `DISPLAY_NAME_HELP_TEXT` constant on `members/models.py`.
+> Carried through `InductionSignup.display_name` into the created
+> `Volunteer` on activation. Changes are logged to
+> `audit.VolunteerDisplayNameChangeLog` (no rate limit, per the agreed
+> direction). Six render sites switched from the canonical `Member.name`
+> to `display_name_or_default`: `view_rota.html` (×2),
+> `edit_rota.html` (×2), and `view_event_privatedetails.html`'s
+> `Event.programmer` field — the last of these wasn't in the original
+> five-site list below, found while doing the actual switch. The
+> `RotaEntry` pronoun-matching lookup (`diary/edit_views/rota.py:172-192`)
+> needed no change, as analysed in Q4 below. Tests added in
+> `test_volunteers.py` and `test_flows.py` (fallback logic, form save,
+> audit logging, sign-up carry-through); full suite green (1430 tests).
+> Original design-question record kept below for the reasoning trail.
+
+**Source:** Conversation 2026-09-10, surfaced alongside `docs/tasks/events-and-rota.md`
 
 **Source:** Conversation 2026-09-10, surfaced alongside `docs/tasks/events-and-rota.md`
 9.169 — the new `Event.programmer` field needs something to render, which exposed
@@ -1571,49 +1591,114 @@ Panopticons for membership/GDPR/dispute purposes.
   doing the selecting can see enough (email fragment, membership number) to
   pick the right record without the public site ever exposing a surname.
 
-**Open questions — not yet resolved, needs a proper scoping session.**
-- Exact field shape: `display_name` on `Member` or `Volunteer`? Does it need
-  a fallback/default (e.g. first name + last initial) for volunteers who
-  never set one?
-- Where the consent notice actually lives and its exact copy —
-  `InductionsSettings` already has a `privacy_policy_url`/
-  `privacy_policy_version` pattern (see 9.151, the consent-renewal
-  precedent) worth reusing rather than inventing new consent-tracking
-  machinery, but this wasn't checked against the real form fields before
-  the investigating session ended.
-- Whether existing volunteers (pre-dating this feature) get prompted to set
-  a display name retroactively, or default silently to their current full
-  name until they visit a settings page.
-- Interaction with `RotaEntry.name`'s free-text fallback path (superuser-
-  entered, unlinked, external-hire-style entries) and the pronoun-matching
-  lookup (`diary/edit_views/rota.py:172-192`), which currently does an
-  exact-string match against `Member.name` to attach pronouns to unlinked
-  rota entries — a live example of what already breaks when identity
-  depends on string matching rather than a picked record. Both would need
-  to match on `display_name` instead, or be re-derived some other way.
+**Open questions — resolved 2026-09-12 (checked against the real code; see
+below). Design is now locked enough to size and build.**
+
+1. **Field shape: resolved — `display_name` lives on `Volunteer`, not
+   `Member`.** Checked `Event.programmer` (`diary/models/event.py:416`): it's
+   a FK to `members.Volunteer`, not `Member`. `RotaEntry.volunteer` is the
+   same. Every place this feature needs to change is Volunteer-typed, and a
+   bare `Member` (someone who is a member but never became a volunteer)
+   never appears in those contexts — so there's nothing for a `Member`-level
+   field to protect. This also matches where `pronouns` already lives
+   (9.24, also on `Volunteer`), keeping identity-display fields on one
+   model. **Fallback default:** first name + last initial (e.g. "Jonny K"),
+   computed as a property when `display_name` is unset — reuses the exact
+   convention 9.86's directory feature already specifies
+   (`dir_share_name: 'initial'`), rather than inventing a second naming
+   convention.
+
+2. **Consent notice: resolved — inline field help text, not a new
+   consent checkbox or a privacy_policy_version bump.** Read `SignupForm`
+   (`inductions/forms.py:10-70`) and `InductionsSettings`
+   (`inductions/models.py:56-135`). The existing `consent` checkbox already
+   covers "your data will be stored" in general terms, versioned via
+   `privacy_policy_version`/`privacy_policy_updated_at` for policy-level
+   changes. A display-name choice isn't a policy a volunteer agrees to —
+   it's a one-off product fact ("most volunteers will see this name;
+   Panopticons can look up your full name"). So: add `display_name` as a
+   new field on `SignupForm` next to `first_name`/`last_name`, with that
+   disclosure as the field's `help_text`. No new checkbox, no
+   `privacy_policy_version` bump, no new consent-tracking model.
+
+   **Help text copy (also reused on the 9.50 self-service edit page, so it
+   isn't only seen once at induction):** *"This is the name most other
+   volunteers will see — on the rota, and if you're credited as an event's
+   programmer. Panopticon admins can still look up your full name for
+   membership and legal purposes. First name + last initial (e.g. "Jonny
+   K") strikes a good balance between privacy and other volunteers being
+   able to tell who's who — most people go with that."* Deliberately states
+   *where* the name shows up and leaves the judgement of what's appropriate
+   to the volunteer, rather than adding a "don't pick anything offensive"
+   instruction — the visibility disclosure is what actually does the work;
+   spelling out the bad-behaviour case reads as an accusation aimed at
+   everyone for a problem only a handful of people would ever cause, and
+   invites arguing about the line rather than just making the exposure
+   concrete. Same text on both surfaces (`SignupForm` and the 9.50 edit
+   page) rather than writing it twice — put it in one place
+   (`InductionsSettings` or a module-level constant) and import it into
+   both forms so the guidance can't drift out of sync between the two.
+
+   No moderation/validation is proposed. If a display name ever turns out
+   to be a problem in practice, it's handled the same way any other
+   inappropriate profile field would be today — a Panopticon edits or
+   resets it — rather than building bespoke profanity-filtering or an
+   approval queue for a case that hasn't actually occurred.
+
+3. **Retroactive prompt: resolved — no prompt, silent fallback, no
+   backfill.** Existing volunteers get the Q1 fallback (first name + last
+   initial) computed on the fly; nothing is written to the DB and no one is
+   nagged. This matches the "not backfilled" precedent already used twice
+   in this codebase for exactly this kind of additive field (see
+   `created_by` and `programmer` on `Event`, both documented as "not
+   backfilded for events created before this field existed"). A volunteer
+   who wants a custom display name sets it via the existing self-service
+   edit page (9.50) whenever they like.
+
+4. **`RotaEntry.name` free-text path and the pronoun lookup: resolved —
+   the lookup needs no change; the templates do.** Read
+   `diary/edit_views/rota.py:172-192` directly. It has two branches:
+   linked entries pull pronouns straight off
+   `entry.volunteer.member.personal_pronouns` (no string matching
+   involved); only *unlinked*, free-text entries fall back to matching
+   `entry.name` against `Member.name` (the canonical name, case-insensitive).
+   Since `display_name` is additive and `Member.name` isn't changing, this
+   fallback keeps working exactly as it does today — **no code change
+   needed here.**
+   The real interaction is on the render side, not the lookup side: three
+   templates render the *canonical* name directly for linked entries,
+   which is precisely the surname leak this feature exists to close —
+   `view_rota.html:70,72`, `edit_rota.html:223,225` (five occurrences of
+   `rota_entry.volunteer.member.name` across the three files). These need
+   to switch to `rota_entry.volunteer.display_name` (with the Q1 fallback)
+   once the field exists. The free-text `{{ rota_entry.name }}` branch is
+   untouched — that's an admin-typed string already outside the volunteer's
+   own privacy choice.
 
 **Related:** `docs/tasks/events-and-rota.md` 9.169 (the first real consumer
 of `display_name`), 9.144 (Configurable signup form fields via Inductions
 Settings — same screen this would extend), 9.151 (consent-renewal
 precedent to reuse).
 
-**Size estimate:** 🟡 M — genuinely unscoped past the direction above; needs
-a proper session to nail the field shape and induction-form changes before
-sizing tightens further.
+**Size estimate:** 🟡 M (~14–20h) — field + migration + fallback property on
+`Volunteer` (1–2h), `SignupForm` field + help text (1–2h), self-service edit
+page addition (9.50) (1–2h), five template render sites across
+`view_rota.html`/`edit_rota.html` switched to `display_name` (2–3h), audit
+trail for changes reusing the `EventAuditLog` pattern (3–5h), tests
+(4–5h).
 
 **Resume protocol (for a fresh session picking this up cold).**
-1. Read this entry in full first — it already has the agreed direction and
-   the open-questions list above; don't re-derive either from scratch.
-2. Read `toolkit/inductions/forms.py`'s `SignupForm` (fields, and how/where
-   any existing consent notice is rendered) — this is the concrete
-   next step that was started and interrupted last time, not completed.
-3. Read `toolkit/inductions/models.py`'s `InductionsSettings` fields
-   (`privacy_policy_url`/`privacy_policy_version`/`privacy_policy_updated_at`)
-   as the consent-versioning precedent flagged above to reuse rather than
-   invent from scratch.
-4. Work through the open-questions list above one at a time; each answered
-   question should get written back into this entry (direction-agreed
-   section), same as 9.169's design section did, before any code gets
-   written. This is more sensitive than 9.169 (privacy/GDPR-adjacent, touches
-   every volunteer's identity) — don't jump to implementation until the
-   design is locked, unlike 9.169 which arrived here already fully specced.
+1. Read this entry in full first — direction, all four resolved design
+   questions, and the concrete render-site list above are already here;
+   don't re-derive any of it.
+2. Implementation order: (a) `display_name` field + migration + fallback
+   property on `Volunteer`; (b) `SignupForm` field; (c) the five template
+   sites listed in Q4 above; (d) self-service edit page (9.50); (e) audit
+   trail last, since it's additive and easiest to bolt on once the field
+   exists.
+3. Not yet decided, and worth a quick check-in before coding rather than a
+   silent judgement call: the exact audit-trail model shape (reuse
+   `EventAuditLog` generically, or a small parallel model) and whether
+   `RotaEntry.volunteer.display_name` needs an index/denormalised copy for
+   the rota query's existing `select_related`. Neither blocks starting on
+   steps (a)-(c) above.

@@ -238,9 +238,9 @@ The `s+s` branch is available locally for reference (`git checkout s+s`, or insp
 
 **For current task status, what's done, and what's next, see [CURRENT_WORK.md](CURRENT_WORK.md).** That is the single source of truth — do not track status anywhere else.
 
-**Actively in progress, resume here:** [docs/tasks/volunteers.md](docs/tasks/volunteers.md) **9.170** — volunteer display names + surname privacy. Direction is agreed (see that entry), but real open questions remain; it has its own "Resume protocol" section at the end of the 9.170 entry — read that first, it names the exact next step (checking `inductions/forms.py`'s `SignupForm`). Surfaced 2026-09-10 out of 9.169 below, which is now fully built.
+**9.170 (volunteer display names + surname privacy) shipped 2026-09-12** — see `docs/tasks/volunteers.md` for the full design trail and `CURRENT_WORK.md` for what was built.
 
-**Next planned workstream (not started):** [docs/USER_STORIES_PASS.md](docs/USER_STORIES_PASS.md) — a persona/workflow audit to identify which user journeys deserve the most polish and to sanity-check the architecture against them. Self-contained plan, resumable cold.
+**Actively in progress, resume here:** [docs/USER_STORIES_PASS.md](docs/USER_STORIES_PASS.md) — a persona/workflow audit to identify which user journeys deserve the most polish and to sanity-check the architecture against them. Self-contained plan, resumable cold. Not yet started.
 
 **Also queued:** the event-financial-loop settlement schema itself — [docs/EVENT_SETTLEMENT_SCOPING.md](docs/EVENT_SETTLEMENT_SCOPING.md) + [docs/EVENT_SETTLEMENT_USER_STORIES.md](docs/EVENT_SETTLEMENT_USER_STORIES.md) have the full scoping and user-stories pass; `docs/tasks/events-and-rota.md` **9.169** (`Event.programmer`) and its `no_financial_activity` checkbox, both surfaced from this scoping, are done. What's left of this thread is the settlement-actuals feature itself (attendance/revenue/settlement recording, none of which exists anywhere today) — next step is a `docs/tasks/finance.md` task-file entry, not more scoping.
 
