@@ -1,0 +1,99 @@
+{% extends "form_base.html" %}
+{% block title %}{% if prep %}{{ prep.display_title }}{% else %}Add a film{% endif %}: {{ event.name }}{% endblock %}
+
+{% block body %}
+<h1>{% if prep %}Edit film{% else %}Add a film{% endif %}</h1>
+<p class="text-muted mb-3"><strong>{{ event.name }}</strong></p>
+
+{% include "bs_messages.html" %}
+
+<form method="post">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+
+  <h2 class="h5">The film</h2>
+  <div class="row g-3 mb-3">
+    <div class="col-md-8">
+      <label class="form-label" for="{{ form.film_title.id_for_label }}">{{ form.film_title.label }}</label>
+      {{ form.film_title }}
+      <div class="form-text">{{ form.film_title.help_text }}</div>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="{{ form.bill_position.id_for_label }}">{{ form.bill_position.label }}</label>
+      {{ form.bill_position }}
+      <div class="form-text">{{ form.bill_position.help_text }}</div>
+    </div>
+  </div>
+
+  <fieldset class="mb-4">
+    <legend class="h6">{{ form.showings.label }}</legend>
+    {{ form.showings.errors }}
+    {{ form.showings }}
+    <div class="form-text">{{ form.showings.help_text }}</div>
+  </fieldset>
+
+  <h2 class="h5">Copies</h2>
+  <p class="text-muted small">
+    One row per copy (main, backup). Steps follow the format; changing it keeps any step already done or claimed.
+    {% if guide_url %}<a href="{{ guide_url }}">Which format should I choose?</a>{% endif %}
+  </p>
+  {{ formset.management_form }}
+  {% for f in formset %}
+  <div class="row g-2 mb-2 align-items-end">
+    {{ f.id }}
+    <div class="col-md-3"><label class="form-label small" for="{{ f.label.id_for_label }}">{{ f.label.label }}</label>{{ f.label }}{{ f.label.errors }}</div>
+    <div class="col-md-4"><label class="form-label small" for="{{ f.format.id_for_label }}">{{ f.format.label }}</label>{{ f.format }}{{ f.format.errors }}</div>
+    <div class="col-md-3"><label class="form-label small" for="{{ f.location_note.id_for_label }}">{{ f.location_note.label }}</label>{{ f.location_note }}</div>
+    <div class="col-md-2">{% if f.instance.pk %}<label class="small text-danger">{{ f.DELETE }} Remove</label>{% endif %}</div>
+  </div>
+  {% endfor %}
+
+  <h2 class="h5 mt-4">Checklist and handover</h2>
+  <div class="mb-3">
+    <label class="form-label" for="{{ form.subtitles.id_for_label }}">{{ form.subtitles.label }}</label>
+    {{ form.subtitles }}
+  </div>
+  <div class="mb-3">
+    <div class="form-check">
+      {{ form.backup_in_place }}
+      <label class="form-check-label" for="{{ form.backup_in_place.id_for_label }}">{{ form.backup_in_place.label }}</label>
+    </div>
+    <div class="form-text">{{ form.backup_in_place.help_text }}</div>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="{{ form.backup_note.id_for_label }}">{{ form.backup_note.label }}</label>
+    {{ form.backup_note }}
+    <div class="form-text">{{ form.backup_note.help_text }}</div>
+  </div>
+  {% for field in form %}{% if field.name == "trailers_plan" or field.name == "booth_notes" or field.name == "handover_note" %}
+  <div class="mb-3">
+    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    <div class="form-text">{{ field.help_text }}</div>
+  </div>
+  {% endif %}{% endfor %}
+
+  <div class="mt-2">
+    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+    <a href="{% url 'edit-event-details-view' event.pk %}#film-readiness" class="btn btn-secondary btn-sm ms-1">Cancel</a>
+  </div>
+</form>
+
+{% if prep %}
+<details class="mt-4">
+  <summary class="text-danger">Remove this film</summary>
+  <form method="post" action="{% url 'delete-film-prep' prep.pk %}" class="mt-2">
+    {% csrf_token %}
+    <div class="form-check mb-2">
+      <input type="checkbox" name="confirm" value="1" id="confirm-delete" class="form-check-input">
+      <label class="form-check-label" for="confirm-delete">Remove {{ prep.display_title }} with its copies and progress. This cannot be undone.</label>
+    </div>
+    <button type="submit" class="btn btn-sm btn-outline-danger">Remove film</button>
+  </form>
+</details>
+{% endif %}
+
+<p class="mt-4 small text-muted">
+  <a href="{% url 'edit-event-details-view' event.pk %}#film-readiness">&larr; Back to event hub</a>
+</p>
+{% endblock %}

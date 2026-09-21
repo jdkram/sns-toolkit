@@ -39,6 +39,7 @@ from .printed_programme import (
 )
 from .misc import DiaryIdeaForm, MailoutForm, SearchForm
 from .site_config import SiteConfigurationForm
+from .film_prep import FilmCopyForm, FilmCopyFormSet, FilmPrepForm
 from .finance import (
     DistributorPaymentForm,
     PerformerRegistrationForm,
@@ -68,6 +69,9 @@ __all__ = [
     "EventTemplateRoleFormSet",
     "EventTemplateRoomForm",
     "EventTemplateRoomFormSet",
+    "FilmCopyForm",
+    "FilmCopyFormSet",
+    "FilmPrepForm",
     "MailoutForm",
     "MediaItemForm",
     "NewEventForm",

@@ -232,6 +232,8 @@ The `feature_required(feature_name)` decorator in `toolkit/toolkit_auth/decorato
 
 **Access audit trail:** When Panopticon or Programmer access is granted, a `PanopticonGrant` or `ProgrammerGrant` record is created (models in `toolkit/members/models.py`). Each grant stores the granting user, a mandatory reason (Panopticon only), and the date granted. `PanopticonGrant` also tracks last-reviewed date and reviewer. Access grants are visible to all logged-in volunteers at `/toolkit/access/`: a transparency page that also explains what each tier can do in plain language. Panopticon users can mark their own grants as reviewed; reviews are considered overdue after 365 days without a review.
 
+**Film readiness (9.174): a narrower, fourth path.** Recording that a film step is done, or claiming it ("I'll test this"), is open to Programmer+ *and* to any volunteer who holds, or in the last 180 days held, a rota entry on a `Role` with `is_projectionist` set. That volunteer needs no toolkit permission: rota-only volunteers have none, and the dashboard asks only for a login. The two endpoints (`film-milestone-claim`, `film-milestone-complete`) use `film_update_required` for this; everything else in the feature (the edit page, the Event Hub panel) stays Programmer+. Someone who is both a programmer and a projectionist takes the Programmer+ branch, so it is one permission check, not two roles. The read-only overview page (`film-readiness-overview`) is different: any logged-in volunteer may view it, with no permission check beyond login, so people thinking of becoming programmers can see how the process works first. It shows volunteer display names (9.170), never usernames or private names, and links through to the Hub only for Programmer+. The whole feature 404s while `SiteConfiguration.film_prep_enabled` is off.
+
 ### Known limitations
 
 - **Free-text rota names.** `RotaEntry.name` is a plain string, not a link to `Volunteer` (§3 rule 4). The system has no automated way to see a volunteer's full rota history or contact them about a booking.
@@ -421,6 +423,8 @@ Toolkit fields for a film event:
 | Image | Distributors provide licensed images; Filmbank account gives access to film poster scans. Avoid Google Images: copyright risk. |
 
 Once the TicketSource link is added, mark the showing **Confirmed** to make it live.
+
+**Film readiness (9.174, behind `film_prep_enabled`).** Getting the film into the booth in working order is a handover between whoever sourced it and whoever runs it. The unit is one *film*, linked to the showings it plays at: a run of one film is one film on all its showings; Family Film Club, which shows a different film each date, is one film per date; a double or triple bill is two or three films on the same showing, each with its own state. A film that accompanies another event (a film with Community Kitchen) is programmed as an event of its own, which also puts it on the public programme. On the Event Hub a "Film readiness" panel shows one block per film, with each *copy* (main, backup) and a format-dependent list of steps: a disc is in the building, in the booth, test-played; a DCP is on FilmVault or its hard drive has arrived, then ingested, then test-played; an MP4 is in the building, then test-played. Each step records who did it and when, and anyone permitted (see §2) can claim one ("I'll test this on Thursday") so it is visible that someone has said they will. Claims and completions land in the Hub audit trail. A film is ready as soon as any one copy is ready, so a working backup covers a failed main copy. Dates of a film event with no film recorded are flagged on the Hub, the overview and the programmer's dashboard. Hired hard drives have a return leg after the film's last showing (sent back by courier, then confirmed by the distributor), tracked separately from readiness and surfaced as a "Hard drives to send back" list on the overview and a dashboard card, so drives do not pile up. Post-run financial reporting is out of scope here and stays in 9.171. A read-only **overview page** lists every upcoming film, soonest first and in every state, ready ones included, with each copy's steps, who did or claimed what, the bill it is on, subtitles, and whether a backup is in place and where it is. Two dashboard cards surface it, each linking to the overview, and anyone with neither card gets a small standing "Film readiness" card instead: "Your films" (films on events the viewer programmes, any status) and "Films needing a test" (untested films in the next 7 days, for Programmer+ and projectionists, excluding the viewer's own films so nothing appears twice). A **Films** link in the toolkit navbar and command palette leads to the overview. No email or scheduled nudges yet. Which format to choose is guidance that lives elsewhere; `film_sourcing_guide_url` links to it.
 
 ### 4.6 Volunteer user accounts and password setup
 
@@ -895,7 +899,42 @@ erDiagram
         datetime created_at
     }
 
+    FilmPrep {
+        int id PK
+        int event_id FK
+        string film_title
+        int bill_position
+        string subtitles
+        bool backup_in_place
+        string backup_note
+        text trailers_plan
+        text booth_notes
+        text handover_note
+    }
+
+    FilmCopy {
+        int id PK
+        int film_prep_id FK
+        string label
+        string format
+        string location_note
+    }
+
+    FilmMilestone {
+        int id PK
+        int copy_id FK
+        string key
+        datetime done_at
+        string result
+        int claimed_by FK
+        date planned_for
+    }
+
     Event ||--o{ Showing : "has showings"
+    Event ||--o{ FilmPrep : "films being run (9.174)"
+    Showing }o--o{ FilmPrep : "films playing at this showing (9.174)"
+    FilmPrep ||--o{ FilmCopy : "copies of the film (9.174)"
+    FilmCopy ||--o{ FilmMilestone : "steps, per format (9.174)"
     Event }o--|| EventTemplate : "based on (optional)"
     Event }o--o{ EventTag : "tagged"
     Event }o--o{ MediaItem : "has images"
@@ -1014,7 +1053,19 @@ UI: the Event Hub's past-showings section gets more visual prominence (expanded 
 - Entry form `event_prs_registration_edit` (`edit_views/finance.py`, URL `edit-prs-registration`), reached from the Event Hub next to the distributor-payment link (shown only when `event.prs_relevant()`) and from the Finance review screen, both as a plain link with a non-alarming badge -- never the red "outstanding" styling the settlement/distributor-payment statuses get.
 - `prs_report` (URL `prs-report`) is a CSV export off the review screen's date range, scoped to `Event.prs_relevant()` events: one row per performer, or one row with blank performer fields for an event that has nothing entered yet, so it stays visible in the export rather than silently vanishing. Explicitly draft material for whoever compiles the real PRS/PPL return to check against bank/till figures -- not an automated filing, per the scoping doc's evidence that reconciliation is always manual and cash/bank-verified figures win over any estimate.
 
-Not yet built: the Finance-facing, date-ranged monthly review screen (list every event/showing in a window with its settlement status, drill-down, correction); revision history on corrections (the scoping doc calls for the same `EventTermsRevision`/`EventAuditLog` pattern, not yet wired up — currently just `updated_by`/`updated_at`); a decision on whether PRS/PPL performer-registration status belongs in this model at all.
+#### FilmPrep / FilmCopy / FilmMilestone
+Film readiness (task 9.174, `docs/tasks/events-and-rota.md`; code in `toolkit/diary/models/film_prep.py`). The unit is one *film*, linked to the showings it plays at, so it works for a run of one film, a different film per date (Family Film Club) and a double or triple bill alike. Gated behind `SiteConfiguration.film_prep_enabled` (default off).
+
+- `FilmPrep`: FK to `Event` (`related_name="film_preps"`) and a many-to-many to `Showing` (`FilmPrep.showings`, `related_name="film_preps"`) restricted to showings of the same event (an `m2m_changed` check, both directions); `film_title` (blank when the event is the film), `bill_position` (running order on a bill), `subtitles` (unknown / not needed / burned in / separate file / still to source), `backup_in_place` (bool) and `backup_note` (free text: what the backup is and where, e.g. "disc in the booth"), `trailers_plan`, `booth_notes`, `handover_note` (what a projectionist who did not source the film needs to know); `updated_at`, `updated_by`. `display_title` is `film_title`, falling back to the event's name.
+- The backup fields are informational and do not feed `readiness()`: whether a backup exists is a different question from whether the film has been test-played. A backup that is worth tracking step by step is recorded as a second `FilmCopy`; these two fields are the quick answer for the overview.
+- `FilmCopy`: FK to `FilmPrep` (`related_name="copies"`); `label` (e.g. "Main copy", "Backup"), `format` (`disc`, `dcp_filmvault`, `dcp_hdd`, `mp4`, `other`), `location_note` (e.g. "Library, shelf D3"). Saving a copy syncs its milestone rows to its format.
+- `FilmMilestone`: FK to `FilmCopy` (`related_name="milestones"`); unique on (`copy`, `key`); `key`, `done_at`, `done_by`, `result` (ok / problem, used by the playback test), `notes`, `claimed_by`, `claimed_at`, `planned_for`.
+- Which steps a format has lives in the `FORMAT_MILESTONES` dict, not the schema, so adding a format or a step needs no migration. Changing a copy's format removes only untouched steps: one someone has done or claimed is kept.
+- Hard-drive copies also carry two post-screening steps, `returned` (courier and tracking reference in `notes`) and `return_confirmed`. They are excluded from `readiness()`; `returns_outstanding()` lists drives whose film has no showing left to come and whose return is not confirmed (overdue after 3 days, chase after 14; constants).
+- Derived, not stored: `FilmCopy.readiness()` and `FilmPrep.readiness()` (`not_started` / `in_progress` / `ready` / `problem`; a film is ready if any copy is), and `FilmPrep.urgency()` from days to its next non-cancelled showing (3 days urgent, 7 days look-ahead, module constants). `showings_without_film()` lists upcoming dates of film events (tagged `film`, linked to a `Film`, or already carrying a film) that have no film recorded.
+- `Role.is_projectionist` (BooleanField, editable on the roles page) marks the roles whose holders count as projectionists.
+- `EventAuditLog` gains `film_claimed`, `film_step_done`, `film_unclaimed` and `film_step_undone` actions. Unclaim and undo are the reverses of claim and complete; each log entry records who had claimed or done the step, when, and any result or note, so a dropped claim shows in the event's trail.
+- Confirmed hard-drive returns stay on the overview for `RETURN_KEEP_DAYS` (14) so a misclick can be undone.
 
 #### Showing
 A specific scheduled date/time of an Event. One event can have many showings.
@@ -1313,6 +1364,7 @@ A single completion of a `MaintenanceTask`.
 | `/auth/login` | Login |
 | `/auth/logout` | Logout (POST only) |
 | `/toolkit/` | Internal dashboard |
+| `/diary/films/readiness/` | Film readiness overview: every upcoming film, all states, dates with no film recorded, and drives to send back (any logged-in volunteer; 9.174, feature-flagged) |
 | `/diary/edit/` | Event list for editing |
 | `/diary/edit/calendar/` | Calendar view |
 | `/diary/edit/event/id/N/` | Edit event |

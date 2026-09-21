@@ -186,17 +186,17 @@ function hideAddShowingForm() {
 {% endif %}
 {% endwith %}
 
-{# ── Settlement summary (9.171) — shown once the event has elapsed showings needing one #}
-{% if settlement_enabled and event_settlement_status and event_settlement_status != "recorded" %}
+{# ── Settlement summary (9.171) — shown once the event has elapsed showings needing one. Excludes "not_applicable" (no_financial_activity, or no real cost type) and None (too soon to ask) -- neither is an outstanding requirement. #}
+{% if settlement_enabled and event_settlement_status == "not_recorded" or settlement_enabled and event_settlement_status == "partial" %}
 <div class="alert {% if event_settlement_status == 'not_recorded' %}alert-danger{% else %}alert-warning{% endif %} d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 py-2">
   <span>
-    <strong>Settlement {% if event_settlement_status == "not_recorded" %}not recorded{% else %}partially recorded{% endif %}</strong>
+    <strong>Finances {% if event_settlement_status == "not_recorded" %}not recorded{% else %}partially recorded{% endif %}</strong>
     — {% if event_settlement_status == "not_recorded" %}none of this event's past {{ site_config.occurrence_noun_plural }} have attendance/income entered yet.{% else %}some past {{ site_config.occurrence_noun_plural }} still need attendance/income entered.{% endif %}
     See the {{ site_config.occurrence_noun_plural }} list below.
   </span>
   <span class="d-flex gap-2">
   {% if event.cost_type and event.cost_type != "tbc" %}
-  <a href="{% url 'edit-distributor-payment' event.pk %}" class="btn btn-sm btn-outline-secondary">Distributor payment: {{ distributor_payment_status|default:"outstanding"|capfirst }} →</a>
+  <a href="{% url 'edit-distributor-payment' event.pk %}" class="btn btn-sm btn-outline-secondary">Distributor payment: {{ distributor_payment_status|capfirst }} →</a>
   {% endif %}
   {% if prs_relevant %}
   <a href="{% url 'edit-prs-registration' event.pk %}" class="btn btn-sm btn-outline-secondary">PRS/PPL registration{% if prs_recorded %} (recorded){% endif %} →</a>
@@ -205,10 +205,10 @@ function hideAddShowingForm() {
 </div>
 {% elif settlement_enabled and event_settlement_status == "recorded" %}
 <div class="alert alert-success d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 py-2">
-  <span><strong>✓ Settlement recorded</strong> for every past {{ site_config.occurrence_noun }}.</span>
+  <span><strong>✓ Finances recorded</strong> for every past {{ site_config.occurrence_noun }}.</span>
   <span class="d-flex gap-2">
   {% if event.cost_type and event.cost_type != "tbc" %}
-  <a href="{% url 'edit-distributor-payment' event.pk %}" class="btn btn-sm btn-outline-secondary">Distributor payment: {{ distributor_payment_status|default:"outstanding"|capfirst }} →</a>
+  <a href="{% url 'edit-distributor-payment' event.pk %}" class="btn btn-sm btn-outline-secondary">Distributor payment: {{ distributor_payment_status|capfirst }} →</a>
   {% endif %}
   {% if prs_relevant %}
   <a href="{% url 'edit-prs-registration' event.pk %}" class="btn btn-sm btn-outline-secondary">PRS/PPL registration{% if prs_recorded %} (recorded){% endif %} →</a>
@@ -219,6 +219,8 @@ function hideAddShowingForm() {
 
 {# ── Audit trail (9.163) — Panopticon only, same tier as the email/deletion logs #}
 {% if user.is_superuser %}
+{% if film_panel %}{% include "film_readiness_panel.html" %}{% endif %}
+
 <details class="mb-3">
   <summary>Audit trail{% if audit_trail %} ({{ audit_trail|length }}){% endif %}</summary>
   <p class="text-muted small mt-2 mb-2">
@@ -716,20 +718,32 @@ function hideAddShowingForm() {
 {# that makes settlement data go unrecorded in the first place. #}
 <details class="mb-3" {% if settlement_enabled and event_settlement_status and event_settlement_status != "recorded" %}open{% endif %}>
   <summary>Past {{ site_config.occurrence_noun_plural }} ({{ past_showings|length }})</summary>
+  {% if settlement_enabled and is_series %}
+  <form method="post" action="{% url 'bulk-nothing-to-report' %}" id="bulk-nothing-to-report-form">
+    {% csrf_token %}
+  {% endif %}
   <table class="table table-sm mt-2">
     <thead>
       <tr>
+        {% if settlement_enabled and is_series %}<th></th>{% endif %}
         <th>When</th>
         {% if MULTIROOM_ENABLED %}<th>Room</th>{% endif %}
         <th>Booked by</th>
         <th>Status</th>
-        {% if settlement_enabled %}<th>Settlement</th>{% endif %}
+        {% if settlement_enabled %}<th>Finances</th>{% endif %}
       </tr>
     </thead>
     <tbody>
     {% for showing in past_showings %}
       {% with sstatus=showing_settlement_statuses|lookup:showing.pk %}
       <tr{% if sstatus == "not_recorded" or sstatus == "partial" %} class="settlement-outstanding"{% endif %}>
+        {% if settlement_enabled and is_series %}
+        <td>
+          {% if sstatus == "not_recorded" or sstatus == "partial" %}
+          <input type="checkbox" name="showing_ids" value="{{ showing.pk }}" class="nothing-to-report-checkbox" aria-label="Mark {{ showing.start|date:'d/m/Y' }} as nothing to report">
+          {% endif %}
+        </td>
+        {% endif %}
         <td>{{ showing.start|date:"d/m/Y H:i" }}</td>
         {% if MULTIROOM_ENABLED %}<td>{{ showing.rooms_display }}</td>{% endif %}
         <td>{{ showing.booked_by }}</td>
@@ -744,6 +758,7 @@ function hideAddShowingForm() {
           <span class="text-muted small">—</span>
           {% else %}
           {% if sstatus == "recorded" %}<span class="badge text-bg-success">Recorded</span>
+          {% elif sstatus == "nothing_to_report" %}<span class="badge text-bg-light text-dark border">Nothing to report</span>
           {% elif sstatus == "partial" %}<span class="badge text-bg-warning text-dark">Partial</span>
           {% else %}<span class="badge text-bg-danger">Not recorded</span>{% endif %}
           <a href="{% url 'edit-showing-settlement' showing.pk %}" class="ms-1">{% if sstatus == "not_recorded" %}Record →{% else %}Edit →{% endif %}</a>
@@ -755,6 +770,26 @@ function hideAddShowingForm() {
     {% endfor %}
     </tbody>
   </table>
+  {% if settlement_enabled and is_series %}
+    <button type="submit" id="bulk-nothing-to-report-btn" class="btn btn-sm btn-outline-secondary mb-2" disabled>Mark selected as nothing to report</button>
+  </form>
+  <script>
+  (function () {
+    "use strict";
+    var form = document.getElementById("bulk-nothing-to-report-form");
+    if (!form) { return; }
+    var btn = document.getElementById("bulk-nothing-to-report-btn");
+    function updateButton() {
+      var checked = form.querySelectorAll(".nothing-to-report-checkbox:checked").length;
+      btn.disabled = checked === 0;
+      btn.textContent = checked > 0 ? "Mark " + checked + " selected as nothing to report" : "Mark selected as nothing to report";
+    }
+    form.addEventListener("change", function (e) {
+      if (e.target.classList.contains("nothing-to-report-checkbox")) { updateButton(); }
+    });
+  })();
+  </script>
+  {% endif %}
 </details>
 {% endif %}
 

@@ -28,6 +28,11 @@ from .budget import (
     EventBudgetLine,
     sync_budget_lines_for_event,
 )
+from .film_prep import (
+    FilmCopy,
+    FilmMilestone,
+    FilmPrep,
+)
 from .finance import (
     PerformerRegistration,
     PRSPerformerEntry,
@@ -74,6 +79,9 @@ __all__ = [
     "EventTemplateRoom",
     "EventTermsRevision",
     "Film",
+    "FilmCopy",
+    "FilmMilestone",
+    "FilmPrep",
     "FutureDateTimeField",
     "INCOME_CATEGORY_TEMPLATE",
     "MediaItem",

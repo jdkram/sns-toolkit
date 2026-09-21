@@ -135,11 +135,19 @@ class EventAuditLog(models.Model):
     ACTION_STATUS_CHANGED = "status_changed"
     ACTION_CONFIRMED = "confirmed"
     ACTION_UNCONFIRMED = "unconfirmed"
+    ACTION_FILM_CLAIMED = "film_claimed"
+    ACTION_FILM_STEP_DONE = "film_step_done"
+    ACTION_FILM_UNCLAIMED = "film_unclaimed"
+    ACTION_FILM_STEP_UNDONE = "film_step_undone"
     ACTION_CHOICES = [
         (ACTION_CREATED, "Created"),
         (ACTION_STATUS_CHANGED, "Programming status changed"),
         (ACTION_CONFIRMED, "Showing confirmed"),
         (ACTION_UNCONFIRMED, "Showing unconfirmed"),
+        (ACTION_FILM_CLAIMED, "Film prep step claimed"),
+        (ACTION_FILM_STEP_DONE, "Film prep step done"),
+        (ACTION_FILM_UNCLAIMED, "Film prep step handed back"),
+        (ACTION_FILM_STEP_UNDONE, "Film prep step marked not done"),
     ]
 
     event = models.ForeignKey(

@@ -17,6 +17,7 @@ class RoleForm(forms.ModelForm):
             "beginner_friendly",
             "wheelchair_accessible",
             "keyholder_only",
+            "is_projectionist",
             "required_qualification",
             "qualification_gate",
         )

@@ -315,8 +315,9 @@ class Showing(models.Model):
 
     def settlement_status(self):
         """Derived per-showing settlement status (9.171): 'not_applicable',
-        'not_recorded', 'partial', or 'recorded'. Not stored -- see
-        Event.settlement_status() for the event-level rollup this feeds.
+        'not_recorded', 'partial', 'recorded', or 'nothing_to_report'. Not
+        stored -- see Event.settlement_status() for the event-level rollup
+        this feeds.
 
         Uses getattr rather than importing ShowingSettlement, since the
         reverse one-to-one accessor ("settlement") is registered by Django
@@ -328,6 +329,8 @@ class Showing(models.Model):
         settlement = getattr(self, "settlement", None)
         if settlement is None or not settlement.has_any_data():
             return "not_recorded"
+        if settlement.nothing_to_report:
+            return "nothing_to_report"
         if (
             settlement.attendance is not None
             and settlement.line_items.exists()

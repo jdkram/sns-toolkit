@@ -1702,3 +1702,42 @@ trail for changes reusing the `EventAuditLog` pattern (3–5h), tests
    `RotaEntry.volunteer.display_name` needs an index/denormalised copy for
    the rota query's existing `select_related`. Neither blocks starting on
    steps (a)-(c) above.
+
+---
+
+### 9.172 — Replace native `alert()`/`confirm()` dialogs on rota and inductions with the flash-message idiom 🟢 XS (2–4h)
+
+**Background.** Found while walking workflow #1 (rota sign-up/drop) live in
+`docs/USER_STORIES_PASS.md`'s chunk-4 pass, 2026-09-12. Two places fire a
+blocking native browser dialog instead of the toolkit's own flash-message
+pattern (used everywhere else — see `messages.css`, Bug BC in
+`known-issues.md`):
+
+- `toolkit/diary/static/diary/js/edit_rota.js:49-50`/`105-106` —
+  `window.alert(rota_clear_email_prompt_text...)` fires when a volunteer
+  clears their own rota slot, reminding them to email the volunteers list.
+- The inductions "remove a pending signup" `×` link on
+  `/inductions/manage/<slug>/` — a `window.confirm()` guarding the delete.
+
+**Why this is more than a style nit.** Reproduced live: clicking to clear a
+rota slot froze the browser tab until a fresh navigation forced recovery —
+the underlying AJAX clear/notify request never completed, so the slot
+silently reverted to signed-up on reload rather than actually clearing. A
+human clicking straight through the `alert()` mostly won't notice, but
+anything that delays the dismissal (a slow tap, an interruption, assistive
+tech shifting focus) leaves the save in an undefined state. Native dialogs
+are also flatly incompatible with any future automated UI testing of this
+page.
+
+**Direction.** Replace both with the existing flash-message/inline-undo
+idiom already used elsewhere in the toolkit — an inline confirmation banner
+or a toast, not a page-blocking dialog. For the rota clear-email prompt
+specifically, consider whether the reminder needs to block submission at
+all, or could show *after* the clear succeeds (the information — "remember
+to tell the list" — doesn't actually require blocking the action it's
+attached to).
+
+**Related:** Bug BC (`known-issues.md`) established the flash-message
+pattern's own contrast/legibility fix; this task is about *using* that
+pattern consistently rather than a native dialog, not about the pattern's
+own styling.

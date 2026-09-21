@@ -65,6 +65,7 @@
               <th class="text-center" style="width:50px" title="🌱 Good first role">🌱</th>
               <th class="text-center" style="width:50px" title="♿ Confirmed wheelchair-accessible">♿</th>
               <th class="text-center" style="width:50px" title="🔑 Keyholder slot">🔑</th>
+              <th class="text-center" style="width:50px" title="Projectionist role: film readiness shows on the dashboard of whoever holds it">&#127902;</th>
               <th style="width:160px">Requires qualification</th>
               <th style="width:115px">
                 Gate
@@ -80,7 +81,7 @@
           {% for form in formset %}
             {% if form.errors %}
             <tr class="table-danger">
-              <td colspan="11">
+              <td colspan="12">
                 <strong>Error:</strong>
                 {{ form.name.errors.as_text }}
                 {{ form.standard.errors.as_text }}
@@ -98,6 +99,7 @@
                 <td class="text-center">{{ form.beginner_friendly }}</td>
                 <td class="text-center">{{ form.wheelchair_accessible }}</td>
                 <td class="text-center">{{ form.keyholder_only }}</td>
+                <td class="text-center">{{ form.is_projectionist }}</td>
                 <td>{{ form.required_qualification }}</td>
                 <td>{{ form.qualification_gate }}</td>
                 <td class="text-center text-muted small">{{ form.instance.rota_count|default:"—" }}</td>
@@ -121,6 +123,7 @@
                 <td class="text-center">{{ form.beginner_friendly }}</td>
                 <td class="text-center">{{ form.wheelchair_accessible }}</td>
                 <td class="text-center">{{ form.keyholder_only }}</td>
+                <td class="text-center">{{ form.is_projectionist }}</td>
                 <td>{{ form.required_qualification }}</td>
                 <td>{{ form.qualification_gate }}</td>
                 <td class="text-center text-muted small">{{ form.instance.rota_count|default:"—" }}</td>

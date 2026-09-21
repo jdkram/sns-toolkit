@@ -14,7 +14,31 @@ reasoning.
 
 ---
 
-### 9.171 — Event settlement records: attendance, ticket/bar income, distributor payment 🟠 L — MVP shipped 2026-09-12
+### 9.171 — Event settlement records: attendance, ticket/bar income, distributor payment 🟠 L
+
+**Browser verification, two bug fixes, the "Finances" rename, and a bulk "nothing to report"
+action — shipped 2026-09-14.** First live Claude-in-Chrome session against this feature since
+MVP; closed out the "not browser-verified" caveat on every entry below. Two real bugs found and
+fixed: `Event.distributor_payment_status()` didn't check `no_financial_activity` (now delegates
+to `has_financial_terms()`, matching `settlement_status()`); and both `finance_settlement_review`
+/`prs_report`'s shared query and the general `past_events_search` computed `Max("showings__start")`
+over *all* of an event's showings, so any recurring regular with a future booking silently vanished
+from both screens the moment it had an elapsed showing needing attention — fixed to filter on
+elapsed, non-cancelled showings only. `past_events_search` also gained a Finances status column.
+
+Following the test pass, per direct conversation with Jonny: "Settlement" renamed to **"Finances"**
+throughout user-facing copy (UI text only — models/fields/URLs untouched), and a **bulk "nothing to
+report" action** added for a recurring series' backlog of outstanding showings — new
+`ShowingSettlement.nothing_to_report` field (migration `0051`), a distinct grey per-showing badge
+that still counts as "done" in the event-level rollup, checkboxes + bulk button on the Event Hub
+(gated to `is_series` events), new `bulk_mark_nothing_to_report` view. Attendance stays
+independently fillable regardless of the flag. 30 new tests, full suite green (1,526), ruff/black
+clean, smoke-tested live on the dev DB. One minor bug flagged this session and fixed later the same
+day: the settlement form's live ticket-income subtotal didn't update as you type — it was computed
+server-side at page load only. Fixed with an `input`/`change` listener (event delegation on the
+line-items container, so it covers rows added by "+ Add another row" too) that resums
+`count × unit_price_gbp` across every non-deleted row. Template-only JS, verified live rather than
+via the test suite (no JS test tooling in this repo).
 
 **Shipped this pass:** the data model (`ShowingSettlement`, `SettlementLineItem`, the three
 `Event.distributor_*` fields), the `event_settlement_enabled` feature flag, the per-showing
@@ -301,3 +325,26 @@ additions + migration, two new UI surfaces (Hub entry point, Finance review scre
 existing-screen no-op (the checkbox is already there), an audit-trail extension, a feature flag.
 Roughly 40–70h; the Finance-facing review screen is the single biggest unknown inside that
 range, since it's genuinely new UI rather than an addition to an existing page.
+
+#### Nav discoverability + seed data — 2026-09-17
+
+Two gaps found on picking this task back up, both fixed:
+
+- `finance-settlement-review` and `prs-report` had no nav presence on any of the three surfaces
+  since MVP — reachable only by typing the URL. Fixed in the toolkit navbar + command palette:
+  new **Finances** dropdown (Finance review, PRS/PPL report), gated on
+  `event_settlement_enabled and feature_perms.diary_reports`. "Past events" also demoted out of
+  the headline navbar into a new **Diary** dropdown alongside Diary list/Calendar. Sidebar
+  untouched (reporting-only, sidebar-exempt by `docs/NAVIGATION.md`'s design decision). Full
+  account in `docs/NAVIGATION.md`.
+- More fundamentally: `event_settlement_enabled` defaults `False` and `seed_dev_data` never
+  turned it on, so on a fresh dev DB every 9.171 surface was invisible regardless of nav
+  placement. Now seeded `True` alongside `structured_cost_terms_enabled`.
+- `seed_dev_data` had zero settlement/finance rows: `_seed_recurring_events` computed an unused
+  past `window_start` (a `d >= today` filter discarded every past date), and the two showing
+  helpers had a dead `if showing_start < now: return` guard left over from the future-only era.
+  Both fixed; new `_seed_event_finances` gives every seeded event a tag-based `cost_type`/
+  `no_financial_activity`, a `programmer`, and (for the last ~10 weeks of elapsed showings)
+  `ShowingSettlement`/`SettlementLineItem` rows spread across every status, plus a sample of
+  `PerformerRegistration`/`PRSPerformerEntry` rows. See `CURRENT_WORK.md`'s 2026-09-17 entry for
+  the full account and verification.

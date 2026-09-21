@@ -815,3 +815,248 @@ class TestFinanceSettlementReviewLink(TestCase):
             response.context["finance_settlement_review_url"],
             reverse("finance-settlement-review"),
         )
+
+
+class TestFilmReadinessCards(TestCase):
+    """9.174 — "Your films" (the programmer's own) and "Films needing a
+    test" (venue-wide, Programmer+ or projectionist), gated on
+    SiteConfiguration.film_prep_enabled."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        from toolkit.test_common import _create_toolkit_permissions
+
+        cache.delete(SiteConfiguration._CACHE_KEY)
+        self.url = reverse("toolkit-index")
+        SiteConfiguration.objects.update_or_create(
+            pk=1, defaults={"film_prep_enabled": True}
+        )
+        self.write_perm, self.read_perm = _create_toolkit_permissions()
+        self.projectionist_role = Role.objects.create(
+            name="Projectionist", is_projectionist=True
+        )
+        self.other_role = Role.objects.create(name="Bar")
+
+    def _film(self, name="A film", days=5, programmer=None, format="disc"):
+        from toolkit.diary.models import FilmCopy, FilmPrep
+
+        event = Event.objects.create(name=name, programmer=programmer)
+        showing = Showing.objects.create(
+            event=event, start=timezone.now() + timedelta(days=days)
+        )
+        prep = FilmPrep.objects.create(event=event)
+        prep.showings.add(showing)
+        FilmCopy.objects.create(film_prep=prep, format=format)
+        return event, showing
+
+    def _projectionist(self, username):
+        # No permissions at all: that is what a rota-only volunteer has.
+        user, volunteer = _make_volunteer_user(username)
+        _, showing = self._film(name=f"{username} shift film", days=1)
+        RotaEntry.objects.create(
+            role=self.projectionist_role, showing=showing, volunteer=volunteer
+        )
+        return user, volunteer
+
+    def _programmer(self, username):
+        user, volunteer = _make_volunteer_user(username)
+        user.user_permissions.add(self.read_perm, self.write_perm)
+        return user, volunteer
+
+    def _get(self, username):
+        self.client.login(username=username, password="T3stPassword!")
+        return self.client.get(self.url)
+
+    def test_cards_absent_when_flag_off(self):
+        SiteConfiguration.objects.update_or_create(
+            pk=1, defaults={"film_prep_enabled": False}
+        )
+        _, vol = self._programmer("progflagoff")
+        self._film(programmer=vol)
+        response = self._get("progflagoff")
+        self.assertNotIn("film_prep_mine", response.context)
+        self.assertNotIn("film_tests", response.context)
+
+    def test_programmer_sees_only_own_films_in_your_films(self):
+        _, vol = self._programmer("progmine")
+        mine, _ = self._film(name="Mine", programmer=vol)
+        self._film(name="Someone else's")
+        response = self._get("progmine")
+        rows = response.context["film_prep_mine"]
+        self.assertEqual([r["event"] for r in rows], [mine])
+
+    def test_ready_film_shows_in_your_films_but_not_needing_a_test(self):
+        _, vol = self._programmer("progready")
+        event, _ = self._film(name="Done", programmer=vol)
+        for step in event.film_preps.get().copies.get().milestones.all():
+            step.complete(vol.user)
+        response = self._get("progready")
+        self.assertEqual(
+            response.context["film_prep_mine"][0]["readiness"], "ready"
+        )
+        self.assertNotIn("film_tests", response.context)
+
+    def test_projectionist_sees_tests_card_but_not_your_films(self):
+        self._projectionist("proj1")
+        _, vol = self._programmer("progother")
+        other, _ = self._film(name="Needs test", days=4, programmer=vol)
+        response = self._get("proj1")
+        self.assertNotIn("film_prep_mine", response.context)
+        events = [r["event"] for r in response.context["film_tests"]]
+        self.assertIn(other, events)
+
+    def test_volunteer_who_is_not_a_projectionist_sees_no_tests_card(self):
+        user, _vol = _make_volunteer_user("plainvol")
+        user.user_permissions.add(self.read_perm)
+        self._film()
+        response = self._get("plainvol")
+        self.assertNotIn("film_tests", response.context)
+
+    def test_programmer_who_is_also_projectionist_sees_no_duplicates(self):
+        user, vol = self._programmer("both")
+        _, shift = self._film(name="Shift film", days=1)
+        RotaEntry.objects.create(
+            role=self.projectionist_role, showing=shift, volunteer=vol
+        )
+        own, _ = self._film(name="Own film", days=3, programmer=vol)
+        other, _ = self._film(name="Other film", days=4)
+        response = self._get("both")
+        mine = [r["event"] for r in response.context["film_prep_mine"]]
+        tests = [r["event"] for r in response.context["film_tests"]]
+        self.assertEqual(mine, [own])
+        self.assertIn(other, tests)
+        self.assertNotIn(own, tests)
+
+    def test_films_beyond_lookahead_excluded_from_tests_card(self):
+        self._projectionist("projfar")
+        far, _ = self._film(name="Far away", days=40)
+        response = self._get("projfar")
+        events = [r["event"] for r in response.context.get("film_tests") or []]
+        self.assertNotIn(far, events)
+
+    def test_cancelled_showing_does_not_count(self):
+        _, vol = self._programmer("progcancel")
+        event, showing = self._film(programmer=vol)
+        showing.cancelled = True
+        showing.save()
+        response = self._get("progcancel")
+        self.assertNotIn("film_prep_mine", response.context)
+
+    def test_old_rota_entry_no_longer_counts_as_projectionist(self):
+        user, vol = _make_volunteer_user("projold")
+        user.user_permissions.add(self.read_perm)
+        _, shift = self._film(days=1)
+        RotaEntry.objects.create(
+            role=self.projectionist_role, showing=shift, volunteer=vol
+        )
+        Showing.objects.filter(pk=shift.pk).update(
+            start=timezone.now() - timedelta(days=400)
+        )
+        self._film(name="Needs test", days=3)
+        response = self._get("projold")
+        self.assertNotIn("film_tests", response.context)
+
+    def test_non_projectionist_role_does_not_count(self):
+        user, vol = _make_volunteer_user("barvol")
+        user.user_permissions.add(self.read_perm)
+        _, shift = self._film(days=1)
+        RotaEntry.objects.create(
+            role=self.other_role, showing=shift, volunteer=vol
+        )
+        response = self._get("barvol")
+        self.assertNotIn("film_tests", response.context)
+
+    def test_every_volunteer_gets_a_link_to_the_overview(self):
+        user, _vol = _make_volunteer_user("curious")
+        response = self._get("curious")
+        self.assertEqual(
+            response.context["film_overview_url"],
+            reverse("film-readiness-overview"),
+        )
+        self.assertContains(response, 'id="dash_film_overview"')
+
+    def test_no_standing_card_when_a_film_card_is_present(self):
+        _, vol = self._programmer("progwithcard")
+        self._film(programmer=vol)
+        response = self._get("progwithcard")
+        self.assertNotContains(response, 'id="dash_film_overview"')
+        self.assertContains(response, reverse("film-readiness-overview"))
+
+    def test_no_overview_link_when_flag_off(self):
+        SiteConfiguration.objects.update_or_create(
+            pk=1, defaults={"film_prep_enabled": False}
+        )
+        _user, _vol = _make_volunteer_user("curious2")
+        response = self._get("curious2")
+        self.assertNotIn("film_overview_url", response.context)
+
+    def test_navbar_and_palette_link_follow_the_flag(self):
+        _user, _vol = _make_volunteer_user("navvol")
+        response = self._get("navvol")
+        self.assertContains(response, 'data-nav-key="l">Films</a>')
+        self.assertContains(response, "g → l")
+        SiteConfiguration.objects.update_or_create(
+            pk=1, defaults={"film_prep_enabled": False}
+        )
+        from django.core.cache import cache
+
+        cache.delete(SiteConfiguration._CACHE_KEY)
+        response = self.client.get(self.url)
+        self.assertNotContains(response, 'data-nav-key="l">Films</a>')
+        self.assertNotContains(response, "g → l")
+
+    def test_returns_card_for_updaters_only(self):
+        from toolkit.diary.models import FilmCopy, FilmPrep
+        from toolkit.diary.models.film_prep import FORMAT_DCP_HDD
+
+        event = Event.objects.create(name="Gone film")
+        showing = Showing.objects.create(
+            event=event, start=timezone.now() - timedelta(days=5)
+        )
+        prep = FilmPrep.objects.create(event=event)
+        prep.showings.add(showing)
+        copy = FilmCopy.objects.create(film_prep=prep, format=FORMAT_DCP_HDD)
+        copy.milestones.get(key="hdd_arrived").complete(None)
+        self._programmer("progreturn")
+        response = self._get("progreturn")
+        self.assertEqual(
+            [r["event"] for r in response.context["film_returns"]], [event]
+        )
+        self.assertContains(response, 'id="dash_film_returns"')
+        self.client.logout()
+        _user, _vol = _make_volunteer_user("plainreturn")
+        response = self._get("plainreturn")
+        self.assertNotIn("film_returns", response.context)
+
+    def test_a_series_shows_a_prompt_for_dates_with_no_film(self):
+        from toolkit.diary.models import EventTag
+
+        tag = EventTag.objects.get_or_create(
+            slug="film", defaults={"name": "film"}
+        )[0]
+        _, vol = self._programmer("progseries")
+        club = Event.objects.create(name="Family Film Club", programmer=vol)
+        club.tags.add(tag)
+        Showing.objects.create(
+            event=club, start=timezone.now() + timedelta(days=6)
+        )
+        response = self._get("progseries")
+        (row,) = response.context["film_prep_mine"]
+        self.assertEqual(row["kind"], "missing")
+        self.assertContains(response, "No film recorded for this date yet")
+        self.assertContains(response, "Add film")
+
+    def test_a_different_film_each_date_shows_titles_separately(self):
+        from toolkit.diary.models import FilmPrep
+
+        _, vol = self._programmer("progtitles")
+        club = Event.objects.create(name="Family Film Club", programmer=vol)
+        for days, title in [(4, "Paddington"), (11, "The Iron Giant")]:
+            showing = Showing.objects.create(
+                event=club, start=timezone.now() + timedelta(days=days)
+            )
+            prep = FilmPrep.objects.create(event=club, film_title=title)
+            prep.showings.add(showing)
+        response = self._get("progtitles")
+        titles = [r["title"] for r in response.context["film_prep_mine"]]
+        self.assertEqual(titles, ["Paddington", "The Iron Giant"])

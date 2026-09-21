@@ -1,5 +1,5 @@
 {% extends "form_base.html" %}
-{% block title %}Settlement: {{ event.name }}{% endblock %}
+{% block title %}Finances: {{ event.name }}{% endblock %}
 
 {% block css %}
 {{ block.super }}
@@ -21,6 +21,26 @@
         var container = document.getElementById("line-items-container");
         var totalForms = document.getElementById("id_line_items-TOTAL_FORMS");
         if (!addBtn || !container || !totalForms) { return; }
+        var totalEl = document.getElementById("ticket-income-total");
+
+        function updateTotal() {
+            if (!totalEl) { return; }
+            var total = 0;
+            container.querySelectorAll(".line-item-row").forEach(function (row) {
+                var deleteBox = row.querySelector("input[name$='-DELETE']");
+                if (deleteBox && deleteBox.checked) { return; }
+                var countEl = row.querySelector("input[name$='-count']");
+                var priceEl = row.querySelector("input[name$='-unit_price_gbp']");
+                var count = countEl ? parseFloat(countEl.value) : NaN;
+                var price = priceEl ? parseFloat(priceEl.value) : NaN;
+                if (!isNaN(count) && !isNaN(price)) { total += count * price; }
+            });
+            totalEl.textContent = total.toFixed(2);
+        }
+
+        container.addEventListener("input", updateTotal);
+        container.addEventListener("change", updateTotal);
+
         addBtn.addEventListener("click", function () {
             var forms = container.querySelectorAll(".line-item-row");
             var lastForm = forms[forms.length - 1];
@@ -36,6 +56,7 @@
             });
             container.appendChild(newForm);
             totalForms.value = newIndex + 1;
+            updateTotal();
         });
     });
 })();
@@ -43,17 +64,16 @@
 {% endblock %}
 
 {% block body %}
-<h1>Settlement</h1>
+<h1>Finances</h1>
 <p class="text-muted mb-1">
-  <strong>{{ event.name }}</strong> — {{ showing.start|date:"D j M Y, H:i" }}
+  <strong>{{ event.name }}</strong>, {{ showing.start|date:"D j M Y, H:i" }}
 </p>
 
 {% include "bs_messages.html" %}
 
 <p class="mb-3">
-  Enter what you've got. A rough attendance guess is fine, ticket sales as free-text rows
-  (no fixed columns), and the bar figure can be left blank if that's not your job tonight —
-  none of this blocks submitting.
+  Enter what you have. <strong>Nothing here is required</strong>: a rough attendance guess will do,
+  and the bar figure can wait for whoever has till access.
 </p>
 
 <form method="post">
@@ -75,7 +95,7 @@
 
   <h5>Ticket sales</h5>
   <p class="text-muted small mb-2">
-    Free text — describe it however it was actually counted. Category is optional, useful for Finance later, never required.
+    Describe each row however it was counted. Category is optional.
   </p>
 
   {{ formset.management_form }}
@@ -119,7 +139,7 @@
 
   <button id="add-line-item-btn" type="button" class="btn btn-sm btn-outline-secondary mb-3">+ Add another row</button>
 
-  <p class="settlement-total">Ticket income recorded so far: <strong>£{{ ticket_income_total }}</strong></p>
+  <p class="settlement-total">Ticket income recorded so far: <strong>£<span id="ticket-income-total">{{ ticket_income_total }}</span></strong></p>
 
   <div class="mb-3">
     <label class="form-label" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
@@ -128,7 +148,7 @@
   </div>
 
   <div class="mt-2">
-    <button type="submit" class="btn btn-primary btn-sm">Save settlement</button>
+    <button type="submit" class="btn btn-primary btn-sm">Save finances</button>
     <a href="{% url 'edit-event-details-view' event.pk %}#showings-heading" class="btn btn-secondary btn-sm ms-1">Cancel</a>
   </div>
 </form>
@@ -141,9 +161,9 @@
     <li>
       <strong>{{ rev.saved_at|date:"j M Y H:i" }}</strong>
       {% if rev.saved_by %}by {{ rev.saved_by.get_full_name|default:rev.saved_by.username }}{% endif %}
-      &mdash; previously: attendance {{ rev.attendance|default:"—" }};
+      (previously: attendance {{ rev.attendance|default:"—" }};
       bar {% if rev.bar_contribution_gbp %}£{{ rev.bar_contribution_gbp }}{% else %}—{% endif %};
-      {{ rev.line_items_snapshot|length }} ticket line{{ rev.line_items_snapshot|length|pluralize }}
+      {{ rev.line_items_snapshot|length }} ticket line{{ rev.line_items_snapshot|length|pluralize }})
     </li>
     {% endfor %}
   </ul>

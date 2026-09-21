@@ -11,6 +11,7 @@ from django.urls import reverse
 from toolkit.diary.models import (
     Showing,
     Event,
+    get_site_config,
 )
 
 import toolkit.diary.edit_prefs
@@ -399,3 +400,40 @@ class PastEventsSearchViewTests(DiaryTestsMixin, TestCase):
             "edit-event-details-view", kwargs={"event_id": self.past_event.pk}
         )
         self.assertContains(response, expected_url)
+
+    def test_recurring_event_with_future_showing_still_found(self):
+        """A recurring event's overall latest showing is routinely a future
+        date -- filtering on that (rather than the latest *elapsed*
+        showing) wrongly excluded the whole event from this search the
+        moment it had any future booking on the books, which is the common
+        case for a weekly regular. Found live 2026-09-14."""
+        recurring = Event(name="Weekly Craft Club")
+        recurring.save()
+        Showing(
+            start=datetime(2010, 3, 4, 20, 0, tzinfo=UTC),
+            event=recurring,
+            booked_by="Tester",
+            confirmed=True,
+        ).save(force=True)
+        Showing(
+            start=datetime.now(UTC) + timedelta(days=30),
+            event=recurring,
+            booked_by="Tester",
+            confirmed=True,
+        ).save()
+        response = self.client.get(self.url, {"q": "Craft"})
+        self.assertIn(recurring, list(response.context["events"]))
+
+    def test_finances_column_hidden_when_flag_off(self):
+        response = self.client.get(self.url)
+        self.assertNotContains(response, "<th>Finances</th>")
+
+    def test_finances_column_shown_when_flag_on(self):
+        cfg = get_site_config()
+        cfg.event_settlement_enabled = True
+        cfg.save()
+        self.past_event.cost_type = Event.COST_TYPE_FILM_LICENSE
+        self.past_event.save()
+        response = self.client.get(self.url, {"q": "Jazz"})
+        self.assertContains(response, "<th>Finances</th>")
+        self.assertContains(response, "Not recorded")

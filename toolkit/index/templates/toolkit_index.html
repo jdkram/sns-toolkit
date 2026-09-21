@@ -100,7 +100,7 @@
 {% block body %}
 <h1>{{ VENUE.longname }} Toolkit</h1>
 
-{% if welcome_back or has_volunteer or new_showings or showings_with_gaps or unconfirmed_showings or upcoming_training or recent_bulletins or shopping_needs or open_jobs or upcoming_maintenance or outstanding_settlements or finance_settlement_review_url %}
+{% if welcome_back or has_volunteer or new_showings or showings_with_gaps or unconfirmed_showings or upcoming_training or recent_bulletins or shopping_needs or open_jobs or upcoming_maintenance or outstanding_settlements or finance_settlement_review_url or film_prep_mine or film_tests or film_returns or film_overview_url %}
 <div class="d-flex justify-content-between align-items-baseline mb-2">
   <h2 class="h5 mb-0">Dashboard</h2>
   <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#dash-customise" aria-expanded="false">Customise</button>
@@ -148,7 +148,19 @@
       <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_settlements" checked> Your past events</label>
       {% endif %}
       {% if finance_settlement_review_url %}
-      <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_finance_review" checked> Finance settlement review</label>
+      <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_finance_review" checked> Review finances</label>
+      {% endif %}
+      {% if film_prep_mine %}
+      <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_film_prep" checked> Your films</label>
+      {% endif %}
+      {% if film_tests %}
+      <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_film_tests" checked> Films needing a test</label>
+      {% endif %}
+      {% if film_returns %}
+      <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_film_returns" checked> Drives to send back</label>
+      {% endif %}
+      {% if film_overview_url and not film_prep_mine and not film_tests and not film_returns %}
+      <label class="mb-0"><input type="checkbox" class="dash-toggle" data-key="dash_film_overview" checked> Film readiness</label>
       {% endif %}
     </div>
   </div>
@@ -163,17 +175,17 @@
   <div class="col-12 d-flex">
     <div class="card w-100 border-success">
       <div class="card-header d-flex justify-content-between align-items-center text-bg-success">
-        <strong>Welcome back &mdash; good to see you</strong>
+        <strong>Welcome back, good to see you</strong>
         <a href="?dismiss_welcome=1" class="text-white" style="font-size:0.85em" title="Hide this for now">Dismiss &times;</a>
       </div>
       <div class="card-body">
         <p class="mb-2">
-          It's been a while, so we marked your account as dormant &mdash; nothing was lost,
+          It's been a while, so we marked your account as dormant. Nothing was lost,
           and you can still do everything as before. Ready to pick up shifts again?
         </p>
         <form method="post" action="{% url "volunteer-reactivate-self" %}" class="d-inline">
           {% csrf_token %}
-          <button type="submit" class="btn btn-success btn-sm">I'm back &mdash; put me on the active roster</button>
+          <button type="submit" class="btn btn-success btn-sm">I'm back, put me on the active roster</button>
         </form>
         <ul class="mt-3 mb-0" style="font-size:0.92em">
           {% if next_induction %}
@@ -395,7 +407,7 @@
   {% if outstanding_settlements %}
   <div id="dash_settlements" class="col-md-6 d-flex{% if 'dash_settlements' in dash_hidden_cards %} d-none{% endif %}">
     <div class="card w-100 border-warning">
-      <div class="card-header"><strong>Your past events</strong> &mdash; settlement outstanding</div>
+      <div class="card-header"><strong>Your past events</strong> (finances outstanding)</div>
       <div class="card-body">
         <table class="w-100">
           {% for row in outstanding_settlements %}
@@ -415,13 +427,159 @@
   </div>
   {% endif %}
 
+  {# Your films: the programmer's own upcoming film events (9.174) #}
+  {% if film_prep_mine %}
+  <div id="dash_film_prep" class="col-md-6 d-flex{% if 'dash_film_prep' in dash_hidden_cards %} d-none{% endif %}">
+    <div class="card w-100">
+      <div class="card-header"><strong>Your films</strong></div>
+      <div class="card-body">
+        <table class="w-100">
+          {% for row in film_prep_mine %}
+          {% if row.kind == "missing" %}
+          <tr class="shift-row">
+            <td>{{ row.start|date:"D j M" }}</td>
+            <td>
+              <a href="{% url "edit-event-details-view" event_id=row.event.pk %}#film-readiness">{{ row.event.name }}</a>
+              <div class="small text-muted">No film recorded for this date yet</div>
+            </td>
+            <td class="text-end"><a class="btn btn-sm btn-outline-secondary py-0" href="{% url 'add-film-prep' event_id=row.event.pk %}?showing={{ row.showing.pk }}">Add film</a></td>
+          </tr>
+          {% else %}
+          <tr class="shift-row">
+            <td>{{ row.start|date:"D j M" }}</td>
+            <td>
+              <a href="{% url "edit-event-details-view" event_id=row.event.pk %}#film-readiness">{{ row.title }}</a>
+              {% if row.prep.film_title %}<span class="small text-muted">({{ row.event.name }})</span>{% endif %}
+              {% if row.companions %}<div class="small text-muted">On a bill with {% for c in row.companions %}{{ c.display_title }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+              {% if row.readiness != "ready" %}<div class="small text-muted">
+                {% if not row.has_copies %}No copy recorded yet{% elif row.next_step %}Next: {{ row.next_step.label }}{% if row.next_step.claimed_by %} (claimed by {{ row.next_step.claimed_by_name }}){% endif %}{% endif %}
+                {% if row.test_unclaimed %}<strong class="text-danger">&middot; nobody has claimed the test-play</strong>{% endif %}
+              </div>{% endif %}
+            </td>
+            <td class="text-end">
+              {% if row.readiness == "ready" %}<span class="badge text-bg-success">Ready</span>
+              {% elif row.readiness == "problem" %}<span class="badge text-bg-danger">Problem</span>
+              {% elif row.urgency == "urgent" %}<span class="badge text-bg-danger">Urgent</span>
+              {% elif row.readiness == "in_progress" %}<span class="badge text-bg-warning text-dark">In progress</span>
+              {% else %}<span class="badge text-bg-secondary">Not started</span>{% endif %}
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </table>
+        <div class="mt-2"><small><a href="{{ film_overview_url }}">All films and their status &rarr;</a></small></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Films needing a test: venue-wide, for Programmer+ and projectionists (9.174) #}
+  {% if film_tests %}
+  <div id="dash_film_tests" class="col-md-6 d-flex{% if 'dash_film_tests' in dash_hidden_cards %} d-none{% endif %}">
+    <div class="card w-100 border-warning">
+      <div class="card-header"><strong>Films needing a test</strong> (next week)</div>
+      <div class="card-body">
+        <table class="w-100">
+          {% for row in film_tests %}
+          <tr class="shift-row">
+            <td>{{ row.start|date:"D j M" }}</td>
+            <td>
+              {{ row.title }}{% if row.prep.film_title %} <span class="small text-muted">({{ row.event.name }})</span>{% endif %}
+              {% if row.urgency == "urgent" %}<span class="badge text-bg-danger">Urgent</span>{% endif %}
+              {% if not row.has_copies %}<div class="small text-muted">No copy recorded yet</div>
+              {% elif row.test_step.claimed_by %}<div class="small text-muted">Claimed by {{ row.test_step.claimed_by_name }}{% if row.test_step.planned_for %} for {{ row.test_step.planned_for|date:"D j M" }}{% endif %}</div>{% endif %}
+            </td>
+            <td class="text-end">
+              {% if row.test_step and not row.test_step.claimed_by %}
+              <form method="post" action="{% url 'film-milestone-claim' row.test_step.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'default-edit' %}">
+                <button type="submit" class="btn btn-sm btn-outline-secondary py-0">I'll test this</button>
+              </form>
+              {% elif row.test_step %}
+              <form method="post" action="{% url 'film-milestone-complete' row.test_step.pk %}" class="d-inline-flex gap-1">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'default-edit' %}">
+                <button type="submit" name="result" value="ok" class="btn btn-sm btn-success py-0">Played fine</button>
+                <button type="submit" name="result" value="problem" class="btn btn-sm btn-danger py-0">Problem</button>
+              </form>
+              <form method="post" action="{% url 'film-milestone-unclaim' row.test_step.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'default-edit' %}">
+                <button type="submit" class="btn btn-sm btn-outline-secondary py-0">Hand back</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+        <div class="mt-2"><small><a href="{{ film_overview_url }}">All films and their status &rarr;</a></small></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Drives to send back: hired hard drives whose screenings are over (9.174) #}
+  {% if film_returns %}
+  <div id="dash_film_returns" class="col-md-6 d-flex{% if 'dash_film_returns' in dash_hidden_cards %} d-none{% endif %}">
+    <div class="card w-100 border-warning">
+      <div class="card-header"><strong>Drives to send back</strong></div>
+      <div class="card-body">
+        <table class="w-100">
+          {% for r in film_returns %}
+          <tr class="shift-row">
+            <td>{{ r.last_showing|date:"D j M" }}</td>
+            <td>
+              {{ r.title }}{% if r.prep.film_title %} <span class="small text-muted">({{ r.event.name }})</span>{% endif %}
+              <div class="small text-muted">
+                {% if r.status == "sent" %}Sent {{ r.returned_step.done_at|date:"j M" }}{% if r.returned_step.notes %} ({{ r.returned_step.notes }}){% endif %}, awaiting confirmation
+                {% else %}{{ r.days_since }} day{{ r.days_since|pluralize }} since the last showing{% if r.returned_step.claimed_by %}, claimed by {{ r.returned_step.claimed_by_name }}{% endif %}{% endif %}
+              </div>
+            </td>
+            <td class="text-end text-nowrap">
+              {% if r.status == "to_return" %}
+              <form method="post" action="{% url 'film-milestone-complete' r.returned_step.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'default-edit' %}">
+                <button type="submit" class="btn btn-sm {% if r.overdue %}btn-danger{% else %}btn-outline-secondary{% endif %} py-0">Mark sent</button>
+              </form>
+              {% elif r.confirm_step %}
+              <form method="post" action="{% url 'film-milestone-complete' r.confirm_step.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'default-edit' %}">
+                <button type="submit" class="btn btn-sm {% if r.overdue %}btn-warning{% else %}btn-outline-secondary{% endif %} py-0">Confirmed</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+        <div class="mt-2"><small><a href="{{ film_overview_url }}#returns">Add courier details and see all returns &rarr;</a></small></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Film readiness: standing link for anyone with neither card, so volunteers curious about programming can still find the overview (9.174) #}
+  {% if film_overview_url and not film_prep_mine and not film_tests and not film_returns %}
+  <div id="dash_film_overview" class="col-md-6 d-flex{% if 'dash_film_overview' in dash_hidden_cards %} d-none{% endif %}">
+    <div class="card w-100">
+      <div class="card-header"><strong>Film readiness</strong></div>
+      <div class="card-body">
+        <p class="mb-2 dashboard-empty">Upcoming films: arrived, test-played, backed up?</p>
+        <a href="{{ film_overview_url }}" class="btn btn-sm btn-outline-secondary">See all films &rarr;</a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   {# Finance's monthly settlement review — any Programmer+, when the feature's on (9.171) #}
   {% if finance_settlement_review_url %}
   <div id="dash_finance_review" class="col-md-6 d-flex{% if 'dash_finance_review' in dash_hidden_cards %} d-none{% endif %}">
     <div class="card w-100">
-      <div class="card-header"><strong>Finance</strong> &mdash; settlement review</div>
+      <div class="card-header"><strong>Review finances</strong></div>
       <div class="card-body">
-        <p class="mb-2 dashboard-empty">Every event's settlement and distributor-payment status, by date range.</p>
+        <p class="mb-2 dashboard-empty">Every event's finances and distributor-payment status, by date range.</p>
         <a href="{{ finance_settlement_review_url }}" class="btn btn-sm btn-outline-secondary">Open review &rarr;</a>
       </div>
     </div>
@@ -541,7 +699,7 @@
 </div>
 <script>
 (function() {
-    var KEYS = ['dash_bulletins','dash_favourites','dash_upcoming_shifts','dash_starred_events','dash_rota_gaps','dash_new_showings','dash_shopping','dash_jobs','dash_maintenance','dash_training','dash_unconfirmed'];
+    var KEYS = ['dash_bulletins','dash_favourites','dash_upcoming_shifts','dash_starred_events','dash_rota_gaps','dash_new_showings','dash_shopping','dash_jobs','dash_maintenance','dash_training','dash_unconfirmed','dash_settlements','dash_film_prep','dash_film_tests','dash_film_returns','dash_film_overview','dash_finance_review'];
     var ORDER_KEY = 'dash_order';
     var row = document.getElementById('dash-cards-row');
     var hasServerPrefs = row && row.dataset.hasServerPrefs === '1';
@@ -562,7 +720,7 @@
     // cards are already in the DOM as d-none from the server render). For
     // non-volunteers, fall back to localStorage defaults.
     if (!hasServerPrefs) {
-        // dash_unconfirmed is programmer-focused noise for regular volunteers — hidden by default.
+        // dash_unconfirmed is programmer-focused noise for regular volunteers, hidden by default.
         ['dash_unconfirmed'].forEach(function(key) {
             if (localStorage.getItem(key) === null) { localStorage.setItem(key, 'hidden'); }
         });
@@ -591,7 +749,10 @@
         KEYS.forEach(function(key) {
             if (saved.indexOf(key) === -1) {
                 var el = document.getElementById(key);
-                if (el && el.parentNode === row) row.appendChild(el);
+                if (!el || el.parentNode !== row) return;
+                // Bulletins lead by default; every other unsaved card follows.
+                if (key === 'dash_bulletins') row.insertBefore(el, row.firstChild);
+                else row.appendChild(el);
             }
         });
     }

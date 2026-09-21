@@ -874,6 +874,25 @@ class SiteConfiguration(models.Model):
         ),
     )
 
+    # --- Film readiness (9.174) ---
+    film_prep_enabled = models.BooleanField(
+        default=False,
+        verbose_name="Film readiness tracking enabled (experimental)",
+        help_text=(
+            "Off by default. Adds a readiness panel to the Event Hub, and "
+            "dashboard cards for programmers (their films) and "
+            "projectionists (films needing a test-play)."
+        ),
+    )
+    film_sourcing_guide_url = models.URLField(
+        blank=True,
+        verbose_name="Film sourcing guide link",
+        help_text=(
+            "Optional. Link to a guide on disc, DCP and MP4 sourcing, shown "
+            "beside the format picker."
+        ),
+    )
+
     # --- Event settlement (9.171) ---
     event_settlement_enabled = models.BooleanField(
         default=False,
@@ -1089,6 +1108,10 @@ SITE_CONFIG_FIELD_GROUPS = {
     ],
     "Event programmer": [
         "programmer_required_for_financial_events",
+    ],
+    "Film readiness (experimental)": [
+        "film_prep_enabled",
+        "film_sourcing_guide_url",
     ],
     "Event settlement (experimental)": [
         "event_settlement_enabled",

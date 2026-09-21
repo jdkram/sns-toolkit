@@ -45,6 +45,15 @@ from toolkit.diary.edit_views import (
     past_events_search,
     showing_settlement_edit,
     event_distributor_payment_edit,
+    bulk_mark_nothing_to_report,
+    film_prep_add,
+    film_prep_edit,
+    film_prep_delete,
+    film_readiness_overview,
+    film_milestone_claim,
+    film_milestone_complete,
+    film_milestone_unclaim,
+    film_milestone_undo,
     programmer_past_events,
     finance_settlement_review,
     event_prs_registration_edit,
@@ -210,6 +219,47 @@ diary_urls = [
         programmer_past_events,
         name="programmer-past-events",
     ),
+    # Film readiness (9.174)
+    re_path(
+        r"^films/readiness/$",
+        film_readiness_overview,
+        name="film-readiness-overview",
+    ),
+    re_path(
+        r"^edit/event/id/(?P<event_id>\d+)/film/add/$",
+        film_prep_add,
+        name="add-film-prep",
+    ),
+    re_path(
+        r"^edit/film/(?P<prep_id>\d+)/$",
+        film_prep_edit,
+        name="edit-film-prep",
+    ),
+    re_path(
+        r"^edit/film/(?P<prep_id>\d+)/delete/$",
+        film_prep_delete,
+        name="delete-film-prep",
+    ),
+    re_path(
+        r"^edit/film/milestone/(?P<milestone_id>\d+)/claim/$",
+        film_milestone_claim,
+        name="film-milestone-claim",
+    ),
+    re_path(
+        r"^edit/film/milestone/(?P<milestone_id>\d+)/complete/$",
+        film_milestone_complete,
+        name="film-milestone-complete",
+    ),
+    re_path(
+        r"^edit/film/milestone/(?P<milestone_id>\d+)/unclaim/$",
+        film_milestone_unclaim,
+        name="film-milestone-unclaim",
+    ),
+    re_path(
+        r"^edit/film/milestone/(?P<milestone_id>\d+)/undo/$",
+        film_milestone_undo,
+        name="film-milestone-undo",
+    ),
     # Edit an event: view event before editing
     re_path(
         r"^edit/event/id/(?P<event_id>\d+)/view/$",
@@ -277,6 +327,12 @@ diary_urls = [
         r"^edit/event/id/(?P<event_id>\d+)/distributor-payment/$",
         event_distributor_payment_edit,
         name="edit-distributor-payment",
+    ),
+    # Bulk "nothing to report" for a run of a recurring series' showings
+    re_path(
+        r"^edit/showings/nothing-to-report/$",
+        bulk_mark_nothing_to_report,
+        name="bulk-nothing-to-report",
     ),
     # Finance's date-ranged settlement/distributor-payment review (9.171)
     re_path(

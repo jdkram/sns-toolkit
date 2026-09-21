@@ -94,10 +94,17 @@ body {
       {label:"Rota",               category:"Navigate", shortcut:"g → r", href:"{% url 'rota-edit' %}",          keywords:"shifts schedule volunteering sign up"},
       {% if feature_perms.diary_read %}
       {label:"Diary",              category:"Navigate", shortcut:"g → d", href:"{% url 'default-edit' %}",       keywords:"events showings edit list"},
-      {label:"Past events",        category:"Navigate", shortcut:"g → v", href:"{% url 'past-events-search' %}", keywords:"find search archive history"},
+      {label:"Past events",        category:"Navigate",                  href:"{% url 'past-events-search' %}", keywords:"find search archive history"},
       {% endif %}
       {% if feature_perms.diary_calendar %}
-      {label:"Calendar",           category:"Navigate", shortcut:"g → c", href:"{% url 'diary-edit-calendar' %}", keywords:"events week month view"},
+      {label:"Calendar",           category:"Navigate",                  href:"{% url 'diary-edit-calendar' %}", keywords:"events week month view"},
+      {% endif %}
+      {% if site_config.film_prep_enabled %}
+      {label:"Film readiness",     category:"Navigate", shortcut:"g → l", href:"{% url 'film-readiness-overview' %}", keywords:"films dvd dcp booth test backup projectionist prep status"},
+      {% endif %}
+      {% if site_config.event_settlement_enabled and feature_perms.diary_reports %}
+      {label:"Finance review",     category:"Navigate", shortcut:"g → f", href:"{% url 'finance-settlement-review' %}", keywords:"finances settlement money income distributor payment"},
+      {label:"PRS/PPL report",     category:"Navigate",                  href:"{% url 'prs-report' %}",         keywords:"finances csv performer registration download"},
       {% endif %}
       {% if feature_perms.programming_queue_read %}
       {label:"Programming queue",  category:"Navigate", shortcut:"g → q", href:"{% url 'programming-queue' %}",  keywords:"films proposals planning queue labs"},
@@ -217,17 +224,34 @@ body {
             <a class="nav-link" href="{% url "rota-edit" %}" data-nav-key="r">Rota</a>
           </li>
 
-          {% if feature_perms.diary_read %}
-          <li class="nav-item">
-            <a class="nav-link" href="{% url "default-edit" %}" data-nav-key="d">Diary</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{% url "past-events-search" %}" data-nav-key="v">Past events</a>
+          {% if feature_perms.diary_read or feature_perms.diary_calendar %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="{% if feature_perms.diary_read %}{% url "default-edit" %}{% else %}{% url "diary-edit-calendar" %}{% endif %}" id="dropdown-diary" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-nav-key="d">Diary</a>
+            <div class="dropdown-menu" aria-labelledby="dropdown-diary">
+              {% if feature_perms.diary_read %}
+              <a class="dropdown-item" href="{% url "default-edit" %}">Diary list</a>
+              {% endif %}
+              {% if feature_perms.diary_calendar %}
+              <a class="dropdown-item" href="{% url "diary-edit-calendar" %}">Calendar</a>
+              {% endif %}
+              {% if feature_perms.diary_read %}
+              <a class="dropdown-item" href="{% url "past-events-search" %}">Past events</a>
+              {% endif %}
+            </div>
           </li>
           {% endif %}
-          {% if feature_perms.diary_calendar %}
+          {% if site_config.film_prep_enabled %}
           <li class="nav-item">
-            <a class="nav-link" href="{% url "diary-edit-calendar" %}" data-nav-key="c">Calendar</a>
+            <a class="nav-link" href="{% url "film-readiness-overview" %}" data-nav-key="l">Films</a>
+          </li>
+          {% endif %}
+          {% if site_config.event_settlement_enabled and feature_perms.diary_reports %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="{% url "finance-settlement-review" %}" id="dropdown-finances" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-nav-key="f">Finances</a>
+            <div class="dropdown-menu" aria-labelledby="dropdown-finances">
+              <a class="dropdown-item" href="{% url "finance-settlement-review" %}">Finance review</a>
+              <a class="dropdown-item" href="{% url "prs-report" %}">PRS/PPL report (CSV) &darr;</a>
+            </div>
           </li>
           {% endif %}
           {% if feature_perms.programming_queue_read %}

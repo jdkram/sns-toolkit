@@ -56,6 +56,21 @@ class ShowingSettlementModelTests(TestCase):
         )
         self.assertEqual(self.showing.settlement_status(), "recorded")
 
+    def test_nothing_to_report_status(self):
+        ShowingSettlement.objects.create(
+            showing=self.showing, nothing_to_report=True
+        )
+        self.assertEqual(self.showing.settlement_status(), "nothing_to_report")
+
+    def test_nothing_to_report_with_attendance_still_nothing_to_report(self):
+        """Attendance stays independent of the flag (Jonny: "yes, keep
+        attendance separate") -- a free showing can have a headcount and
+        still have nothing financial to report."""
+        ShowingSettlement.objects.create(
+            showing=self.showing, attendance=15, nothing_to_report=True
+        )
+        self.assertEqual(self.showing.settlement_status(), "nothing_to_report")
+
     def test_no_financial_activity_is_not_applicable(self):
         no_money_event = Event(
             name="Cleaning club", no_financial_activity=True
@@ -146,6 +161,28 @@ class EventSettlementStatusTests(TestCase):
         )
         self.assertEqual(self.event.settlement_status(), "recorded")
 
+    def test_nothing_to_report_counts_as_recorded_in_rollup(self):
+        """Per Jonny: a showing marked "nothing to report" counts as done
+        for the event-level rollup, same as "recorded" -- the point of the
+        bulk action is to stop the event nagging once cleared."""
+        settlement = ShowingSettlement.objects.create(
+            showing=self.past1, attendance=10
+        )
+        SettlementLineItem.objects.create(
+            settlement=settlement, description="x", count=10
+        )
+        ShowingSettlement.objects.create(
+            showing=self.past2, nothing_to_report=True
+        )
+        self.assertEqual(self.event.settlement_status(), "recorded")
+
+    def test_all_nothing_to_report_counts_as_recorded(self):
+        for showing in (self.past1, self.past2):
+            ShowingSettlement.objects.create(
+                showing=showing, nothing_to_report=True
+            )
+        self.assertEqual(self.event.settlement_status(), "recorded")
+
 
 class DistributorPaymentStatusTests(TestCase):
     def test_none_without_cost_type(self):
@@ -176,6 +213,19 @@ class DistributorPaymentStatusTests(TestCase):
         )
         event.save()
         self.assertEqual(event.distributor_payment_status(), "paid")
+
+    def test_none_when_no_financial_activity(self):
+        """A cost type can be set (e.g. left over from before the event was
+        flagged) but no_financial_activity must still suppress this, same
+        as settlement_status() -- found live 2026-09-14, the flag was only
+        wired into has_financial_terms()/settlement_status(), not here."""
+        event = Event(
+            name="Actually free",
+            cost_type=Event.COST_TYPE_INTERNAL,
+            no_financial_activity=True,
+        )
+        event.save()
+        self.assertIsNone(event.distributor_payment_status())
 
 
 class EventPrsRelevantTests(TestCase):
@@ -363,7 +413,7 @@ class EventHubSettlementDisplayTests(DiaryTestsMixin, TestCase):
         resp = self.client.get(
             reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk})
         )
-        self.assertContains(resp, "Settlement not recorded")
+        self.assertContains(resp, "Finances not recorded")
 
     def test_past_showings_expanded_when_outstanding(self):
         resp = self.client.get(
@@ -372,6 +422,21 @@ class EventHubSettlementDisplayTests(DiaryTestsMixin, TestCase):
         # <details open> -- past showings section not collapsed by default
         self.assertContains(resp, '<details class="mb-3" open>')
 
+    def test_no_banner_when_no_financial_activity(self):
+        """settlement_status() correctly returns "not_applicable" here, but
+        the banner condition used to show it anyway (any truthy non-
+        "recorded" status), so a no_financial_activity event was wrongly
+        told it had an outstanding settlement/distributor payment. Found
+        live 2026-09-14."""
+        self.e4.no_financial_activity = True
+        self.e4.save()
+        resp = self.client.get(
+            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk})
+        )
+        self.assertNotContains(resp, "Finances not recorded")
+        self.assertNotContains(resp, "Finances partially recorded")
+        self.assertNotContains(resp, "Distributor payment: Outstanding")
+
     def test_settlement_column_hidden_when_flag_off(self):
         cfg = get_site_config()
         cfg.event_settlement_enabled = False
@@ -379,7 +444,7 @@ class EventHubSettlementDisplayTests(DiaryTestsMixin, TestCase):
         resp = self.client.get(
             reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk})
         )
-        self.assertNotContains(resp, "Settlement not recorded")
+        self.assertNotContains(resp, "Finances not recorded")
 
     def test_prs_link_shown_for_performer_fee_event(self):
         resp = self.client.get(
@@ -405,6 +470,120 @@ class EventHubSettlementDisplayTests(DiaryTestsMixin, TestCase):
             reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk})
         )
         self.assertNotContains(resp, "PRS/PPL registration")
+
+    def test_bulk_checkboxes_shown_for_series_with_outstanding_showings(self):
+        # e4 has two past showings (e4s3, e4s4) -- a series by the view's
+        # own is_series = len(all_showings) > 1 definition.
+        resp = self.client.get(
+            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk})
+        )
+        self.assertContains(resp, "nothing-to-report-checkbox")
+        self.assertContains(resp, "Mark selected as nothing to report")
+
+    def test_bulk_checkboxes_hidden_for_single_showing_event(self):
+        single = Event(
+            name="One-off gig", cost_type=Event.COST_TYPE_FILM_LICENSE
+        )
+        single.save()
+        Showing(event=single, start="2013-06-01T19:00:00+00:00").save(
+            force=True
+        )
+        resp = self.client.get(
+            reverse("edit-event-details-view", kwargs={"event_id": single.pk})
+        )
+        self.assertNotContains(resp, "nothing-to-report-checkbox")
+
+    def test_no_checkbox_for_already_recorded_showing(self):
+        settlement = ShowingSettlement.objects.create(
+            showing=self.e4s3, attendance=10
+        )
+        SettlementLineItem.objects.create(
+            settlement=settlement, description="x", count=10
+        )
+        resp = self.client.get(
+            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk})
+        )
+        content = resp.content.decode()
+        # Only e4s4 (still outstanding) should get a checkbox, not e4s3.
+        self.assertEqual(
+            content.count('class="nothing-to-report-checkbox"'), 1
+        )
+
+    def test_nothing_to_report_badge_shown(self):
+        ShowingSettlement.objects.create(
+            showing=self.e4s3, nothing_to_report=True
+        )
+        resp = self.client.get(
+            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk})
+        )
+        self.assertContains(resp, "Nothing to report")
+
+
+class BulkMarkNothingToReportViewTests(DiaryTestsMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        cfg = get_site_config()
+        cfg.event_settlement_enabled = True
+        cfg.save()
+        self.e4.cost_type = Event.COST_TYPE_PERFORMER_FEE
+        self.e4.save()
+        self.client.login(username="admin", password="T3stPassword!")
+        self.url = reverse("bulk-nothing-to-report")
+
+    def test_marks_selected_showings(self):
+        resp = self.client.post(
+            self.url, {"showing_ids": [self.e4s3.pk, self.e4s4.pk]}
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(self.e4s3.settlement_status(), "nothing_to_report")
+        self.assertEqual(self.e4s4.settlement_status(), "nothing_to_report")
+
+    def test_redirects_to_event_hub(self):
+        resp = self.client.post(self.url, {"showing_ids": [self.e4s3.pk]})
+        self.assertRedirects(
+            resp,
+            reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk})
+            + "#showings-heading",
+        )
+
+    def test_does_not_clear_existing_attendance(self):
+        ShowingSettlement.objects.create(showing=self.e4s3, attendance=20)
+        self.client.post(self.url, {"showing_ids": [self.e4s3.pk]})
+        self.e4s3.settlement.refresh_from_db()
+        self.assertEqual(self.e4s3.settlement.attendance, 20)
+        self.assertTrue(self.e4s3.settlement.nothing_to_report)
+
+    def test_no_showings_selected_is_a_no_op(self):
+        resp = self.client.post(self.url, {})
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(ShowingSettlement.objects.exists())
+
+    def test_non_numeric_id_is_ignored_not_a_500(self):
+        """pk__in with a non-numeric string raises ValueError from the
+        field, so an unfiltered list would 500 on a mangled POST."""
+        resp = self.client.post(
+            self.url, {"showing_ids": ["not-a-number", self.e4s3.pk]}
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(
+            ShowingSettlement.objects.get(showing=self.e4s3).nothing_to_report
+        )
+
+    def test_only_non_numeric_ids_is_a_no_op(self):
+        resp = self.client.post(self.url, {"showing_ids": ["../../etc"]})
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(ShowingSettlement.objects.exists())
+
+    def test_404s_when_disabled(self):
+        cfg = get_site_config()
+        cfg.event_settlement_enabled = False
+        cfg.save()
+        resp = self.client.post(self.url, {"showing_ids": [self.e4s3.pk]})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_get_not_allowed(self):
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, 405)
 
 
 class ProgrammerPastEventsViewTests(DiaryTestsMixin, TestCase):
@@ -472,7 +651,7 @@ class FinanceSettlementReviewViewTests(DiaryTestsMixin, TestCase):
             reverse("finance-settlement-review"),
             {"date_from": "2013-09-01", "date_to": "2013-09-30"},
         )
-        self.assertContains(resp, "Settlement not recorded")
+        self.assertContains(resp, "Finances not recorded")
         self.assertContains(
             resp,
             reverse(
@@ -485,6 +664,16 @@ class FinanceSettlementReviewViewTests(DiaryTestsMixin, TestCase):
                 "edit-distributor-payment", kwargs={"event_id": self.e4.pk}
             ),
         )
+
+    def test_nothing_to_report_badge_shown_in_drilldown(self):
+        ShowingSettlement.objects.create(
+            showing=self.e4s4, nothing_to_report=True
+        )
+        resp = self.client.get(
+            reverse("finance-settlement-review"),
+            {"date_from": "2013-09-01", "date_to": "2013-09-30"},
+        )
+        self.assertContains(resp, "Nothing to report")
 
     def test_no_financial_activity_excluded(self):
         self.e4.no_financial_activity = True
@@ -521,6 +710,45 @@ class FinanceSettlementReviewViewTests(DiaryTestsMixin, TestCase):
         )
         self.assertNotContains(resp, "PRS/PPL not recorded")
         self.assertNotContains(resp, "PRS/PPL recorded")
+
+    def test_recurring_event_with_future_showing_still_shown_in_range(self):
+        """A recurring event's overall latest showing is routinely a future
+        date outside any reporting month -- filtering on that (rather than
+        the latest *elapsed* showing) wrongly excluded the whole event, so
+        every S+S weekly regular (Art Club, Creative Writing, ...) silently
+        vanished from this screen the moment it had a future date on the
+        books. Found live 2026-09-14."""
+        Showing(
+            start=self.e4s4.start.replace(year=self.e4s4.start.year + 20),
+            event=self.e4,
+            booked_by="Future booking",
+            confirmed=True,
+        ).save()
+        resp = self.client.get(
+            reverse("finance-settlement-review"),
+            {"date_from": "2013-09-01", "date_to": "2013-09-30"},
+        )
+        self.assertContains(resp, self.e4.name)
+
+    def test_range_is_narrowed_in_the_db_not_just_in_python(self):
+        """The Python pass decides the answer, but the DB has to narrow the
+        candidate set first, or every event the venue has ever run is
+        loaded (with all its showings) to report on one month."""
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        with CaptureQueriesContext(connection) as ctx:
+            self.client.get(
+                reverse("finance-settlement-review"),
+                {"date_from": "2013-09-01", "date_to": "2013-09-30"},
+            )
+        event_query = next(
+            q["sql"]
+            for q in ctx.captured_queries
+            if "Events" in q["sql"] and "Showings" in q["sql"]
+        )
+        self.assertIn("2013-09-01", event_query)
+        self.assertIn("2013-09-30", event_query)
 
     def test_csv_download_link_present(self):
         resp = self.client.get(
@@ -744,7 +972,7 @@ class SettlementRevisionTests(DiaryTestsMixin, TestCase):
         resp = self.client.get(
             reverse("edit-event-details-view", kwargs={"event_id": self.e4.pk})
         )
-        self.assertContains(resp, "Settlement corrected for")
+        self.assertContains(resp, "Finances corrected for")
 
 
 class DistributorPaymentRevisionTests(DiaryTestsMixin, TestCase):

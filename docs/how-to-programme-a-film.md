@@ -62,7 +62,7 @@ Ticket sales close 1 hour before the showing starts. Print the TicketSource sale
 ## On the day
 
 - Arrive second, after the Keyholder, at least 1 hour before start.
-- The Projectionist sets up the screener; make sure they have it in hand.
+- The Projectionist sets up the screener; make sure they have it in hand. If your Toolkit has film readiness switched on, the Event Hub's **Film readiness** panel is where you record that the film has arrived and been test-played, and leave a note for the projectionist.
 - The Projectionist will check with you about sound and aspect ratio.
 - You can give a short introduction if you want to (not mandatory) — a good moment to plug upcoming events.
 - Help the Keyholder close up afterwards.

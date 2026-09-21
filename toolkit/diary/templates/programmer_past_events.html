@@ -4,8 +4,8 @@
 {% block body %}
 <h1>Your past events</h1>
 <p class="text-muted mb-3">
-  Every event where you're the named programmer, most recent first, with settlement
-  status if anything's outstanding. Looking for a different event?
+  Events you programmed, most recent first, with finances status where outstanding.
+  Looking for another?
   <a href="{% url 'past-events-search' %}">Search all past events →</a>
 </p>
 
@@ -21,7 +21,7 @@
     <tr>
       <th>Event</th>
       <th>Last showing</th>
-      <th>Settlement</th>
+      <th>Finances</th>
       <th>Distributor payment</th>
     </tr>
   </thead>

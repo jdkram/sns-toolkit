@@ -719,7 +719,12 @@ class Event(models.Model):
           recorded, or explicitly flagged no_financial_activity).
         - "not_recorded" -- financial and past, nothing entered anywhere.
         - "partial" -- some but not all elapsed showings have a settlement.
-        - "recorded" -- every elapsed showing that needs one has one.
+        - "recorded" -- every elapsed showing that needs one either has a
+          settlement or has been marked "nothing to report" -- the two
+          count equally as "done" at this rollup level, since the point of
+          "nothing to report" is to stop the event nagging once a backlog
+          is cleared. The distinction between them only shows at the
+          per-showing badge, not here.
 
         Not stored -- computed fresh each time, matching every other
         completeness indicator on the Event Hub (has_copy, terms_ok, etc.).
@@ -734,7 +739,8 @@ class Event(models.Model):
         if not elapsed:
             return None
         statuses = [s.settlement_status() for s in elapsed]
-        if all(status == "recorded" for status in statuses):
+        done = {"recorded", "nothing_to_report"}
+        if all(status in done for status in statuses):
             return "recorded"
         if all(status == "not_recorded" for status in statuses):
             return "not_recorded"
@@ -742,7 +748,7 @@ class Event(models.Model):
 
     def distributor_payment_status(self):
         """One of None (no deal recorded), 'outstanding', 'invoiced', 'paid'."""
-        if not self.cost_type or self.cost_type == self.COST_TYPE_TBC:
+        if not self.has_financial_terms():
             return None
         if self.distributor_paid_date:
             return "paid"

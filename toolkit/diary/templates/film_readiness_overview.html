@@ -1,0 +1,205 @@
+{% extends "form_base.html" %}
+{% block title %}Film readiness{% endblock %}
+
+{% block body %}
+<h1>Film readiness</h1>
+<p class="text-muted mb-3">
+  Upcoming films in date order: is each one in the building, test-played and backed up, and who is doing what.
+</p>
+
+{% include "bs_messages.html" %}
+
+<p class="mb-3">
+  <span class="badge text-bg-success">Ready {{ counts.ready|default:0 }}</span>
+  <span class="badge text-bg-warning text-dark">In progress {{ counts.in_progress|default:0 }}</span>
+  <span class="badge text-bg-secondary">Not started {{ counts.not_started|default:0 }}</span>
+  <span class="badge text-bg-danger">Problem {{ counts.problem|default:0 }}</span>
+</p>
+
+{% if not rows %}
+<p class="text-muted">No upcoming films have readiness recorded yet.</p>
+{% else %}
+<div class="table-responsive">
+<table class="table table-sm align-top">
+  <thead>
+    <tr>
+      <th scope="col">Date</th>
+      <th scope="col">Film</th>
+      <th scope="col">Status</th>
+      <th scope="col">Copies and steps</th>
+      <th scope="col">Backup</th>
+      <th scope="col">Subtitles</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for row in rows %}
+    <tr{% if row.readiness == "problem" or row.readiness != "ready" and row.urgency == "urgent" %} class="table-danger"{% elif row.readiness != "ready" and row.urgency == "soon" %} class="table-warning"{% endif %}>
+      <td class="text-nowrap">
+        {{ row.start|date:"D j M" }}
+        {% if row.readiness != "ready" and row.urgency == "urgent" %}<div class="small fw-bold">Within {{ urgent_days }} days</div>
+        {% elif row.readiness != "ready" and row.urgency == "soon" %}<div class="small">Soon</div>{% endif %}
+        {% if row.showing_count > 1 %}<div class="small text-muted">+{{ row.showing_count|add:"-1" }} more</div>{% endif %}
+      </td>
+      <td>
+        {% if can_open_hub %}<a href="{% url 'edit-event-details-view' event_id=row.event.pk %}#film-readiness">{{ row.title }}</a>{% else %}{{ row.title }}{% endif %}
+        {% if row.prep.film_title %}<div class="small text-muted">{{ row.event.name }}</div>{% endif %}
+        {% if row.companions %}<div class="small text-muted">Running order {{ row.prep.bill_position }}, on a bill with {% for c in row.companions %}{{ c.display_title }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+        {% if row.event.programmer %}<div class="small text-muted">Programmer: {{ row.event.programmer.display_name_or_default }}</div>{% endif %}
+      </td>
+      <td>
+        {% if row.readiness == "ready" %}<span class="badge text-bg-success">Ready</span>
+        {% elif row.readiness == "problem" %}<span class="badge text-bg-danger">Problem</span>
+        {% elif row.readiness == "in_progress" %}<span class="badge text-bg-warning text-dark">In progress</span>
+        {% else %}<span class="badge text-bg-secondary">Not started</span>{% endif %}
+      </td>
+      <td>
+        {% for c in row.copies %}
+        <div class="mb-1">
+          <strong>{{ c.copy.label }}</strong>
+          <span class="text-muted small">({{ c.copy.get_format_display }}){% if c.copy.location_note %}, {{ c.copy.location_note }}{% endif %}</span>
+          <ul class="list-unstyled small mb-0">
+            {% for m in c.steps %}
+            <li>
+              {% if m.done_at %}<span aria-hidden="true">{% if m.result == "problem" %}&#10007;{% else %}&#10003;{% endif %}</span>
+              <span class="visually-hidden">{% if m.result == "problem" %}Problem:{% else %}Done:{% endif %}</span>
+              {{ m.label }}, {{ m.done_at|date:"j M" }}{% if m.done_by %} by {{ m.done_by_name }}{% endif %}{% if m.result == "problem" %} (problem{% if m.notes %}: {{ m.notes }}{% endif %}){% endif %}
+              {% else %}<span aria-hidden="true">&#9675;</span>
+              <span class="visually-hidden">To do:</span>
+              {{ m.label }}{% if m.claimed_by %}, <em>claimed by {{ m.claimed_by_name }}{% if m.planned_for %} for {{ m.planned_for|date:"D j M" }}{% endif %}</em>{% endif %}
+              {% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% empty %}
+        <span class="text-muted small">No copy recorded yet</span>
+        {% endfor %}
+      </td>
+      <td>
+        {% if row.prep.backup_in_place %}Yes{% if row.prep.backup_note %}<div class="small text-muted">{{ row.prep.backup_note }}</div>{% endif %}
+        {% else %}<span class="text-muted">None</span>{% endif %}
+      </td>
+      <td class="small">{% if row.prep %}{{ row.prep.get_subtitles_display }}{% else %}<span class="text-muted">Not checked yet</span>{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{% if unfilled %}
+<h2 class="h5 mt-4" id="unfilled">Dates with no film recorded yet</h2>
+<p class="text-muted small mb-2">
+  Film events in the next {{ lookahead_days }} days with no film recorded.
+</p>
+<ul class="list-unstyled">
+  {% for s in unfilled %}
+  <li class="py-1">
+    <span class="text-nowrap">{{ s.start|date:"D j M" }}</span>,
+    {% if can_open_hub %}<a href="{% url 'edit-event-details-view' event_id=s.event.pk %}#film-readiness">{{ s.event.name }}</a>{% else %}{{ s.event.name }}{% endif %}
+    {% if s.event.programmer %}<span class="small text-muted">(programmer: {{ s.event.programmer.display_name_or_default }})</span>{% endif %}
+    {% if can_open_hub %}<a class="btn btn-sm btn-outline-secondary py-0 ms-1" href="{% url 'add-film-prep' event_id=s.event.pk %}?showing={{ s.pk }}">Add film</a>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if returns %}
+<h2 class="h5 mt-4" id="returns">Hard drives to send back</h2>
+<p class="text-muted small mb-2">
+  Screenings are over, so these go back to the distributor. Add the courier and tracking reference when you mark one sent,
+  then confirm once the distributor has received it. Confirmed drives stay listed for {{ return_keep_days }} days, so a mistaken click can be undone.
+</p>
+<div class="table-responsive">
+<table class="table table-sm align-top">
+  <thead>
+    <tr>
+      <th scope="col">Film</th>
+      <th scope="col">Last showing</th>
+      <th scope="col">Status</th>
+      <th scope="col">Sent</th>
+      {% if can_update %}<th scope="col"><span class="visually-hidden">Actions</span></th>{% endif %}
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in returns %}
+    <tr{% if r.status == "to_return" and r.overdue %} class="table-danger"{% elif r.status == "confirmed" %} class="text-muted"{% endif %}>
+      <td>
+        {% if can_open_hub %}<a href="{% url 'edit-event-details-view' event_id=r.event.pk %}#film-readiness">{{ r.title }}</a>{% else %}{{ r.title }}{% endif %}
+        {% if r.prep.film_title %}<div class="small text-muted">{{ r.event.name }}</div>{% endif %}
+        <div class="small text-muted">{{ r.copy.label }}{% if r.copy.location_note %}, {{ r.copy.location_note }}{% endif %}</div>
+      </td>
+      <td class="text-nowrap">{{ r.last_showing|date:"D j M" }}<div class="small text-muted">{{ r.days_since }} day{{ r.days_since|pluralize }} ago</div></td>
+      <td>
+        {% if r.status == "to_return" %}<span class="badge {% if r.overdue %}text-bg-danger{% else %}text-bg-warning text-dark{% endif %}">{% if r.overdue %}Overdue: {% endif %}To send back</span>
+        {% if r.returned_step.claimed_by %}<div class="small text-muted">Claimed by {{ r.returned_step.claimed_by_name }}</div>{% endif %}
+        {% elif r.status == "sent" %}<span class="badge {% if r.overdue %}text-bg-warning text-dark{% else %}text-bg-secondary{% endif %}">Sent{% if r.overdue %}: worth chasing{% endif %}</span>
+        {% else %}<span class="badge text-bg-success">Confirmed</span>
+        <div class="small text-muted">{{ r.confirm_step.done_at|date:"j M" }}{% if r.confirm_step.done_by %} by {{ r.confirm_step.done_by_name }}{% endif %}</div>{% endif %}
+      </td>
+      <td class="small">
+        {% if r.returned_step.done_at %}{{ r.returned_step.done_at|date:"j M" }}{% if r.returned_step.done_by %} by {{ r.returned_step.done_by_name }}{% endif %}{% if r.returned_step.notes %}<div>{{ r.returned_step.notes }}</div>{% endif %}
+        {% else %}<span class="text-muted">Not yet</span>{% endif %}
+      </td>
+      {% if can_update %}
+      <td>
+        {% if r.status == "to_return" %}
+        <form method="post" action="{% url 'film-milestone-complete' r.returned_step.pk %}" class="d-flex gap-1">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'film-readiness-overview' %}#returns">
+          <label class="visually-hidden" for="courier-{{ r.copy.pk }}">Courier and tracking reference</label>
+          <input type="text" id="courier-{{ r.copy.pk }}" name="notes" maxlength="256" class="form-control form-control-sm" placeholder="Courier and tracking ref">
+          <button type="submit" class="btn btn-sm btn-primary text-nowrap">Mark sent</button>
+        </form>
+        {% elif r.status == "sent" %}
+        <div class="d-flex gap-1 flex-wrap">
+          <form method="post" action="{% url 'film-milestone-complete' r.confirm_step.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'film-readiness-overview' %}#returns">
+            <button type="submit" class="btn btn-sm btn-success text-nowrap">Distributor confirmed</button>
+          </form>
+          <form method="post" action="{% url 'film-milestone-undo' r.returned_step.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'film-readiness-overview' %}#returns">
+            <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">Not sent after all</button>
+          </form>
+        </div>
+        {% else %}
+        <form method="post" action="{% url 'film-milestone-undo' r.confirm_step.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'film-readiness-overview' %}#returns">
+          <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">Not confirmed after all</button>
+        </form>
+        {% endif %}
+      </td>
+      {% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+<details class="mt-4">
+  <summary>How film readiness works</summary>
+  <ul class="mt-2 small">
+    <li><strong>Ready</strong> once any one copy has been test-played successfully, so a working backup covers a failed main copy.</li>
+    <li><strong>Copies</strong> are a main copy and any backups. One film can play at several showings; a double bill is two films on one showing.</li>
+    <li><strong>Steps</strong> depend on the copy's format (below). Anyone who programmes or projects can claim one, and each records who did it and when.</li>
+    <li><strong>Hired hard drives</strong> have two extra steps after the last showing (sent back, confirmed). They don't affect readiness, but stay under "Hard drives to send back" until confirmed, and for {{ return_keep_days }} days after.</li>
+    <li><strong>Nothing is one-way.</strong> A claim can be handed back and a finished step marked not done, from the film's Event Hub panel. Both are logged against the event with who did it.</li>
+    <li><strong>Flags:</strong> a film not yet ready is marked "soon" within {{ lookahead_days }} days and "urgent" within {{ urgent_days }}.</li>
+  </ul>
+  <table class="table table-sm small w-auto">
+    <thead><tr><th scope="col">Format</th><th scope="col">Steps, in order</th></tr></thead>
+    <tbody>
+    {% for label, steps in process %}
+      <tr><td>{{ label }}</td><td>{{ steps|join:", " }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if guide_url %}<p class="small"><a href="{{ guide_url }}">Which format should I choose?</a></p>{% endif %}
+</details>
+
+<p class="mt-4 small text-muted"><a href="{% url 'toolkit-index' %}">&larr; Back to the dashboard</a></p>
+{% endblock %}

@@ -1,14 +1,12 @@
 {% extends "base_admin.html" %}
 
-{% block title %}Finance: settlement review{% endblock %}
+{% block title %}Finance: review finances{% endblock %}
 
 {% block body %}
-<h1>Settlement review</h1>
+<h1>Review finances</h1>
 <p class="text-muted">
-  Every event with a financial outcome due in the date range below, with its
-  settlement and distributor-payment status. This page doesn't record
-  anything itself &mdash; use the links to open the showing or event's own
-  correction form.
+  Events with finances due in the date range below, and their status.
+  <strong>Read-only</strong>: use the links to correct a record.
 </p>
 
 {% include "bs_messages.html" %}
@@ -44,9 +42,9 @@
       <span class="text-muted small">&mdash; last showing {{ row.latest_showing.start|date:"D j M Y, H:i" }}</span>
     </div>
     <div class="d-flex gap-2 align-items-center">
-      {% if row.settlement_status == "recorded" %}<span class="badge text-bg-success">Settlement recorded</span>
-      {% elif row.settlement_status == "partial" %}<span class="badge text-bg-warning text-dark">Settlement partial</span>
-      {% elif row.settlement_status == "not_recorded" %}<span class="badge text-bg-danger">Settlement not recorded</span>
+      {% if row.settlement_status == "recorded" %}<span class="badge text-bg-success">Finances recorded</span>
+      {% elif row.settlement_status == "partial" %}<span class="badge text-bg-warning text-dark">Finances partial</span>
+      {% elif row.settlement_status == "not_recorded" %}<span class="badge text-bg-danger">Finances not recorded</span>
       {% endif %}
       {% if row.distributor_payment_status == "paid" %}<span class="badge text-bg-success">Distributor paid</span>
       {% elif row.distributor_payment_status == "invoiced" %}<span class="badge text-bg-info">Distributor invoiced</span>
@@ -68,7 +66,7 @@
       <thead>
         <tr>
           <th>Showing</th>
-          <th>Settlement</th>
+          <th>Finances</th>
           <th></th>
         </tr>
       </thead>
@@ -78,6 +76,7 @@
           <td>{{ entry.showing.start|date:"D j M Y, H:i" }}</td>
           <td>
             {% if entry.status == "recorded" %}<span class="badge text-bg-success">Recorded</span>
+            {% elif entry.status == "nothing_to_report" %}<span class="badge text-bg-light text-dark border">Nothing to report</span>
             {% elif entry.status == "partial" %}<span class="badge text-bg-warning text-dark">Partial</span>
             {% elif entry.status == "not_recorded" %}<span class="badge text-bg-danger">Not recorded</span>
             {% else %}<span class="text-muted small">&mdash;</span>{% endif %}

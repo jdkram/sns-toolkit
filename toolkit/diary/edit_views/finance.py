@@ -10,6 +10,9 @@ finance-facing review of both:
   actuals, reached from the Event Hub's past-showings section.
 - ``event_distributor_payment_edit`` -- the event-level invoiced/paid
   outcome, also reached from the Hub.
+- ``bulk_mark_nothing_to_report`` -- mark several outstanding showings on a
+  recurring series "nothing to report" in one go, for a backlog of elapsed
+  showings that never need logging one-by-one.
 - ``programmer_past_events`` -- a programmer's own past events with
   settlement status surfaced, the dashboard-card-linked destination.
 - ``finance_settlement_review`` -- a date-ranged index of every event's
@@ -27,7 +30,6 @@ from decimal import Decimal
 from functools import wraps
 
 from django.contrib import messages
-from django.db.models import Max
 from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -126,7 +128,7 @@ def showing_settlement_edit(request, showing_id):
 
             messages.success(
                 request,
-                f"Settlement saved for {showing.start:%d/%m/%Y %H:%M}.",
+                f"Finances saved for {showing.start:%d/%m/%Y %H:%M}.",
             )
             return HttpResponseRedirect(
                 reverse(
@@ -149,6 +151,60 @@ def showing_settlement_edit(request, showing_id):
             "formset": formset,
             "ticket_income_total": settlement.ticket_income_total(),
         },
+    )
+
+
+@write_required
+@_settlement_enabled_or_404
+@require_http_methods(["POST"])
+def bulk_mark_nothing_to_report(request):
+    """Mark several outstanding showings "nothing to report" in one go
+    (9.171 follow-up) -- the entry-form fix for a backlog of elapsed
+    showings on a recurring regular (a weekly meetup, say) where nothing
+    ever needs logging one-by-one. Deliberately not a fake zero-value line
+    item (would pollute ticket-income totals and the PRS/PPL report) --
+    see ShowingSettlement.nothing_to_report.
+
+    Doesn't touch attendance -- a showing already partially recorded (e.g.
+    just a headcount) keeps that headcount, only gains the flag. No
+    confirmation step and no revision recorded, matching this codebase's
+    existing pattern for reversible single-field toggles
+    (no_financial_activity, Unconfirm) -- each showing stays individually
+    correctable afterwards via its normal settlement form.
+    """
+    # Cast before querying: pk__in with a non-numeric string raises
+    # ValueError from the field, i.e. a 500 rather than the "nothing
+    # selected" path, on any hand-crafted or mangled POST.
+    showing_ids = [
+        int(raw)
+        for raw in request.POST.getlist("showing_ids")
+        if raw.isdigit()
+    ]
+    showings = list(
+        Showing.objects.filter(pk__in=showing_ids).select_related("event")
+    )
+    if not showings:
+        messages.warning(request, "No showings selected.")
+        return HttpResponseRedirect(reverse("toolkit-index"))
+
+    for showing in showings:
+        settlement, _ = ShowingSettlement.objects.get_or_create(
+            showing=showing
+        )
+        if not settlement.nothing_to_report:
+            settlement.nothing_to_report = True
+            settlement.updated_by = request.user
+            settlement.save()
+
+    messages.success(
+        request,
+        f"Marked {len(showings)} showing{'s' if len(showings) != 1 else ''} "
+        "as nothing to report.",
+    )
+    event_id = showings[0].event_id
+    return HttpResponseRedirect(
+        reverse("edit-event-details-view", kwargs={"event_id": event_id})
+        + "#showings-heading"
     )
 
 
@@ -299,28 +355,42 @@ def _events_with_elapsed_showings_in_range(
     date_from, date_to, now, extra_filters=None
 ):
     """Every event with at least one elapsed, non-cancelled showing whose
-    *latest* showing falls in the range, paired with that event's sorted
-    elapsed showings -- the shared query behind finance_settlement_review
-    and prs_report (9.171), so the two never drift on what counts as "in
-    range". `extra_filters` narrows further (e.g. prs_report's cost_type
-    scoping) without duplicating the base query.
+    *latest elapsed* showing falls in the range, paired with that event's
+    sorted elapsed showings -- the shared query behind
+    finance_settlement_review and prs_report (9.171), so the two never
+    drift on what counts as "in range". `extra_filters` narrows further
+    (e.g. prs_report's cost_type scoping) without duplicating the base
+    query.
+
+    Filters in Python on the max of each event's *elapsed* showings, not a
+    DB-side Max("showings__start") -- a recurring event's overall latest
+    showing is routinely a future date outside any reporting month, which
+    would wrongly exclude the whole event from a range that its elapsed
+    showings do fall in (found during 2026-09-14 manual testing).
+
+    The DB still narrows to events with an elapsed, non-cancelled showing
+    *inside* the range, which is a strict superset of the answer: an event
+    whose latest elapsed showing falls in the range necessarily has an
+    elapsed showing in the range. Without it the candidate set is every
+    event the venue has ever run, which grows with total history rather
+    than with the reporting window (on the dev DB, 92 events loaded with
+    all their showings to return 10 for one month).
     """
-    events = (
-        Event.objects.annotate(latest_showing_start=Max("showings__start"))
-        .filter(
-            latest_showing_start__date__gte=date_from,
-            latest_showing_start__date__lte=date_to,
-            latest_showing_start__lte=now,
+    candidates = (
+        Event.objects.filter(
+            showings__start__lte=now,
+            showings__start__date__gte=date_from,
+            showings__start__date__lte=date_to,
+            showings__cancelled=False,
             no_financial_activity=False,
             **(extra_filters or {}),
         )
         .prefetch_related("showings")
         .distinct()
-        .order_by("-latest_showing_start")
     )
 
     result = []
-    for event in events:
+    for event in candidates:
         elapsed = [
             s
             for s in event.showings.all()
@@ -329,7 +399,11 @@ def _events_with_elapsed_showings_in_range(
         if not elapsed:
             continue
         elapsed.sort(key=lambda s: s.start, reverse=True)
+        latest_elapsed = elapsed[0].start
+        if not (date_from <= latest_elapsed.date() <= date_to):
+            continue
         result.append((event, elapsed))
+    result.sort(key=lambda pair: pair[1][0].start, reverse=True)
     return result
 
 

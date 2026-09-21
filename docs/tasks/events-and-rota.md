@@ -4208,7 +4208,7 @@ checklist), 9.54 (structured deal terms — sibling, not superseded), 9.92
 
 ---
 
-### 9.162 — Bridge programming-queue approval and showing confirmation ✅ shipped 2026-09-09
+### 9.162 — Bridge programming-queue approval and showing confirmation 🟡 M
 
 **Source:** Live workflow report, 2026-07-28 (see Bug AR).
 
@@ -4266,7 +4266,7 @@ dependent follow-on), Bug AR (symptom writeup).
 
 ---
 
-### 9.163 — Event/showing audit trail + real created-by/booked-for fields ✅ Delivered 2026-09-10
+### 9.163 — Event/showing audit trail + real created-by/booked-for fields 🟡 M
 
 **Delivered as spec'd below**, with the open question about a separate "responsible programmer"
 FK left for 9.164 to resolve, as originally flagged. `Event.created_by` (migration `0045`,
@@ -4597,3 +4597,245 @@ only *when* — the audience for rota-note edits is unchanged.
 **Related:** `toolkit/diary/models/showing.py` (`in_past`, `end_time`,
 `setup_time`), `toolkit/diary/edit_views/rota.py:150,255,355`,
 `toolkit/diary/templates/edit_rota.html` (`data-in-past` usage).
+
+---
+
+### 9.173 — Native venue programming proposal: an admin-configurable readiness checklist 🟠 L
+
+**Source:** Conversation 2026-09-17. The Venue Programming Collective runs event proposals
+through an external Nextcloud form (dumped at
+[docs/ARCHIVE/venue_programming_form_2026-09-17.md](../ARCHIVE/venue_programming_form_2026-09-17.md))
+feeding a spreadsheet reviewed at Monday meetings, disconnected from the toolkit's own
+draft/proposed/active/rejected queue (`Event.programming_status`,
+`update_event_programming_status` in `edit_views/site_config.py`). Decision 2026-09-17: build
+the full native replacement rather than a "link out plus checkbox" MVP. A first draft of this
+entry proposed a general-purpose custom-field (EAV) engine, sized 🔴 XL; it was replaced the
+same day by the design below after re-reading the 34 questions against the models that shipped
+in September 2026.
+
+**The finding that changes the shape.** Almost none of the form's questions need new data.
+Keyholder, sound engineer, projectionist, bar and cafe cover are rota `Role`s filled by a
+`RotaEntry`. Location and green room or meeting room needs are `RoomBooking`s. Budget total,
+breakdown, door staff and late licence, and "have you budgeted for volunteer food and taxis" are
+`EventBudgetLine` rows (9.149), whose template already carries those categories and a
+site-default late-licence fee. Ticket sales against budget is computable from the same rows.
+Artists and PRS/PPL are `PerformerRegistration` (9.171). Name, contact and consent are the
+logged-in user and `Event.programmer` (9.169). "First event" is `programmed_events.count()`.
+"Placeholder in the calendar" is the draft event itself. Clash checking is computable from room
+bookings, better than self-report. Active-volunteer status is computable from `RotaEntry`.
+
+What is genuinely new: a buddy request, an Instagram request, an expected-attendance figure,
+and a handful of "I have read and considered X" acknowledgements. Building a typed
+custom-field engine to hold four questions is the wrong shape.
+
+**Design principle.** The thing the Collective changes over time is not a *field*, it is a
+*required check*: add or drop a requirement, reword its guidance, change a threshold, require a
+new rota slot. So the configurable unit is a checklist item, and the Event Hub's existing
+completeness checklist (the `completeness` dict in `event_detail_view`) becomes the proposal.
+
+#### Data model
+
+- `ProposalCheck`, admin-editable (Django admin, `list_editable` on `order`/`required`/`active`):
+  `label`, `help_text` (may link to the etiquette guide), `section`, `order`, `required`,
+  `active`, and a `kind`:
+  - **computed**: `check_name` bound to a check the code exposes from a small registry module
+    (lifting the existing `completeness` entries such as `has_programmer`, `terms_ok`,
+    `has_copy`, `has_image` out of the view, plus new ones: `rooms_booked`,
+    `budget_under_threshold`, `late_finish_budgeted`, `prs_recorded`, `active_volunteer`,
+    `no_room_clash`). Stores nothing per event.
+  - **role**: FK to a rota `Role`; passes when the first showing's rota has that slot
+    (optionally, `must_be_filled`). Covers keyholder, tech, bar, cafe and a new "programming
+    buddy" role. Admins add a role and pick it; no code.
+  - **acknowledge**: a tick box the proposer must tick.
+  - **note**: a short free-text answer.
+- `ProposalCheckResponse` (`event`, `check`, `ticked`, `note`, `answered_by`, `answered_at`).
+  Written only for the last two kinds.
+- One native integer, `Event.expected_attendance`, since it feeds the break-even calculator and
+  is the settlement `attendance` field's planning counterpart.
+- `SiteConfiguration`: `proposal_checklist_enabled` (ships off), `proposal_budget_threshold_gbp`
+  (the £500 rule), `active_volunteer_min_shifts` and `active_volunteer_window_months`.
+
+Completeness is evaluated against the *current* active check set at propose time; earlier
+proposals are never re-evaluated. This is a Monday-meeting aid, not a compliance record.
+
+#### Behaviour
+
+- **Propose gate.** With the flag on, "propose" requires every active, required check to pass,
+  otherwise it redirects to the Hub with the failing items highlighted. The state machine and its
+  actions are untouched, so the flag off restores today's bare status flip exactly; no data
+  migration, no half-built state.
+- **Hub rendering.** Checks grouped by `section`, computed and role kinds shown as pass/fail
+  with a link to the thing that fixes them (the rota, the budget, the room booking),
+  acknowledge and note kinds as inputs. Replaces the current hardcoded checklist block rather
+  than sitting beside it.
+- **Queue summary.** The programming queue shows one line per event ("7 of 9; missing:
+  keyholder, budget"), which is the condensed view the spreadsheet was standing in for.
+- **Eligibility** appears as a computed check with the thresholds above, so whether it is
+  informational or blocking is the Collective's setting, not a code decision.
+
+This honours SPEC's "intentional friction" note: the keyholder question is answered by a real
+person signing up on the rota, not a name typed into a box.
+
+**What this gives up.** Admin-defined typed questions (dates, choices, numbers). Nothing in the
+34 needs one the toolkit does not already model. If one appears, `kind=choice` with a JSON
+choices list is an additive change to the same table.
+
+**Out of scope for v1.** A non-admin check editor; migrating historical Nextcloud submissions;
+the decision email (9.164, now unblocked, is the natural follow-on); retiring the Nextcloud form
+before the Collective trusts this.
+
+**Size estimate:** 🟠 L, about 40h. Two small models and migration (4h); the check registry
+refactor (6h); propose gate, Hub rendering, queue summary (10h); eligibility checks and
+`SiteConfiguration` fields (5h); flag and docs (3h); tests (12h).
+
+**Related:** 9.162/9.163/9.169 (queue plumbing), 9.171 (PRS/PPL reuse), 9.149 (budget lines),
+9.54 (cost terms), 9.164 (follow-on), `docs/ARCHIVE/venue_programming_form_2026-09-17.md`.
+
+### 9.174 — Film readiness: is the film in the building, and has anyone test-played it? 🟠 L
+
+**Status:** ✅ built 2026-09-21 and reworked the same day around one film per record (below).
+Models, flag, add/edit/delete pages, claim/complete endpoints, Event Hub panel, dashboard cards,
+overview page with returns, navbar and palette entries, seed data, SPEC.md. Not yet
+browser-verified. Ships dormant behind `SiteConfiguration.film_prep_enabled`; the dev seed
+switches it on. The schema is a single migration, `diary/0051_nothing_to_report_and_film_readiness`.
+
+**Problem.** Getting a film into the booth in working order is a handover between the programmer
+who sources it and the projectionist who runs it, who may be different people. That handover lived
+in `Event.technical_notes` and in heads. Nothing recorded whether a disc was in the building, a DCP
+had arrived or been ingested, or anyone had test-played it, and hired hard drives piled up because
+nothing tracked sending them back.
+
+**The unit is one film.** A `FilmPrep` is one film we are running, linked to the showings it plays
+at (a many-to-many `FilmPrep.showings`), and only to showings of its own event (enforced on the
+link, both directions). That covers every real shape without special cases:
+- A one-off, or a run of the same film: one film ticked on all its showings, so a test done once
+  counts for every screening.
+- Family Film Club, a different film each date: one film per showing, each with its own title,
+  copies, backup and handover note.
+- A double or triple bill: two or three films on the same showing, each with its own state (one
+  film on a disc and the other on a hard drive is normal). `bill_position` gives the running order.
+- Community Kitchen with a film: **programme the film as an event of its own**, separate from the
+  Kitchen event (decided 2026-09-21; it is what we recommend anyway, since it puts the film on the
+  public programme). That is why films only link to showings of their own event, and why there is no
+  separate "owner" field: the film event has its own programmer.
+A showing with no film on a film event is a gap: the Hub, the overview and the programmer's
+dashboard flag "no film recorded" for dates in the next 14 days.
+
+**Other decisions.** Nudges are dashboard-only for now. Accountability is claim plus log: anyone
+can say "I'll do this (by date)", and every step records who and when, written to the Event Hub
+audit trail with the film's title. The sourcing guide lives elsewhere (public repo);
+`film_sourcing_guide_url` links to it beside the format picker. Discs come from a volunteer-run
+library, so a disc's "where is it" is the copy's location note ("Library, shelf D3"), and discs
+have no return leg.
+
+**Data model** (`toolkit/diary/models/film_prep.py`): `FilmPrep` (event, showings, `film_title`
+blank when the event is the film, `bill_position`, subtitles, backup, trailers, booth notes,
+handover note), `FilmCopy` (film, label, format, location), `FilmMilestone` (one step per copy:
+done, result, claimed-by, planned date, notes). Which steps a copy has comes from the
+`FORMAT_MILESTONES` dict, not the schema: disc is in building, in booth, tested; DCP is on
+FilmVault or hard drive arrived, ingested, tested (a hard drive also has sent back and confirmed
+returned, see Returns); MP4 is in building, tested; other is tested only. Changing a format keeps
+any step someone has done or claimed. A film is ready as soon as any copy is ready, so a working
+backup covers a failed main copy. Urgency is days to the film's next non-cancelled showing (3 =
+urgent, 14 = look-ahead); constants, not config, until they prove wrong. `bill_position` sits on
+the film rather than on a per-showing link table: the same film is nearly always first or second
+wherever it plays. Move it to a through table only if that stops being true.
+
+**Views** (`edit_views/film_prep.py`, all flag-gated to 404): `film_prep_add`
+(`add-film-prep`, `?showing=` preselects a date), `film_prep_edit` (`edit-film-prep`),
+`film_prep_delete` (`delete-film-prep`, needs a ticked confirmation): all Programmer+. A new
+film defaults to the dates that have no film yet, so "one film for the whole run" is a single
+click and "a different film per date" is a per-date button. At least one showing must be ticked,
+or the film would never appear anywhere. `film_milestone_claim` / `film_milestone_complete` take
+`film_update_required`: Programmer+ *or* a projectionist. The two POST endpoints redirect to a
+local `next` only, falling back to the Hub for Programmer+ and to the dashboard for a rota-only
+projectionist (who cannot open the Hub).
+
+**Who counts as a projectionist.** A volunteer with a rota entry, in the last 180 days or in the
+future, on a `Role` with `is_projectionist` set (a column on the roles page). Rota-only volunteers
+hold no toolkit permissions, so this is the whole test: it does not also require `toolkit.read`.
+It is a rolling window rather than a flag on the person, so someone who drifts out of the booth
+stops seeing the card. A programmer who is also a projectionist is just a programmer: one
+permission check, and on the dashboard their own films appear in "Your films" only, never again in
+"Films needing a test".
+
+**Event Hub panel.** One block per film: title, status, the dates it plays at, the bill it is on,
+each copy's steps with claim and complete buttons, subtitles, backup, notes. Above them, a warning
+listing upcoming dates with no film recorded, each a link that opens the add page on that date.
+
+**Dashboard.** "Your films" (`dash_film_prep`): films on events the volunteer programmes, any
+status, with the next missing step, who has claimed it, a warning when nobody has claimed the
+test-play, and a prompt row (with an "Add film" button) for each of their dates in the next 14
+days that has no film. "Films needing a test" (`dash_film_tests`): untested films in the next 14
+days, excluding the viewer's own, with one-click "I'll test this" then "Played fine" / "Problem".
+"Drives to send back" (`dash_film_returns`), below. All auto-appear when there is something to
+show and are toggleable and draggable in Customise. Row data is built from prefetched showings,
+copies and milestones, so the cost does not grow per film.
+
+**Overview page** (`film-readiness-overview`, `/diary/films/readiness/`). Read-only list of every
+upcoming film, soonest first, every state including ready. Per row: date (and "+N more" for further
+showings), film title with the event name beneath, the films it shares a bill with, programmer,
+status and urgency, each copy's readiness steps with who and when, backup, subtitles. Below it:
+dates with no film recorded, and the returns table. A short "How film readiness works" section
+lists each format's steps, for volunteers who are only looking. Viewable by **any logged-in
+volunteer** (login only, no toolkit permission), so people considering programming can see the
+process first. It shows volunteer display names, never usernames or private names, and links to the
+Hub only for Programmer+. Both dashboard cards link to it, a volunteer with neither card gets a
+standing "Film readiness" card, and there is a **Films** link in the toolkit navbar (`g → l`) and a
+matching command-palette entry, both gated on the flag only (see `docs/NAVIGATION.md`). Shared
+query and row code lives in `models/film_prep.py` (`upcoming_film_preps`, `film_row`,
+`showings_without_film`).
+
+**Backup fields** (`FilmPrep.backup_in_place`, `backup_note`). A bool plus a free text note ("disc
+in the booth", "MP4 in the Films folder"). Informational only: they do not change `readiness()`.
+Overlaps in spirit with recording a second `FilmCopy`; the rule of thumb is that a backup someone
+needs to track step by step is a copy, and these two fields are the at-a-glance answer. Shown in
+the Hub panel, the edit page and the overview. The bool cannot tell "no backup" from "not checked
+yet" (the overview says "No backup" for both); make it a three-way choice like subtitles if that
+distinction matters in practice.
+
+**Returns: hired hard drives after the run.** A hired DCP drive has two further steps after the
+last showing: `returned` (sent back by courier; the note field takes the courier and tracking
+reference) and `return_confirmed` (the distributor says it arrived; optional to chase, but logged
+when it happens). They are "post-screening" steps (`POST_SCREENING_KEYS`) and deliberately **do
+not** affect `readiness()`: a tested drive waiting to be posted is a ready film and a separate
+problem, and folding the two together would have made every finished film look unready.
+`returns_outstanding()` lists copies whose drive arrived, whose **film's own showings** have none
+left to come, and whose return is not yet confirmed: "to send back" (overdue after 3 days) and
+"sent, awaiting confirmation" (worth chasing after 14 days), both constants. Keying off the film's
+showings rather than the event's matters for a recurring event: a drive for one Family Film Club
+date is due back after that date, not after the series ends. A cancelled run still leaves a drive
+to send back. Surfaces: a "Hard drives to send back" table on the overview (visible to all, with
+one-click "Mark sent" plus a courier-reference box and "Distributor confirmed" for those who may
+update), a "Drives to send back" dashboard card for Programmer+ and projectionists, and the two
+steps in the Hub panel. Discs and MP4s have no return leg; add the two keys to their
+`FORMAT_MILESTONES` entry if that ever changes (no schema change needed).
+
+**Scope boundary (decided 2026-09-21).** Film readiness covers the physical film's logistics from
+sourcing to return. Financial reporting after the run (settlement, distributor payment, PRS/PPL)
+stays in 9.171 and is not folded in here. The two are linked only by the event.
+
+**Migrations.** The uncommitted diary migrations `0051` to `0054` and the schema reworks above were
+consolidated into the single `0051_nothing_to_report_and_film_readiness`, because none of them had
+left this branch and no data in the old shape existed outside dev databases. Anyone with a dev DB
+from before that needs `manage.py migrate diary 0050` (with the old files still present) or a
+`flush` and reseed; a fresh DB just migrates. Migrations up to `0050` are unchanged: they were
+committed and may already be applied on the homeserver, so squashing them would need Django's
+`squashmigrations` with `replaces`.
+
+**Decisions and gaps.**
+- A rota-only projectionist can claim and complete but cannot edit films or notes (Programmer+);
+  the handover note is therefore written by the programmer, which is the point of it.
+- A film event is one tagged `film`, linked to a `Film` record, or already carrying a film. Other
+  events never show the panel or the "no film recorded" prompt.
+- Every film-tagged event with no film recorded therefore gets the prompt for its dates in the next
+  14 days, including ordinary single-film events nobody has started tracking. Deliberate: it is the
+  nudge to start.
+- `Event.film` (the linked film record) still allows only one film per event, and is unchanged.
+  Giving `FilmPrep` its own optional `Film` link, falling back to the event's, is the natural
+  follow-up.
+- Urgency and return thresholds (3, 14, 3 and 14 days) are constants; promote to site config only
+  if they prove wrong.
+- Out of scope, unchanged: email or digest nudges, a "you have a shift today, test film X" prompt,
+  an admin-configurable checklist (9.173 covers proposals; revisit shared machinery), 35mm-specific
+  steps beyond "other".

@@ -6,7 +6,14 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User, Group
 from django.contrib import messages
 from django.db import connection, OperationalError
-from django.db.models import Count, ExpressionWrapper, F, IntegerField, Min, Q
+from django.db.models import (
+    Count,
+    ExpressionWrapper,
+    F,
+    IntegerField,
+    Min,
+    Q,
+)
 from django.http import (
     HttpResponse,
     HttpResponseServerError,
@@ -25,6 +32,15 @@ from toolkit.diary.models import (
     Showing,
     VolunteerEventMark,
     get_site_config,
+)
+from toolkit.diary.models.film_prep import (
+    LOOKAHEAD_DAYS,
+    READY,
+    film_row,
+    returns_outstanding,
+    showings_without_film,
+    upcoming_film_preps,
+    user_can_update_film_prep,
 )
 from toolkit.index.models import IndexLink
 from toolkit.members.models import PanopticonGrant, Volunteer
@@ -198,6 +214,57 @@ def _outstanding_settlements_for(volunteer, now):
         )
     rows.sort(key=lambda r: r["latest_showing"].start, reverse=True)
     return rows[:8]
+
+
+def _film_prep_cards_for(user, volunteer, now):
+    """Context for the film-readiness dashboard cards (9.174), or {}.
+
+    "Your films": the films on events this volunteer is the programmer of,
+    any status, plus a prompt row for each upcoming date of theirs that has
+    no film recorded yet (a Family Film Club date, say). "Films needing a
+    test": untested films in the look-ahead window across the venue, and
+    "Drives to send back" (hired hard drives whose screenings are over),
+    both for anyone who may update film prep (Programmer+ or a
+    projectionist). Someone who is both a programmer and a projectionist
+    sees their own films in the first card only, so nothing appears twice.
+    """
+    if not get_site_config().film_prep_enabled:
+        return {}
+    cards = {"film_overview_url": reverse("film-readiness-overview")}
+    if volunteer is not None:
+        mine = [
+            film_row(p, now)
+            for p in upcoming_film_preps(now).filter(
+                event__programmer=volunteer
+            )
+        ]
+        mine += [
+            {
+                "kind": "missing",
+                "start": s.start,
+                "event": s.event,
+                "showing": s,
+            }
+            for s in showings_without_film(now, LOOKAHEAD_DAYS).filter(
+                event__programmer=volunteer
+            )
+        ]
+        if mine:
+            cards["film_prep_mine"] = sorted(mine, key=lambda r: r["start"])[
+                :8
+            ]
+    if user_can_update_film_prep(user):
+        others = upcoming_film_preps(now, days=LOOKAHEAD_DAYS)
+        if volunteer is not None:
+            others = others.exclude(event__programmer=volunteer)
+        rows = [film_row(p, now) for p in others]
+        rows = [r for r in rows if r["readiness"] != READY]
+        if rows:
+            cards["film_tests"] = sorted(rows, key=lambda r: r["start"])[:8]
+        returns = returns_outstanding(now)
+        if returns:
+            cards["film_returns"] = returns[:8]
+    return cards
 
 
 def _finance_settlement_review_url_for(user):
@@ -454,6 +521,10 @@ class ToolkitIndexView(ListView):
         outstanding_settlements = _outstanding_settlements_for(volunteer, now)
         if outstanding_settlements:
             context["outstanding_settlements"] = outstanding_settlements
+
+        # Film readiness cards (9.174): flag check and de-duplication live
+        # in the helper, keeping this method's branch count flat.
+        context.update(_film_prep_cards_for(user, volunteer, now))
 
         # Finance's monthly settlement review (9.171): a standing link, not
         # a data-bearing card -- the review page itself does the querying,

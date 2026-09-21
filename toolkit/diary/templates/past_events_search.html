@@ -1,4 +1,5 @@
 {% extends "base_admin.html" %}
+{% load hash_filter %}
 
 {% block title %}Find a past event{% endblock %}
 
@@ -37,19 +38,31 @@
     <tr>
       <th>Event</th>
       <th>Last showing</th>
+      {% if settlement_enabled %}<th>Finances</th>{% endif %}
       <th></th>
     </tr>
   </thead>
   <tbody>
     {% for event in events %}
+    {% with fstatus=settlement_statuses|lookup:event.pk %}
     <tr>
       <td>{{ event.name }}</td>
-      <td>{{ event.latest_showing_start|date:"D j M Y, H:i" }}</td>
+      <td>{{ event.latest_elapsed_showing|date:"D j M Y, H:i" }}</td>
+      {% if settlement_enabled %}
+      <td>
+        {% if not fstatus or fstatus == "not_applicable" %}
+        <span class="text-muted small">—</span>
+        {% elif fstatus == "recorded" %}<span class="badge text-bg-success">Recorded</span>
+        {% elif fstatus == "partial" %}<span class="badge text-bg-warning text-dark">Partial</span>
+        {% else %}<span class="badge text-bg-danger">Not recorded</span>{% endif %}
+      </td>
+      {% endif %}
       <td>
         <a href="{% url 'edit-event-details-view' event_id=event.pk %}"
            class="btn btn-sm btn-outline-secondary">Open</a>
       </td>
     </tr>
+    {% endwith %}
     {% endfor %}
   </tbody>
 </table>

@@ -40,6 +40,7 @@ from toolkit.diary.models import (
 import toolkit.diary.forms as diary_forms
 import toolkit.diary.validators as diary_validators
 from toolkit.audit.models import DeletionLog, EventAuditLog, log_event_action
+from toolkit.diary.models.film_prep import URGENT_DAYS
 
 # Shared utility method:
 from toolkit.diary.daterange import safe_json
@@ -76,18 +77,35 @@ def past_events_search(request):
         except ValueError:
             return None
 
+    # Max() over the *elapsed, non-cancelled* showings only -- an event's
+    # overall latest showing is routinely a future date for anything
+    # recurring (a weekly regular, say), which would otherwise exclude the
+    # whole event the moment it has any future booking on the books. Same
+    # bug, same fix, as finance.py's _events_with_elapsed_showings_in_range
+    # (found live 2026-09-14).
     events = Event.objects.annotate(
-        latest_showing_start=Max("showings__start")
-    ).filter(latest_showing_start__lte=now)
+        latest_elapsed_showing=Max(
+            "showings__start",
+            filter=Q(showings__start__lte=now, showings__cancelled=False),
+        )
+    ).filter(latest_elapsed_showing__isnull=False)
     if q:
         events = events.filter(name__icontains=q)
     parsed_from = _parse_date(date_from) if date_from else None
     if parsed_from:
-        events = events.filter(latest_showing_start__date__gte=parsed_from)
+        events = events.filter(latest_elapsed_showing__date__gte=parsed_from)
     parsed_to = _parse_date(date_to) if date_to else None
     if parsed_to:
-        events = events.filter(latest_showing_start__date__lte=parsed_to)
-    events = events.order_by("-latest_showing_start")[:200]
+        events = events.filter(latest_elapsed_showing__date__lte=parsed_to)
+    events = events.order_by("-latest_elapsed_showing")[:200]
+
+    settlement_enabled = get_site_config().event_settlement_enabled
+    events = list(events.prefetch_related("showings"))
+    settlement_statuses = {}
+    if settlement_enabled:
+        settlement_statuses = {
+            event.pk: event.settlement_status() for event in events
+        }
 
     return render(
         request,
@@ -97,6 +115,8 @@ def past_events_search(request):
             "q": q,
             "date_from": date_from,
             "date_to": date_to,
+            "settlement_enabled": settlement_enabled,
+            "settlement_statuses": settlement_statuses,
         },
     )
 
@@ -144,7 +164,7 @@ def _build_event_audit_trail(event):
                 "timestamp": rev.saved_at,
                 "actor": rev.saved_by,
                 "summary": (
-                    f"Settlement corrected for "
+                    f"Finances corrected for "
                     f"{rev.settlement.showing.start:%d/%m/%Y %H:%M}"
                 ),
             }
@@ -161,6 +181,68 @@ def _build_event_audit_trail(event):
         )
     rows.sort(key=lambda r: r["timestamp"], reverse=True)
     return rows
+
+
+def _film_prep_context(event, has_film_tag):
+    """Event Hub "Film readiness" panel data (9.174), or {} when the flag is
+    off or the event is neither a film event nor already tracked. One entry
+    per film (a run, a different film per date, or the films on a bill),
+    plus the upcoming showings that still have no film recorded. Split out
+    of event_detail_view to keep it under the complexity gate.
+    """
+    if not get_site_config().film_prep_enabled:
+        return {}
+    now = timezone.now()
+    preps = list(
+        event.film_preps.prefetch_related(
+            "copies__milestones__claimed_by__volunteer__member",
+            "copies__milestones__done_by__volunteer__member",
+            "showings__film_preps",
+        )
+    )
+    if not (has_film_tag or event.film_id or preps):
+        return {}
+    films = []
+    for prep in preps:
+        showings = sorted(prep.showings.all(), key=lambda s: s.start)
+        companions = {
+            other
+            for showing in showings
+            for other in showing.film_preps.all()
+            if other.pk != prep.pk
+        }
+        films.append(
+            {
+                "prep": prep,
+                "showings": showings,
+                "companions": sorted(
+                    companions, key=lambda p: (p.bill_position, p.pk)
+                ),
+                "copies": [
+                    {
+                        "copy": c,
+                        "steps": c.ordered_milestones(),
+                        "readiness": c.readiness(),
+                    }
+                    for c in prep.copies.all()
+                ],
+                "readiness": prep.readiness(),
+                "urgency": prep.urgency(now),
+            }
+        )
+    unfilled = list(
+        event.showings.filter(
+            cancelled=False, start__gte=now, film_preps__isnull=True
+        ).order_by("start")
+    )
+    return {
+        "film_panel": {
+            "films": films,
+            "unfilled": unfilled,
+            "guide_url": get_site_config().film_sourcing_guide_url,
+            "urgent_days": URGENT_DAYS,
+        }
+    }
 
 
 @write_required
@@ -268,6 +350,7 @@ def event_detail_view(request, event_id):
             ),
             "prs_relevant": prs_relevant,
             "prs_recorded": prs_recorded,
+            **_film_prep_context(event, has_film_tag),
         },
     )
 

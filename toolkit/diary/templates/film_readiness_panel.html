@@ -1,0 +1,105 @@
+{# Film readiness panel (9.174): one block per film. Separate small forms per action: never nest a form inside another. #}
+<div id="film-readiness" class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <strong>Film readiness</strong>
+    <span class="d-flex gap-2">
+      <a href="{% url 'film-readiness-overview' %}" class="btn btn-sm btn-outline-secondary">All films &rarr;</a>
+      <a href="{% url 'add-film-prep' event.pk %}" class="btn btn-sm btn-outline-secondary">Add a film</a>
+    </span>
+  </div>
+  <div class="card-body">
+    {% if film_panel.unfilled %}
+    <div class="alert alert-warning py-2 small">
+      <strong>No film recorded yet for:</strong>
+      {% for s in film_panel.unfilled %}
+      <a href="{% url 'add-film-prep' event.pk %}?showing={{ s.pk }}">{{ s.start|date:"D j M" }}</a>{% if not forloop.last %}, {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% for f in film_panel.films %}
+    <div class="mb-3 pb-3{% if not forloop.last %} border-bottom{% endif %}">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+          <strong>{{ f.prep.display_title }}</strong>
+          {% if f.readiness == "ready" %}<span class="badge text-bg-success ms-1">Ready</span>
+          {% elif f.readiness == "problem" %}<span class="badge text-bg-danger ms-1">Problem</span>
+          {% elif f.readiness == "in_progress" %}<span class="badge text-bg-warning text-dark ms-1">In progress</span>
+          {% else %}<span class="badge text-bg-secondary ms-1">Not started</span>{% endif %}
+          {% if f.readiness != "ready" and f.urgency == "urgent" %}<span class="badge text-bg-danger ms-1">Showing within {{ film_panel.urgent_days }} days</span>
+          {% elif f.readiness != "ready" and f.urgency == "soon" %}<span class="badge text-bg-warning text-dark ms-1">Showing soon</span>{% endif %}
+          {% if f.companions %}<div class="small text-muted">Running order {{ f.prep.bill_position }}, on a bill with {% for c in f.companions %}{{ c.display_title }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+          <div class="small text-muted">Plays at: {% for s in f.showings %}{{ s.start|date:"D j M" }}{% if not forloop.last %}, {% endif %}{% empty %}no showings linked{% endfor %}</div>
+        </div>
+        <a href="{% url 'edit-film-prep' f.prep.pk %}" class="btn btn-sm btn-outline-secondary">Edit &rarr;</a>
+      </div>
+
+      {% for row in f.copies %}
+      <div class="mt-2">
+        <div><strong>{{ row.copy.label }}</strong> <span class="text-muted">({{ row.copy.get_format_display }}){% if row.copy.location_note %} &middot; {{ row.copy.location_note }}{% endif %}</span></div>
+        <ul class="list-unstyled mb-0 mt-1">
+          {% for m in row.steps %}
+          <li class="d-flex flex-wrap align-items-center gap-2 py-1">
+            {% if m.done_at %}
+            <span aria-hidden="true">{% if m.result == "problem" %}&#10007;{% else %}&#10003;{% endif %}</span>
+            <span>{{ m.label }}</span>
+            <span class="text-muted small">{{ m.done_at|date:"d/m H:i" }}{% if m.done_by %} by {{ m.done_by_name }}{% endif %}{% if m.result == "problem" %}, problem{% endif %}{% if m.notes %}: {{ m.notes }}{% endif %}</span>
+            <form method="post" action="{% url 'film-milestone-undo' m.pk %}" class="d-inline">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.path }}#film-readiness">
+              <button type="submit" class="btn btn-sm btn-link text-muted py-0" title="Marked done by mistake? This puts it back to not done and is logged.">Undo<span class="visually-hidden"> {{ m.label }}</span></button>
+            </form>
+            {% else %}
+            <span aria-hidden="true">&#9675;</span>
+            <span>{{ m.label }}</span>
+            {% if m.claimed_by %}<span class="text-muted small">claimed by {{ m.claimed_by_name }}{% if m.planned_for %} for {{ m.planned_for|date:"D j M" }}{% endif %}</span>{% endif %}
+            {% if m.claimed_by %}
+            <form method="post" action="{% url 'film-milestone-unclaim' m.pk %}" class="d-inline">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.path }}#film-readiness">
+              <button type="submit" class="btn btn-sm btn-outline-secondary py-0">Hand back<span class="visually-hidden"> {{ m.label }}</span></button>
+            </form>
+            {% else %}
+            <form method="post" action="{% url 'film-milestone-claim' m.pk %}" class="d-inline">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.path }}#film-readiness">
+              <button type="submit" class="btn btn-sm btn-outline-secondary py-0">I'll do this</button>
+            </form>
+            {% endif %}
+            <form method="post" action="{% url 'film-milestone-complete' m.pk %}" class="d-inline-flex gap-1">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.path }}#film-readiness">
+              {% if m.key == "tested" %}
+              <button type="submit" name="result" value="ok" class="btn btn-sm btn-success py-0">Played fine</button>
+              <button type="submit" name="result" value="problem" class="btn btn-sm btn-danger py-0">Problem</button>
+              {% elif m.key == "returned" %}
+              <label class="visually-hidden" for="courier-{{ m.pk }}">Courier and tracking reference</label>
+              <input type="text" id="courier-{{ m.pk }}" name="notes" maxlength="256" class="form-control form-control-sm py-0" placeholder="Courier and tracking ref">
+              <button type="submit" class="btn btn-sm btn-primary py-0 text-nowrap">Mark sent</button>
+              {% else %}
+              <button type="submit" class="btn btn-sm btn-primary py-0">Done</button>
+              {% endif %}
+            </form>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% empty %}
+      <p class="text-muted small mb-0 mt-2">No copies recorded yet. Use Edit to add one.</p>
+      {% endfor %}
+
+      <dl class="row small mb-0 mt-2">
+        <dt class="col-sm-3">Subtitles</dt><dd class="col-sm-9">{{ f.prep.get_subtitles_display }}</dd>
+        <dt class="col-sm-3">Backup</dt><dd class="col-sm-9">{% if f.prep.backup_in_place %}In place{% if f.prep.backup_note %}: {{ f.prep.backup_note }}{% endif %}{% else %}None recorded{% endif %}</dd>
+        {% if f.prep.trailers_plan %}<dt class="col-sm-3">Trailers</dt><dd class="col-sm-9">{{ f.prep.trailers_plan|linebreaksbr }}</dd>{% endif %}
+        {% if f.prep.booth_notes %}<dt class="col-sm-3">Booth notes</dt><dd class="col-sm-9">{{ f.prep.booth_notes|linebreaksbr }}</dd>{% endif %}
+        {% if f.prep.handover_note %}<dt class="col-sm-3">For the projectionist</dt><dd class="col-sm-9">{{ f.prep.handover_note|linebreaksbr }}</dd>{% endif %}
+      </dl>
+    </div>
+    {% empty %}
+    {% if not film_panel.unfilled %}<p class="text-muted mb-0">No film recorded yet. Add one to track its readiness.</p>{% endif %}
+    {% endfor %}
+    {% if film_panel.guide_url %}<p class="small mb-0 mt-2"><a href="{{ film_panel.guide_url }}">Which format should I choose?</a></p>{% endif %}
+  </div>
+</div>

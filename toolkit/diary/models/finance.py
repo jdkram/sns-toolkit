@@ -44,7 +44,7 @@ class ShowingSettlement(models.Model):
         null=True,
         blank=True,
         verbose_name="Attendance",
-        help_text="A rough headcount is fine -- optional precision, not a reconciled figure.",
+        help_text="A rough headcount is fine.",
     )
     bar_contribution_gbp = models.DecimalField(
         max_digits=8,
@@ -53,15 +53,23 @@ class ShowingSettlement(models.Model):
         blank=True,
         verbose_name="Bar/café contribution (£)",
         help_text=(
-            "Optional, and commonly filled in later by whoever has till "
-            "access -- never required to submit the rest of this form."
+            "Optional. Often filled in later by whoever has till access."
         ),
     )
     notes = models.TextField(
         max_length=2048,
         blank=True,
         verbose_name="Notes",
-        help_text="Exceptions Finance needs to know about -- a private hire, a charity split, etc.",
+        help_text="Exceptions Finance needs to know about, e.g. a private hire or charity split.",
+    )
+    nothing_to_report = models.BooleanField(
+        default=False,
+        help_text=(
+            "Nothing to log for this showing. Set in bulk from the event hub "
+            "for recurring showings, so no zero-value line item skews the "
+            "ticket-income totals or PRS/PPL report. A free showing can "
+            "still have a headcount."
+        ),
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -70,7 +78,7 @@ class ShowingSettlement(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        help_text="Whoever last saved this record -- programmer's first pass or Finance's correction alike.",
+        help_text="Whoever last saved this record.",
     )
 
     class Meta:
@@ -85,6 +93,7 @@ class ShowingSettlement(models.Model):
             or self.bar_contribution_gbp is not None
             or bool(self.notes.strip())
             or self.line_items.exists()
+            or self.nothing_to_report
         )
 
     def ticket_income_total(self):
@@ -124,7 +133,7 @@ class SettlementLineItem(models.Model):
     )
     description = models.CharField(
         max_length=128,
-        help_text="Free text, e.g. '40 advance online' -- describe it however it was actually counted.",
+        help_text="Free text, e.g. '40 advance online'.",
     )
     category = models.CharField(
         max_length=16,
@@ -232,15 +241,15 @@ class PerformerRegistration(models.Model):
         max_length=128,
         blank=True,
         help_text=(
-            "Who filled this in -- the programmer, an outside hirer, or "
-            "whoever reconciled it after the fact."
+            "Who filled this in: the programmer, an outside hirer or "
+            "whoever reconciled it later."
         ),
     )
     vat_on_tickets = models.BooleanField(
         null=True,
         blank=True,
         verbose_name="VAT charged on tickets?",
-        help_text="Mainly relevant for outside hires -- leave blank if unknown or not applicable.",
+        help_text="Mainly for outside hires. Leave blank if unknown or not applicable.",
     )
     notes = models.TextField(max_length=2048, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

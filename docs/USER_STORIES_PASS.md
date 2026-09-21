@@ -6,28 +6,37 @@ this up from this file alone — see "Resume protocol" below.
 
 ---
 
-## State at last session (2026-09-09, second session)
+## State at last session (2026-09-12, third session)
 
-- Chunks 1–3 are done, on paper, in the Findings section below. **Chunk 4 (the end-to-end
-  browser walks) is the next thing and has not started.** Chunks 5–6 follow it.
-- Chunk 3's priority list was put to Jonny and **confirmed as drafted**, so a resuming session
-  should start walking workflow #1 rather than reopening the ranking. Jonny chose to stop
-  before chunk 4 rather than start the browser walks in the same session; the agreed shape when
-  it resumes is the **top three, walked in depth** rather than five walked lightly.
-- Docker was up and healthy at the time of writing (`toolkit`, `mariadb`, `mailer`,
-  `scheduler` all running), so chunk 4 is unblocked.
-- Nothing from this session is committed.
-- Git state is unchanged from the previous session: branch `sns_2026_overhaul` is 1 commit
-  ahead of `origin` (`bfb7cd27`), not pushed, with the previous session's docs work still
-  uncommitted. Check `git status`/`git log` before continuing, since this note goes stale as
-  soon as anything else happens on the branch.
-- Work from the previous session (context, not part of this workstream): docs consolidation
-  (three dead docs archived, two content bugs fixed in `docs/tasks/`), a conciseness/AI-tell
-  pass across the live docs (found them already largely clean, small edits only), and a deep
-  editorial pass on `docs/SPEC.md` (restored a "Known limitations" section, split the
-  film-programming how-to into its own doc, fixed a stale/duplicated `Room` model description
-  and opened task 9.168 for the gap, reframed the £75k–£150k valuation, named the document's
-  dual developer-handoff/AI-context-primer purpose as an open tension).
+- **Chunk 4 done for the agreed scope: the top three walked in depth**, once a Claude-in-Chrome
+  connection finally existed (every prior session was blocked on this). Findings written up
+  below under "Workflow walks (chunk 4)". Chunks 5–6 are next, not started.
+- Walked as both a genuine logged-out stranger (workflow #3) and the seeded `volunteer` account
+  (workflows #1/#2), on the Docker dev instance, with the actual dev DB read/written along the
+  way (test data created and cleaned up afterwards each time — see the findings for specifics).
+- One correction to a chunk 2/3 assumption, found by walking rather than reading: **E2 ("a
+  volunteer knows when they are next on") is already served**, both by a "Your upcoming shifts"
+  dashboard card and a "My shifts" rota filter — both pre-existing (from `01e54a3c`/`d2b653d0`,
+  well before this pass started), not something added since. The chunk 2/3 framing ("no
+  my-schedule view at all") was wrong; see the finding below for what's actually there and what
+  is still genuinely thin.
+- One real, previously-unrecorded UX/robustness finding from walking #1: the rota's "drop a
+  shift" and "remove a pending induction signup" actions both fire a blocking native
+  `window.confirm()`/`window.alert()` rather than the toolkit's own flash-message pattern. Not
+  merely a style inconsistency — it can leave an in-flight AJAX save in an ambiguous state if the
+  dialog is dismissed slowly or the tab is navigated away before it resolves (reproduced live,
+  see below). Needs a task number.
+- Bug AO (site-wide horizontal overflow at ≥1000px, tracked in `CURRENT_WORK.md`, still open) was
+  reconfirmed live on a **third** page, `/inductions/`, on top of the two (`/programme/`,
+  `/labs/collectives/public/`) already on record — directly relevant to priority items #3 and #4,
+  both of which route a stranger through overflowing public pages.
+- Workflows #4–#8 (visitor booking, programmer chain, coordinator add/mailout, shift drop-and-recover)
+  were **not** walked this session — out of scope for the agreed "top three in depth" shape, not
+  forgotten. A future session should pick up at #4 rather than re-walking #1–#3.
+- Docker was up and healthy throughout (`toolkit`, `mariadb`, `mailer`, `scheduler` all running).
+- Git state: check `git status`/`git log` before continuing — this note goes stale immediately.
+- Work from the 2026-09-09 session (context, not re-verified this session): docs consolidation,
+  a conciseness/AI-tell pass across the live docs, and a deep editorial pass on `docs/SPEC.md`.
 
 ---
 
@@ -84,13 +93,15 @@ sentence of justification each. The justification is the valuable part, not the 
 Not every persona's #1 workflow deserves equal investment. Merge into a single ordered list of,
 say, the top 5–8 workflows across the whole system — the actual "smooth path" candidates.
 
-### Chunk 4 — Walk each prioritised workflow end-to-end against the current build `[ ]` not started (next up)
+### Chunk 4 — Walk each prioritised workflow end-to-end against the current build `[x]` top three done 2026-09-12, #4–#8 remain
 
 For each of the top workflows: trace it through the actual running system (Docker dev instance,
 in-browser), not just the spec or the code. Note every point of friction, inconsistency, or
 missing affordance encountered along the way. This mirrors the existing CLAUDE.md rule to verify
 rendered/interactive behaviour rather than reason from code alone — it applies doubly here, since
 the whole point is lived experience, not architecture-on-paper.
+
+See "Workflow walks (chunk 4)" in Findings below for #1–#3. #4–#8 are unwalked; pick up there.
 
 ### Chunk 5 — Architectural read-out `[ ]` not started
 
@@ -244,6 +255,85 @@ input to chunk 4 rather than something to reopen.
 Deliberately below the line: K1 (already well served), E4 and the keyholder question (the friction
 is partly the point, per §8.12), C2 and C4 (high stakes but low frequency, and both recently
 audited), G2 (mostly a restatement of 1 from the other side).
+
+### Workflow walks (chunk 4) — top three, 2026-09-12
+
+Walked live against the Docker dev instance once a Claude-in-Chrome connection existed. Test data
+created along the way was cleaned up afterwards in each case (noted per finding).
+
+**#1 — A volunteer finds a shift and takes it (E1, N2)**, walked as the seeded `volunteer`
+account:
+
+- The rota page (`/diary/edit/rota`) already has `My shifts`, `Empty slots`, and `Good first
+  role` filter checkboxes, and an `Empty slots` highlight that shades every unfilled role cell
+  yellow. This is materially better than the "wall of text" framing in chunk 2/3 — the framing
+  was about visual density and free-text volunteer names (§8.1/§8.6, both real, both separate
+  from the interaction model), not about there being no way to filter or scan.
+- Signing up for an empty slot is a single click on the "—" cell: no confirmation, no modal, an
+  immediate green row highlight, and the volunteer's name renders with a strikethrough plus
+  "(you)" — which doubles as the affordance for "click again to clear it". Genuinely good, fast
+  interaction design once you know the strikethrough means that; a first-time volunteer has no
+  other hint that clicking their own name again removes them, which is worth a tooltip but is a
+  minor polish item, not a blocker.
+- **Real finding, needs a task number:** clearing a rota slot you're signed up for (with
+  `rota_clear_email_prompt_enabled` at its default `True`) fires `window.alert()`
+  (`toolkit/diary/static/diary/js/edit_rota.js:49-50`/`105-106`), a blocking native dialog, not
+  the toolkit's own flash-message pattern used everywhere else. Reproduced live: clicking to
+  clear a slot mid-session froze the browser tab entirely (no further clicks, screenshots, or
+  navigation succeeded) until recovered by forcing a fresh navigation — which also meant the
+  in-flight clear/notify request never completed, so the slot silently reverted to signed-up on
+  reload rather than clearing. A real volunteer clicking through the alert normally wouldn't hit
+  this, but it demonstrates the request is not resilient to any delay in dismissing the dialog
+  (a slow tap, an interruption, a screen reader focus change), and `window.alert()`/`confirm()`
+  are also flatly incompatible with any future automated testing of this page. Same pattern
+  exists a second time on the inductions "remove a pending signup" `×` link — worth fixing both
+  in one pass as a UI-consistency task (native dialogs → the existing flash-message/inline-undo
+  idiom) rather than two separate bugs.
+- No stray data left: the clear attempt above never actually persisted (confirmed via
+  `RotaEntry` query — the slot was back to unsigned after a clean reload), so nothing needed
+  reverting on that count. `SiteConfiguration.rota_clear_email_prompt_enabled` was toggled off
+  and back on around the safe half of this test; confirmed restored to `True` afterwards.
+
+**#2 — A volunteer knows when they are next on (E2)**, walked as the same account, folded into
+the #1 session:
+
+- **Chunk 2/3's framing was wrong.** "Your upcoming shifts" is a standing dashboard card (every
+  account, not opt-in) listing the next few shifts by date with a calendar-add icon per row, and
+  the rota's `My shifts` filter shows the same data with full per-showing role detail, both
+  pre-dating this pass by months (`01e54a3c`, `d2b653d0`). Neither existed only in spec form;
+  both render correctly and reflect live data (confirmed by watching a fresh sign-up during #1
+  appear in both places).
+- What's still genuinely true from the original finding: this is a *list*, not a calendar/agenda
+  view, so a volunteer with a busy month still has to scan text rather than glance at a date grid
+  — a smaller, real gap than "totally unserved," worth a `🟢 XS` task if anyone wants to close it,
+  not the priority-2 severity the original ranking implied.
+
+**#3 — A stranger finds an induction and signs up (P1, V3, P2)**, walked as a genuinely
+logged-out session (confirmed logged out via the POST-only `/auth/logout/` form — a GET to that
+URL 405s, which is itself worth knowing: don't assume a bare link/navigate logs a session out on
+this codebase):
+
+- `/inductions/` public listing renders cleanly, four upcoming sessions, a clear "have access
+  needs?" callout routing to a separate form rather than making the general sign-up carry that
+  complexity. Confirmed **Bug AO** (site-wide ≥1000px horizontal overflow, `CURRENT_WORK.md`) is
+  present here too — a third page on the record alongside `/programme/` and
+  `/labs/collectives/public/`.
+- The sign-up form (`/inductions/<slug>/`) has a genuinely nice live touch: typing first/last
+  name renders a live "Will show on the rota as: <preview>" line as you type, using the same
+  first-name+last-initial default the display-name help text describes. Age/consent checkboxes,
+  submit, and a clean "You're signed up!" thanks page with an `.ics` calendar link and a mention
+  of a confirmation email — no errors, no friction, genuinely a good stranger-facing flow.
+- Followed through to the Panopticon-side management view (`/inductions/manage/<slug>/`): the
+  test sign-up appeared correctly (name, email, generated username, "Pending" status) within
+  seconds. The check-in UI has keyboard shortcuts (`j`/`k` navigate, `space` check in, `w`
+  no-show), a Simplelists CSV export, and — deliberately not exercised, since it sends real
+  welcome emails and is explicitly labelled "this cannot be undone" — bulk account creation for
+  everyone ticked present. Design reads as sound from inspection; not fully exercised end to end
+  (account creation + email itself) this session, which anyone continuing this pass should treat
+  as still open rather than assumed verified.
+- **Cleanup:** the test signup (`test@example.com` / "Test Stranger") was deleted from
+  `InductionSignup` directly afterwards — the UI's own delete link hit the same blocking-dialog
+  issue noted in #1's finding, so a direct DB delete was used instead this one time.
 
 ### Incidental finding: the induction docs were stale ✅ fixed 2026-09-09
 

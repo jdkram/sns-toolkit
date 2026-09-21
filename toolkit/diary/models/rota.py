@@ -62,6 +62,12 @@ class Role(models.Model):
         "empty slots show a warning on the rota to encourage sign-up.",
     )
 
+    is_projectionist = models.BooleanField(
+        default=False,
+        help_text="Tick for projectionist roles: whoever holds one sees films "
+        "needing a test on their dashboard.",
+    )
+
     GATE_OFF = "off"
     GATE_ADVISORY = "advisory"
     GATE_BLOCKING = "blocking"

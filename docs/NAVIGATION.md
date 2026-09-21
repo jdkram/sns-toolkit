@@ -83,6 +83,57 @@ settings, audit log), "Do a shop", "Edit profile", "Queue" (programming queue). 
 correctly toolkit-only per the design decision above; the sidebar staying without them is
 not drift, it's the point.
 
+## Diary dropdown + Finances dropdown (2026-09-17)
+
+Prompted by two problems found together: "Past events" sat as a headline item in the
+toolkit navbar even though it's a secondary lookup (find one specific past event), not a
+day-to-day destination like Diary/Calendar/Rota — and 9.171's finance pages
+(`finance-settlement-review`, `prs-report`) had **no nav presence anywhere**, on any of the
+three surfaces, since the day they shipped. The only way in was typing the URL.
+
+**Fix, toolkit navbar + command palette only (sidebar untouched — see the design decision
+above: finance reporting is admin/reporting-only, sidebar-exempt by design):**
+
+- **Diary** became a dropdown (`data-nav-key="d"`, same key as before — it now opens the
+  menu instead of navigating straight to the diary list): **Diary list**, **Calendar**,
+  **Past events**. Gate is `feature_perms.diary_read or feature_perms.diary_calendar`
+  on the wrapping `<li>`, each item individually gated the same as before.
+- New **Finances** dropdown (`data-nav-key="f"`, previously unused): **Finance review**,
+  **PRS/PPL report (CSV)**. Gated on `site_config.event_settlement_enabled and
+  feature_perms.diary_reports` — reuses the existing `diary_reports` perm level
+  (Programmer+ by default) rather than adding a new `SiteConfiguration.perm_*` field, since
+  `finance_settlement_review`'s own view-level gate is just `@write_required` +
+  `event_settlement_enabled`, and `diary_reports` was already the closest existing perm at
+  the same default level guarding similar Meta-dropdown report pages.
+- Command palette mirrors both: "Diary", "Past events" and "Calendar" as three separate
+  flat entries (a flat list doesn't need the dropdown grouping), "Finance review" (shortcut
+  `g → f`, since it has a real `data-nav-key` on the navbar toggle to match) and "PRS/PPL
+  report" (no shortcut — CSV download, not a navigable page, and it hangs off the same
+  toggle rather than getting its own key).
+- `past-events-search` and `diary-edit-calendar` **lost** their standalone `g → v` / `g →
+  c` palette shortcut labels: `keyboard-nav-admin.js` drives `g → <letter>` purely from
+  live `data-nav-key` attributes under `.navbar-nav`, and those two no longer carry one
+  now they're dropdown sub-items (matching the pre-existing pattern for every other
+  dropdown's children, e.g. Website's "Public programme"). Leaving the label in the palette
+  would have advertised a shortcut that no longer fired.
+
+**A likely bigger discoverability problem than nav placement:** `event_settlement_enabled`
+on `SiteConfiguration` defaults to `False` ("ship dormant" — see the field's own docstring)
+and nothing previously flipped it on in `seed_dev_data`. On a fresh dev DB, every one of
+9.171's pages, dashboard cards and (now) nav entries stayed invisible regardless of where
+they lived in the menu, because the feature was switched off, not merely hard to find.
+Fixed alongside this nav change by seeding `event_settlement_enabled = True` — see
+`CURRENT_WORK.md`.
+
+## Films link (2026-09-21)
+
+A flat **Films** item in the toolkit navbar (`data-nav-key="l"`) and a **Film readiness**
+palette entry (`g → l`), linking to the film readiness overview (9.174). Both are gated on
+`site_config.film_prep_enabled` and on nothing else: the overview is open to any logged-in
+volunteer by design, so people considering programming can see the process. The **sidebar** is
+deliberately left without it, per the curated-subset rule above; the dashboard card and the
+Event Hub panel also link to it.
+
 ## Maintenance checklist
 
 Before adding a nav item, ask:

@@ -7,45 +7,67 @@ Bugs and current system limitations.
 
 ---
 
-## Browser verification checklist (2026-09-10)
+## Browser verification checklist (2026-09-10) — done 2026-09-12
 
-Three commits landed 2026-09-10 with zero browser verification (no Claude-in-Chrome connection
+Two commits landed 2026-09-10 with zero browser verification (no Claude-in-Chrome connection
 that session): `b072e4d0` (CSS systemic review — Bugs AZ, BA, BB, BC) and `eed5301f` (nav
-parity — Bug BD). Whoever picks this up next — human or a fresh session with a working browser
-connection — should click through the following before dropping the "not browser-verified"
-caveat from those bug entries below:
+parity — Bug BD). Worked through live on 2026-09-12 once a browser connection was available
+(Docker dev server, logged in as both `programmer` and `admin`):
 
-**Public sidebar** (any page extending `base_public.html`, e.g. `/programme/`):
-- Desktop (≥1000px): sidebar renders with no visual regression from the `#sidebar`/`#site-nav`/
-  `.nav-wrap` consolidation in `layout.css`.
-- Mobile width (<1000px, e.g. resize to ~375px): tap the hamburger, drawer opens; tap it again —
-  confirm it now **closes** (Bug BA — previously unclickable, sat below the sidebar's z-index).
-- If you have access to a real Windows/Firefox machine: check the nav doesn't show a spurious
-  horizontal scrollbar when the link list is tall enough to need a vertical one (Bug AZ — the
-  original report). Otherwise, at minimum confirm no regression on whatever scrollbars this
-  machine has.
-- Find some bold text (event descriptions use `<strong>`) — confirm it's now visibly bolder
-  than surrounding body text (Bug BB — was previously the same weight, invisible).
-- Keyboard: press `g` then `v` — should jump to "Past events", not "Programme" (was a
-  `data-nav-key` collision; `v` should work on both the sidebar and the toolkit navbar).
+- **Bug BB** (`<strong>` weight): confirmed via computed styles — `<strong>` renders at
+  `font-weight: 700` against the body's `500` on a public programme page. Genuinely bolder now.
+- **`g` → `v` keyboard shortcut**: confirmed on `/programme/` — `g` shows nav-key badges
+  (`Programme` = `p`, `Past events` = `v`, no collision), and `v` correctly navigates to "Find a
+  past event". Bug BD's `data-nav-key` collision fix holds.
+- **Toolkit navbar + Ctrl+K palette** (Bug BD): confirmed "Past events" on the navbar directly
+  and "Maintenance schedule" in the Community dropdown; both also found via the palette
+  (clicked the visible ⌘K button — plain `Ctrl+K` is intercepted by Chrome's own omnibox
+  shortcut in this environment, so use the button or `Ctrl+/`).
+- **Feature-flag gating** (Bug BD): toggled `building_map_enabled` off in Site Settings — "Building
+  Map" disappeared from both the navbar dropdown and the palette immediately; re-enabled
+  afterwards to restore the dev environment's normal state. Flash message on the settings save
+  ("Site configuration updated") was clearly legible.
+- **Console errors**: none on `/toolkit/` (`base_admin.html` + `fragment_navmenu.html`) across a
+  fresh load.
+- **Bug BA (mobile hamburger z-index)**: **not live-tested**. `resize_window` did not actually
+  change the viewport in this session's browser environment (`window.innerWidth` stayed at
+  2560 regardless of the requested size), so no real narrow-viewport click test was possible.
+  Verified statically instead: `layout.css`'s z-index scale has `--z-nav-toggle: 600` above
+  `--z-sidebar: 500`, which is the documented fix and is consistent with the button painting on
+  top. Whoever next has a working mobile-width browser (or real device) should still do the
+  actual tap-to-open/tap-to-close check before treating this as fully closed.
+- **Bug AZ (Windows/Firefox scrollbar)**: still unverified — no such machine available in this
+  session either. Unchanged from 2026-09-10.
 
-**Toolkit pages** (any page extending `base_admin.html`, e.g. `/toolkit/` — check as both a
-volunteer with `diary_read` and as a superuser):
-- Trigger a flash message of each kind (success/error/warning/info — e.g. save a form) and
-  confirm all four are legible, especially warning (Bug BC — was ~2.55:1 contrast, essentially
-  unreadable).
-- Top navbar: confirm "Past events" and "Maintenance schedule" now appear (Bug BD).
-- Ctrl+K command palette: confirm "Past events" and "Maintenance schedule" appear there too.
-- Toggle a `site_config.*_enabled` flag off in Site Settings (e.g. Building Map) and confirm
-  the corresponding item disappears from **both** the navbar dropdown and the command palette,
-  not just one (Bug BD's feature-flag-gating fix).
-- Watch the browser console for JS errors on both `base_admin.html` and `fragment_navmenu.html`
-  pages — nothing here should have introduced any, but this wasn't checked live.
-
-Once confirmed, remove the "not browser-verified" line from each bug entry below (Bug AZ, BA,
-BB, BC, BD) rather than leaving it stale, or reopen the specific one with what actually broke.
+Bug entries BB, BC, and BD's "not browser-verified" lines below are removed on the strength of
+the checks above (BC's flash-message legibility was incidentally confirmed too, via the Site
+Settings save). Bug BA keeps a narrowed caveat (z-index reasoning confirmed, live tap-test still
+outstanding). Bug AZ is unchanged.
 
 ## Current bugs
+
+**Bug AZ** — `seed_dev_data` reruns can duplicate a showing (dev tooling only) — open, found 2026-09-21
+
+**Symptom.** Re-running `seed_dev_data` on an already-seeded dev DB occasionally adds a
+second `Showing` for an event on a date it already has, half an hour after the first
+(`19:00` and `19:30`). Three event/date pairs on the current dev DB show it, one of them
+from the new `programme_2026.toml` pool and three from the older `events.toml`/
+`recurring.toml` pools, so the mechanism predates the 2026-09-21 seed rebuild. Intermittent:
+two consecutive reruns during the review added nothing.
+
+**Root cause.** `_seed_showing` calls `_find_free_slot` (`seed_dev_data.py`) to resolve room
+contention *before* the `Showing.objects.get_or_create(event=..., start=...)` that is meant to
+make the step idempotent. On a rerun, `_room_bookings` has been preloaded from the existing
+`RoomBooking` rows, so the showing's own prior booking now counts as a conflict; the slot
+shifts 30 minutes, and `get_or_create` keyed on the shifted datetime no longer matches the
+existing row and creates a second one. Order-dependence in the driving querysets (several
+have no explicit `order_by`) decides whether any given rerun trips it.
+
+**Why it is not fixed here.** Dev-tooling only, no production code path, and the fix
+(look up an existing showing for that event and date before consulting the room schedule,
+rather than after) changes seeding behaviour enough to want its own verification pass with a
+`--wipe` reseed. The 2026-09-21 seed rebuild widens exposure rather than causing it: four
+weekday film pools plus 20 weeks of historical programme now contend for the same two rooms.
 
 **Bug AR** — Approved queue events vanish from the diary — nothing bridges "approved" to "confirmed" ✅ fixed 2026-09-09
 
@@ -168,13 +190,13 @@ Both views in `members/views/member_views.py` called `panopticon_required(unsubs
 
 **Root cause:** `#mobile-menu-btn` (`layout.css`) and `#sidebar` share the same (root) stacking context — neither's ancestors (`.grid`, `.navigation-wrap`, `.mobile-wrap`) isolate one from the other with their own `z-index`. At mobile widths `.grid` has no `margin-left` offset (that's desktop-only), so `.navigation-wrap`/`#mobile-menu-btn` sit at the same top-left screen position the opened `#sidebar` slides into. `#mobile-menu-btn`'s z-index (`var(--z-nav-toggle)` = 100) was lower than `#sidebar`'s (`var(--z-sidebar)` = 500), so the sidebar painted on top of the button and intercepted the tap. A swipe gesture on `.black_overlay` (`site-common.js`) offered an alternate close path, and the button stayed keyboard-focusable throughout (z-index doesn't affect tab order), so this wasn't a total dead-end — but for a mouse/touch user without knowledge of the swipe gesture, tapping the visible-looking-clickable spot did nothing. Found via an independent CSS review (MiniMax M3 via OpenRouter, 2026-09-10), cross-checked against the actual DOM structure (`base_public.html`) and `site-common.js` before accepting it — the model's own framing ("no way to close it") overstated the case since the swipe fallback exists, but the core defect (the button visually and functionally covered for click/tap) was confirmed real.
 
-**Fix:** `layout.css` — reordered the z-index scale so `--z-nav-toggle` (600) sits above `--z-sidebar` (500), not below it. The hamburger button now stays on top and clickable/tappable regardless of drawer state. Not browser-verified.
+**Fix:** `layout.css` — reordered the z-index scale so `--z-nav-toggle` (600) sits above `--z-sidebar` (500), not below it. The hamburger button now stays on top and clickable/tappable regardless of drawer state. **Partially verified 2026-09-12**: the z-index ordering itself was confirmed live in the running dev CSS (600 > 500, matching this fix), but a real narrow-viewport tap-to-open/tap-to-close test still hasn't happened — that session's browser tooling couldn't actually resize the viewport (`window.innerWidth` stayed fixed regardless of the requested size). Still needs a genuine mobile-width or real-device check.
 
 **Bug BB** — `<strong>`/`<b>` render with zero visual weight difference from body text ✅ fixed 2026-09-10
 
 **Root cause:** `layout.css` set `b, strong { font-weight: 500; }` and, separately, `body { font-weight: 500; }` — identical numeric weight. Any editorial emphasis (event descriptions, article copy) rendered indistinguishable from surrounding text. Found by the same MiniMax review pass; confirmed by grep (both declarations verified at their cited lines) before accepting.
 
-**Fix:** `layout.css` — `b, strong` now set to `font-weight: 700`. The site's primary body font (`Roboto Mono`, loaded via the Google Fonts link in `base_public.html`) only has weights up to 500 fetched, so 700 will render via the browser's default synthetic-bold algorithm rather than a true bold face — a real visual distinction either way, and strictly better than the prior complete invisibility. `Source Code Pro` (used for `.copy p`/`#site-nav`) does have a genuine 700 weight already loaded, so that context gets a true bold. Not browser-verified.
+**Fix:** `layout.css` — `b, strong` now set to `font-weight: 700`. The site's primary body font (`Roboto Mono`, loaded via the Google Fonts link in `base_public.html`) only has weights up to 500 fetched, so 700 will render via the browser's default synthetic-bold algorithm rather than a true bold face — a real visual distinction either way, and strictly better than the prior complete invisibility. `Source Code Pro` (used for `.copy p`/`#site-nav`) does have a genuine 700 weight already loaded, so that context gets a true bold. **Browser-verified 2026-09-12**: computed styles on a live `/programme/` page confirmed `<strong>` at `font-weight: 700` against the body's `500`.
 
 **Bug BC** — `messages.css` warning colour fails contrast; unrelated units bug found alongside it ✅ fixed 2026-09-10
 
@@ -182,7 +204,7 @@ Both views in `members/views/member_views.py` called `panopticon_required(unsubs
 
 **Also found alongside it:** `font-size: 16pt` — points are a print unit with no defined relation to a user's browser font-size preference on screen; every other stylesheet in this codebase uses `em`/`rem`.
 
-**Fix:** `messages.css` — `font-size: 16pt` → `1.333rem` (equivalent rendered size at default browser settings, but a relative unit). `li.warning`'s colour changed from `#FF7E00` to `#856404` (≈5.49:1 on white), reusing the amber already established site-wide for warning states (`edit_rota.css`, `form_event.css`) rather than inventing a sixth ad hoc colour. Success/error/info left unchanged since they already pass. Not browser-verified.
+**Fix:** `messages.css` — `font-size: 16pt` → `1.333rem` (equivalent rendered size at default browser settings, but a relative unit). `li.warning`'s colour changed from `#FF7E00` to `#856404` (≈5.49:1 on white), reusing the amber already established site-wide for warning states (`edit_rota.css`, `form_event.css`) rather than inventing a sixth ad hoc colour. Success/error/info left unchanged since they already pass. **Incidentally browser-verified 2026-09-12**: a Site Settings save triggered a live success flash message, clearly legible on `base_admin.html`'s white background — the warning/error/info variants weren't individually triggered that session, but the shared template/CSS path is confirmed working.
 
 **Bug BD** — Sidebar, toolkit navbar, and command palette had drifted apart — several items present in one and missing from the others ✅ fixed 2026-09-10
 
@@ -195,7 +217,7 @@ Both views in `members/views/member_views.py` called `panopticon_required(unsubs
 3. **Six `site_config.*_enabled` feature flags** (`building_map_enabled`, `shopping_list_enabled`, `lost_and_found_enabled`, `collectives_enabled`, `donations_enabled`, `jobs_board_enabled`) gated correctly in the sidebar but left ungated in the navbar and/or palette — not a security hole (the views themselves enforce `@_feature_enabled_or_404`) but a link that 404s the moment a site admin disables the feature, since the nav item itself doesn't know to disappear.
 4. **A `data-nav-key` bug found along the way:** the sidebar used `"p"` for both "Programme" and "Past events". `keyboard-nav-public.js` selects by `data-nav-key`, and jQuery's `.attr()` on a multi-element match returns only the first DOM match — so the `g → p` shortcut could only ever reach "Programme"; "Past events" was silently unreachable by keyboard. Also found: the command palette listed "Rota vacancies" twice, once unconditionally and once correctly gated on `feature_perms.rota_vacancies`.
 
-**Fix:** added the missing items and feature-flag gates to whichever surface(s) lacked them (`toolkit/index/templates/base_admin.html`, both the navbar and the palette); changed "Past events"'s key to `v` in all three surfaces (sidebar, navbar, palette) to resolve the collision and keep the shortcut consistent across surfaces; removed the duplicate "Rota vacancies" palette entry. `docs/NAVIGATION.md` records the design decision and a maintenance checklist so this doesn't silently drift a third time; all three files now carry a one-line pointer comment to it. Not browser-verified — the command palette and keyboard shortcuts in particular should get a manual click-through.
+**Fix:** added the missing items and feature-flag gates to whichever surface(s) lacked them (`toolkit/index/templates/base_admin.html`, both the navbar and the palette); changed "Past events"'s key to `v` in all three surfaces (sidebar, navbar, palette) to resolve the collision and keep the shortcut consistent across surfaces; removed the duplicate "Rota vacancies" palette entry. `docs/NAVIGATION.md` records the design decision and a maintenance checklist so this doesn't silently drift a third time; all three files now carry a one-line pointer comment to it. **Browser-verified 2026-09-12**: `g` → `v` correctly jumps to "Find a past event" with no collision against "Programme" (`p`); "Past events" and "Maintenance schedule" both confirmed present on the toolkit navbar and in the Ctrl+K palette; toggling `building_map_enabled` off in Site Settings removed "Building Map" from both the navbar dropdown and the palette simultaneously, confirming the feature-flag-gating fix.
 
 **Bug AY** — Findings from the September 2026 review sweeps ✅ 13 of 14 fixed 2026-09-10, 1 investigated and closed as not-a-live-bug
 
