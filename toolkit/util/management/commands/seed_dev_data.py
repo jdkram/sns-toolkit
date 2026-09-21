@@ -13,6 +13,7 @@ import random
 import re
 import urllib.request
 from collections import defaultdict
+from decimal import Decimal
 
 from django.contrib.auth.models import Group, User
 from django.core.management.base import BaseCommand
@@ -29,11 +30,15 @@ from toolkit.diary.models import (
     EventTemplateRole,
     EventTemplateRoom,
     MediaItem,
+    PerformerRegistration,
+    PRSPerformerEntry,
     Role,
     RoomBooking,
     RotaEntry,
     Room,
+    SettlementLineItem,
     Showing,
+    ShowingSettlement,
     VolunteerEventMark,
 )
 from toolkit.index.models import IndexCategory, IndexLink
@@ -57,6 +62,10 @@ from toolkit.util.management.commands.seed_data import (
     MONTHLY_EVENTS,
     SUNDAY_FILMS,
     THURSDAY_FILMS,
+    FRIDAY_FILMS,
+    SATURDAY_FILMS,
+    HISTORICAL_FILMS,
+    HISTORICAL_GIGS,
     COLLECTIVES,
     DONATION_ITEMS,
     JOBS,
@@ -277,6 +286,9 @@ class Command(BaseCommand):
             "induction_requests": 0,
             "demo_shifts": 0,
             "demo_stars": 0,
+            "settlements": 0,
+            "settlement_line_items": 0,
+            "performer_registrations": 0,
         }
 
         # Roles
@@ -295,6 +307,7 @@ class Command(BaseCommand):
             role.programmer_contact = role_data.get(
                 "programmer_contact", False
             )
+            role.is_projectionist = role_data.get("is_projectionist", False)
             role.description = role_data.get("description", "")
             role.stats_label = role_data.get("stats_label", "")
             role.save(
@@ -303,6 +316,7 @@ class Command(BaseCommand):
                     "wheelchair_accessible",
                     "keyholder_only",
                     "programmer_contact",
+                    "is_projectionist",
                     "description",
                     "stats_label",
                 ]
@@ -1226,6 +1240,8 @@ class Command(BaseCommand):
         cfg.confirm_label = "Publish & open rota"
         cfg.stats_training_tag_slugs = ["induction", "training-for-volunteers"]
         cfg.structured_cost_terms_enabled = True
+        cfg.event_settlement_enabled = True
+        cfg.film_prep_enabled = True
         if not cfg.stats_programming_note:
             cfg.stats_programming_note = (
                 "This is a guideline, not a hard rule. "
@@ -1238,6 +1254,8 @@ class Command(BaseCommand):
                 "confirm_label",
                 "stats_training_tag_slugs",
                 "structured_cost_terms_enabled",
+                "event_settlement_enabled",
+                "film_prep_enabled",
                 "stats_programming_note",
             ]
         )
@@ -1434,6 +1452,14 @@ class Command(BaseCommand):
         # Film records (9.66)
         self._seed_film_records(counts)
 
+        # Financial terms, programmer ownership, and settlement actuals
+        # (9.171) -- must run last, after every event/showing above exists.
+        self._seed_event_finances(counts)
+
+        # Film readiness in mixed states (9.174) -- after finances, which
+        # is what assigns Event.programmer.
+        self._seed_film_prep(counts)
+
         # Bulk test volunteers (performance testing only)
         if options["bulk_volunteers"] > 0:
             counts["volunteers"] += self._seed_bulk_volunteers(
@@ -1469,6 +1495,9 @@ class Command(BaseCommand):
                 f"  Induction requests: {counts['induction_requests']} new\n"
                 f"  Demo account shifts: {counts['demo_shifts']} new\n"
                 f"  Demo account stars:  {counts['demo_stars']} new\n"
+                f"  Settlements:         {counts['settlements']} new\n"
+                f"  Settlement line items: {counts['settlement_line_items']} new\n"
+                f"  Performer registrations: {counts['performer_registrations']} new\n"
             )
         )
 
@@ -1546,6 +1575,10 @@ class Command(BaseCommand):
             )
             if created:
                 counts["events"] += 1
+                try:
+                    event.tags.add(EventTag.objects.get(name="film"))
+                except EventTag.DoesNotExist:
+                    pass
             hist_events.append(event)
 
         n_vols = len(vols)
@@ -1710,16 +1743,24 @@ class Command(BaseCommand):
         self, rooms_dict, vol_list, counts, anchor
     ):  # noqa: ARG002 -- anchor is dead, deferred to Chunk 11's seed_dev_data rewrite
         today = timezone.now().date()
+        # 6 weeks back, not the full 8-week window_start below, so this
+        # recent-past slice (real film/event names, financial terms, and
+        # settlement data -- see _seed_event_finances) stays distinct from
+        # _seed_historical_shifts' older, placeholder-event backlog, which
+        # picks up from today - 14 days going back to 2022.
+        recent_past_start = today - datetime.timedelta(weeks=6)
         window_start = today - datetime.timedelta(weeks=8)
         window_end = today + datetime.timedelta(weeks=16)
 
-        # Collect Sundays in window
+        # Collect Sundays in window -- recent past as well as future, so
+        # past_events_search/finance review have real programmed content to
+        # show, not just the placeholder events from _seed_historical_shifts.
         d = window_start
         sundays = []
         while d.weekday() != 6:
             d += datetime.timedelta(days=1)
         while d <= window_end:
-            if d >= today:
+            if d >= recent_past_start:
                 sundays.append(d)
             d += datetime.timedelta(days=7)
 
@@ -1729,7 +1770,7 @@ class Command(BaseCommand):
         while d.weekday() != 3:
             d += datetime.timedelta(days=1)
         while d <= window_end:
-            if d >= today:
+            if d >= recent_past_start:
                 thursdays.append(d)
             d += datetime.timedelta(days=7)
 
@@ -1777,76 +1818,63 @@ class Command(BaseCommand):
                     terms=evt_data.get("terms", ""),
                 )
 
-        # Varied start times for Sunday films — a realistic spread across evening
-        # slots. No two consecutive Sundays share a time. Cycling rather than
-        # random keeps the sequence stable across idempotent reseeds.
-        sunday_film_times = [
-            (19, 0),
-            (17, 30),
-            (20, 0),
-            (18, 30),
-            (19, 0),
-            (20, 30),
-            (17, 0),
-            (19, 30),
-        ]
+        # Collect Fridays and (alternate) Saturdays for the wider film
+        # programme: the live site screens films Thursday to Sunday, with
+        # Saturdays reserved for specials (live-scored silents, TV on the
+        # big screen, compilations).
+        fridays = self._weekdays_between(recent_past_start, window_end, 4)
+        saturdays = self._weekdays_between(recent_past_start, window_end, 5)
 
-        # Seed Sunday evening films
-        for i, d in enumerate(sundays):
-            film_idx = i % len(SUNDAY_FILMS)
-            film = SUNDAY_FILMS[film_idx]
-            hour, minute = sunday_film_times[i % len(sunday_film_times)]
-            self._seed_film_showing(
-                film["name"],
-                film["film_information"],
-                d,
-                hour,
-                rooms_dict["Cinema"],
-                film["tags"],
-                vol_list,
-                counts,
-                copy_summary=film.get("copy_summary", ""),
-                copy=film.get("copy", ""),
-                pricing=film.get("pricing", "£7/£5/£3/£0"),
-                image_url=film.get("image_url"),
-                minute=minute,
-                trailer_url=film.get("trailer_url", ""),
-                age_rating=film.get("age_rating", ""),
-            )
+        # Varied start times, cycled rather than random so the sequence stays
+        # stable across idempotent reseeds.
+        cinema = rooms_dict["Cinema"]
+        self._seed_film_pool(
+            SUNDAY_FILMS,
+            sundays,
+            [
+                (19, 0),
+                (17, 30),
+                (20, 0),
+                (18, 30),
+                (19, 0),
+                (20, 30),
+                (17, 0),
+                (19, 30),
+            ],
+            cinema,
+            vol_list,
+            counts,
+        )
+        self._seed_film_pool(
+            THURSDAY_FILMS,
+            thursdays,
+            [(19, 0), (18, 30), (20, 0), (19, 30), (18, 0), (20, 30)],
+            cinema,
+            vol_list,
+            counts,
+        )
+        self._seed_film_pool(
+            FRIDAY_FILMS,
+            fridays,
+            [(19, 30), (19, 0), (20, 0), (19, 30)],
+            cinema,
+            vol_list,
+            counts,
+        )
+        self._seed_film_pool(
+            SATURDAY_FILMS,
+            saturdays[::2],
+            [(19, 30), (19, 0), (16, 30), (19, 30)],
+            cinema,
+            vol_list,
+            counts,
+        )
 
-        # Varied start times for Thursday films — slightly earlier/later
-        # than a standard 19:00 to suggest a realistic programme.
-        thursday_film_times = [
-            (19, 0),
-            (18, 30),
-            (20, 0),
-            (19, 30),
-            (18, 0),
-            (20, 30),
-        ]
-
-        # Seed Thursday evening films
-        for i, d in enumerate(thursdays):
-            film_idx = i % len(THURSDAY_FILMS)
-            film = THURSDAY_FILMS[film_idx]
-            hour, minute = thursday_film_times[i % len(thursday_film_times)]
-            self._seed_film_showing(
-                film["name"],
-                film["film_information"],
-                d,
-                hour,
-                rooms_dict["Cinema"],
-                film["tags"],
-                vol_list,
-                counts,
-                copy_summary=film.get("copy_summary", ""),
-                copy=film.get("copy", ""),
-                pricing=film.get("pricing", "£7/£5/£3/£0"),
-                image_url=film.get("image_url"),
-                minute=minute,
-                trailer_url=film.get("trailer_url", ""),
-                age_rating=film.get("age_rating", ""),
-            )
+        # Older paid programme, before the recent-past window above, so
+        # finance reporting has ~6 months of history rather than 6 weeks.
+        self._seed_historical_programme(
+            rooms_dict, vol_list, counts, recent_past_start
+        )
 
         # Seed monthly events
         for evt_data in MONTHLY_EVENTS:
@@ -1867,14 +1895,14 @@ class Command(BaseCommand):
             )
 
             # Iterate over months in the window
-            current = today.replace(day=1)
+            current = recent_past_start.replace(day=1)
             while current <= window_end:
                 target_date = _nth_weekday_of_month(
                     current.year, current.month, weekday, n
                 )
                 if (
                     target_date
-                    and target_date >= today
+                    and target_date >= recent_past_start
                     and target_date <= window_end
                 ):
                     self._seed_one_recurring_showing(
@@ -1898,6 +1926,122 @@ class Command(BaseCommand):
                     current = current.replace(year=current.year + 1, month=1)
                 else:
                     current = current.replace(month=current.month + 1)
+
+    HISTORICAL_PROGRAMME_WEEKS = 26
+
+    @staticmethod
+    def _weekdays_between(start, end, weekday):
+        """Every date from start to end (inclusive) on the given weekday."""
+        d = start
+        while d.weekday() != weekday:
+            d += datetime.timedelta(days=1)
+        days = []
+        while d <= end:
+            days.append(d)
+            d += datetime.timedelta(days=7)
+        return days
+
+    def _seed_film_pool(self, pool, days, times, room, vol_list, counts):
+        """One film from ``pool`` on each of ``days``, cycling the pool and
+        the start times."""
+        if not pool:
+            return
+        for i, d in enumerate(days):
+            film = pool[i % len(pool)]
+            hour, minute = times[i % len(times)]
+            self._seed_film_showing(
+                film["name"],
+                film.get("film_information", ""),
+                d,
+                hour,
+                room,
+                film.get("tags", ["film"]),
+                vol_list,
+                counts,
+                copy_summary=film.get("copy_summary", ""),
+                copy=film.get("copy", ""),
+                pricing=film.get("pricing", "£7/£5/£3/£0"),
+                image_url=film.get("image_url"),
+                minute=minute,
+                trailer_url=film.get("trailer_url", ""),
+                age_rating=film.get("age_rating", ""),
+            )
+
+    def _seed_historical_programme(
+        self, rooms_dict, vol_list, counts, recent_past_start
+    ):
+        """Paid films and gigs across the ~6 months *before*
+        recent_past_start, from the real-titles pool in films.toml
+        (HISTORICAL_FILMS / HISTORICAL_GIGS).
+
+        _seed_recurring_events only covers the last six weeks with real
+        programme, and _seed_historical_shifts' older placeholder events
+        carry no cost terms, so until this existed the Finance review
+        screen, the PRS/PPL report and past_events_search had almost
+        nothing to show beyond the current month. Films land on Thursdays,
+        Fridays and Sundays, gigs on roughly every third Saturday. The free
+        café add-ons (Art Club, Knitting Circle) deliberately don't get
+        a historical run: they are no_financial_activity events and
+        exist here only as rota/programme furniture.
+        """
+        window_start = recent_past_start - datetime.timedelta(
+            weeks=self.HISTORICAL_PROGRAMME_WEEKS - 6
+        )
+        cinema = rooms_dict.get("Cinema")
+        film_days = []
+        d = window_start
+        while d < recent_past_start:
+            if d.weekday() in (3, 4, 6) and HISTORICAL_FILMS:
+                film_days.append(d)
+            d += datetime.timedelta(days=1)
+
+        film_times = [(19, 30), (19, 0), (20, 0), (18, 30)]
+        for i, d in enumerate(film_days):
+            film = HISTORICAL_FILMS[i % len(HISTORICAL_FILMS)]
+            hour, minute = film_times[i % len(film_times)]
+            self._seed_film_showing(
+                film["name"],
+                film.get("film_information", ""),
+                d,
+                hour,
+                cinema,
+                film.get("tags", ["film"]),
+                vol_list,
+                counts,
+                copy_summary=film.get("copy_summary", ""),
+                copy=film.get("copy", ""),
+                pricing=film.get("pricing", "£7/£5/£3/£0"),
+                image_url=film.get("image_url"),
+                minute=minute,
+                trailer_url=film.get("trailer_url", ""),
+                age_rating=film.get("age_rating", ""),
+            )
+
+        if not HISTORICAL_GIGS:
+            return
+        saturdays = []
+        d = window_start
+        while d < recent_past_start:
+            if d.weekday() == 5:
+                saturdays.append(d)
+            d += datetime.timedelta(days=1)
+        for i, d in enumerate(saturdays[::3]):
+            gig = HISTORICAL_GIGS[i % len(HISTORICAL_GIGS)]
+            mins = gig.get("duration", 180)
+            self._seed_one_recurring_showing(
+                gig["name"],
+                d,
+                gig.get("hour", 19),
+                datetime.time(mins // 60, mins % 60),
+                rooms_dict.get(gig.get("room", "Venue Space")),
+                vol_list,
+                counts,
+                tags=gig.get("tags", ["music"]),
+                pricing=gig.get("pricing", ""),
+                roles=gig.get("roles", []),
+                copy_summary=gig.get("copy_summary", ""),
+                copy=gig.get("copy", ""),
+            )
 
     def _seed_one_recurring_showing(
         self,
@@ -1951,9 +2095,11 @@ class Command(BaseCommand):
             datetime.datetime.combine(date, datetime.time(hour, 0, 0))
         )
 
-        if showing_start < timezone.now():
-            return
-
+        # No "skip if in the past" guard here: Showing.save() only refuses
+        # to *update* an already-past showing (see toolkit/diary/models/
+        # showing.py), not to create one -- and recent-past dates are
+        # exactly what _seed_recurring_events now asks for, so this can
+        # populate elapsed showings for finance/settlement testing.
         _dur_mins = duration.hour * 60 + duration.minute or 60
         showing_start = self._find_free_slot(room, showing_start, _dur_mins)
 
@@ -2094,8 +2240,8 @@ class Command(BaseCommand):
             datetime.datetime.combine(date, datetime.time(hour, minute, 0))
         )
 
-        if showing_start < timezone.now():
-            return
+        # See the matching comment in _seed_one_recurring_showing -- past
+        # dates are intentional here now, not skipped.
 
         showing_start = self._find_free_slot(room, showing_start, 120)
 
@@ -2965,6 +3111,537 @@ class Command(BaseCommand):
             Event.objects.filter(name=data["title"], film__isnull=True).update(
                 film=film
             )
+
+    # Events with nothing to record at settlement time. "cafe" covers the
+    # Sunday café itself and its free add-ons (Art Club, Knitting Circle):
+    # always free entry, no takings of their own -- whatever the café sells
+    # while they run is the café's, not the club's. Films, TV and gigs are
+    # the events where logging tickets and bar/café takings matters, and
+    # they never carry these tags.
+    _NO_FINANCE_TAGS = {
+        "meeting",
+        "induction",
+        "volunteer",
+        "training-for-volunteers",
+        "cafe",
+    }
+    _MUSIC_TAGS = {"music", "performance", "party"}
+    _DISTRIBUTORS = [
+        "Peccadillo Pictures",
+        "Dogwoof",
+        "Modern Films",
+        "New Wave Films",
+        "Park Circus",
+        "Self-distributed",
+    ]
+    _PERFORMER_BOOKERS = [
+        "Independent booking agent",
+        "Self-booked",
+        "Tour manager",
+        "Local promoter collective",
+    ]
+
+    def _make_settlement_line_items(self, attendance, tag_names=()):
+        """A plausible ticket-sales breakdown summing roughly to
+        `attendance`, for one ShowingSettlement (9.171 seed coverage).
+
+        Free-entry events (the "free" tag, e.g. Family Film Club) get a
+        single £0 headcount row rather than invented ticket income; gigs
+        price a little higher than the £7/£5/£3 film tiers.
+        """
+        tag_names = set(tag_names)
+        if "free" in tag_names:
+            return [
+                {
+                    "description": f"{attendance} free entry",
+                    "category": "door",
+                    "count": attendance,
+                    "unit_price_gbp": Decimal("0.00"),
+                }
+            ]
+        if tag_names & self._MUSIC_TAGS:
+            advance_prices = ["6.00", "8.00", "10.00"]
+            door_prices = ["8.00", "10.00", "12.00"]
+        else:
+            advance_prices = ["5.00", "6.00", "7.00"]
+            door_prices = ["6.00", "7.00", "8.00"]
+        advance = max(0, int(attendance * random.uniform(0.4, 0.7)))
+        door = max(0, attendance - advance)
+        items = []
+        if advance:
+            items.append(
+                {
+                    "description": f"{advance} advance online",
+                    "category": "advance",
+                    "count": advance,
+                    "unit_price_gbp": Decimal(random.choice(advance_prices)),
+                }
+            )
+        if door:
+            items.append(
+                {
+                    "description": f"{door} on the door",
+                    "category": "door",
+                    "count": door,
+                    "unit_price_gbp": Decimal(random.choice(door_prices)),
+                }
+            )
+        if random.random() < 0.4:
+            items.append(
+                {
+                    "description": "Guest list",
+                    "category": "guest_list",
+                    "count": random.randint(1, 4),
+                    "unit_price_gbp": Decimal("0.00"),
+                }
+            )
+        return items
+
+    def _seed_film_prep(self, counts):  # noqa: ARG002 -- seed step signature
+        """Film readiness (9.174): films in every shape the feature has to
+        handle, so the Hub panel, overview and dashboard cards have
+        something of each kind to render.
+
+        - Single-film events in a spread of states: in progress, waiting on
+          an unclaimed test, ready, a failed test, a claimed test.
+        - Family Film Club: a different film each date (one ready, one
+          still on its hard drive), with the third date left with no film
+          recorded so the prompt shows.
+        - A double bill: two films on the same showings.
+        - Hired hard drives after the run: to send back, sent, and closed.
+
+        Additive and idempotent: an event that already has a film is left
+        alone, so re-running never resets what a browser session did.
+        """
+        from toolkit.diary.models import FilmCopy, FilmPrep
+        from toolkit.diary.models.film_prep import (
+            FORMAT_DCP_FILMVAULT,
+            FORMAT_DCP_HDD,
+            FORMAT_DISC,
+            FORMAT_MP4,
+            RESULT_OK,
+            RESULT_PROBLEM,
+        )
+
+        now = timezone.now()
+        actor = User.objects.filter(username="programmer").first()
+        tester = User.objects.filter(username="volunteer").first()
+
+        def _future(event):
+            return sorted(
+                (
+                    s
+                    for s in event.showings.all()
+                    if s.start >= now and not s.cancelled
+                ),
+                key=lambda s: s.start,
+            )
+
+        def _film(event, showings, title="", position=1, backup=""):
+            prep = FilmPrep.objects.create(
+                event=event,
+                film_title=title,
+                bill_position=position,
+                subtitles=FilmPrep.SUBTITLES_NONE,
+                backup_in_place=bool(backup),
+                backup_note=backup,
+                handover_note=(
+                    "Menu autoplays with the wrong language: pick the "
+                    "original audio before doors."
+                ),
+                updated_by=actor,
+            )
+            prep.showings.set(showings)
+            return prep
+
+        def _copy(prep, fmt, label="Main copy", location=""):
+            return FilmCopy.objects.create(
+                film_prep=prep,
+                label=label,
+                format=fmt,
+                location_note=location,
+            )
+
+        def _step(copy, key):
+            return copy.milestones.get(key=key)
+
+        def in_progress(prep):
+            c = _copy(prep, FORMAT_DISC, location="Library, shelf D3")
+            _step(c, "in_building").complete(actor)
+
+        def waiting_for_test(prep):
+            c = _copy(prep, FORMAT_DCP_FILMVAULT)
+            _step(c, "on_filmvault").complete(actor)
+            _step(c, "ingested").complete(actor)
+
+        def ready(prep):
+            c = _copy(prep, FORMAT_DISC)
+            for m in c.milestones.all():
+                m.complete(
+                    actor, result=RESULT_OK if m.key == "tested" else ""
+                )
+
+        def failed_test(prep):
+            c = _copy(prep, FORMAT_MP4)
+            _step(c, "in_building").complete(actor)
+            _step(c, "tested").complete(
+                tester or actor, result=RESULT_PROBLEM, notes="No audio track"
+            )
+
+        def claimed_test(prep):
+            c = _copy(prep, FORMAT_DCP_HDD, location="CRU bay 2")
+            _step(c, "hdd_arrived").complete(actor)
+            _step(c, "tested").claim(
+                tester or actor,
+                planned_for=(now + datetime.timedelta(days=2)).date(),
+            )
+
+        # Single-film events, soonest first, skipping the series.
+        events = list(
+            Event.objects.filter(
+                tags__slug="film",
+                showings__cancelled=False,
+                showings__start__gte=now,
+            )
+            .exclude(name="Family Film Club")
+            .distinct()
+            .prefetch_related("showings")
+        )
+        events = [e for e in events if _future(e)]
+        events.sort(key=lambda e: _future(e)[0].start)
+        fresh = [e for e in events if not e.film_preps.exists()]
+
+        backups = {
+            0: "Blu-ray in the booth drawer",
+            2: "MP4 in the Films folder on the booth PC",
+            3: "DCP on the CRU, bay 2",
+        }
+        recipes = [
+            in_progress,
+            waiting_for_test,
+            ready,
+            failed_test,
+            claimed_test,
+        ]
+        for idx, (event, recipe) in enumerate(zip(fresh, recipes)):
+            recipe(_film(event, _future(event), backup=backups.get(idx, "")))
+
+        # A double bill on the next event: two films sharing every showing,
+        # each with its own copy and state.
+        if len(fresh) > len(recipes):
+            event = fresh[len(recipes)]
+            dates = _future(event)
+            ready(_film(event, dates, title="Cleo from 5 to 7", position=1))
+            in_progress(
+                _film(
+                    event,
+                    dates,
+                    title="Vagabond",
+                    position=2,
+                    backup="Blu-ray in the booth drawer",
+                )
+            )
+
+        # Family Film Club: a different film each date. The third date is
+        # left with no film recorded, which the Hub and dashboard flag.
+        club = (
+            Event.objects.filter(name="Family Film Club")
+            .prefetch_related("showings")
+            .first()
+        )
+        if club is not None and not club.film_preps.exists():
+            dates = _future(club)
+            if len(dates) >= 1:
+                ready(_film(club, [dates[0]], title="Paddington"))
+            if len(dates) >= 2:
+                claimed_test(_film(club, [dates[1]], title="The Iron Giant"))
+
+        # Hired hard drives after the run: one to post, one sent and
+        # awaiting the distributor, one closed (which should not show).
+        past_films = list(
+            Event.objects.filter(tags__slug="film", showings__start__lt=now)
+            .exclude(showings__start__gte=now)
+            .distinct()
+            .prefetch_related("showings")
+        )
+        past_films.sort(
+            key=lambda e: max(s.start for s in e.showings.all()),
+            reverse=True,
+        )
+
+        def _drive(event, sent=False, confirmed=False):
+            prep = _film(event, list(event.showings.all()))
+            c = _copy(prep, FORMAT_DCP_HDD, location="Returns shelf")
+            for key in ("hdd_arrived", "ingested"):
+                _step(c, key).complete(actor)
+            _step(c, "tested").complete(actor, result=RESULT_OK)
+            if sent:
+                _step(c, "returned").complete(
+                    actor, notes="Courier and ref: DPD 1234 5678"
+                )
+            if confirmed:
+                _step(c, "return_confirmed").complete(actor)
+
+        drive_states = [{}, {"sent": True}, {"sent": True, "confirmed": True}]
+        candidates = [e for e in past_films if not e.film_preps.exists()]
+        for event, state in zip(candidates, drive_states):
+            _drive(event, **state)
+
+        # Make one demo volunteer a projectionist, so the "Films needing a
+        # test" card shows for a rota-only account.
+        role = Role.objects.filter(is_projectionist=True).first()
+        volunteer = (
+            Volunteer.objects.filter(user=tester).first() if tester else None
+        )
+        upcoming = Showing.objects.filter(
+            cancelled=False, start__gte=now
+        ).order_by("start")
+        if role and volunteer and upcoming.exists():
+            if not RotaEntry.objects.filter(
+                volunteer=volunteer, role=role
+            ).exists():
+                RotaEntry.objects.create(
+                    role=role, showing=upcoming.first(), volunteer=volunteer
+                )
+
+    def _seed_event_finances(self, counts):
+        """Financial terms, programmer ownership, distributor-payment
+        outcomes, and per-showing settlement actuals for every seeded
+        event (9.171 test coverage) -- see docs/tasks/finance.md.
+
+        Idempotent and additive: only fills in fields/rows that are still
+        unset, so re-running seed_dev_data doesn't duplicate settlements
+        or clobber anything a browser session has since edited. Must run
+        after every other event/showing-seeding step, since it needs the
+        full picture of each event's elapsed showings to decide what
+        "past events booked in should have financial info" means for that
+        event.
+        """
+        now = timezone.now()
+
+        programmers = list(
+            Volunteer.objects.filter(
+                user__username__in=["programmer", "programmer2"]
+            ).order_by("user__username")
+        )
+
+        events = Event.objects.prefetch_related("tags", "showings").all()
+        for idx, event in enumerate(events):
+            tag_names = {t.name for t in event.tags.all()}
+            update_fields = []
+
+            # Reconcile events whose tags now say "nothing to record" but
+            # which an earlier seed run gave cost terms (Art Club and
+            # Knitting Circle were tagged "workshop" until 2026-09-17, so
+            # got internal cost terms and settlement rows). Tag-derived,
+            # so safe to correct on every run; only settlements the seed
+            # itself made (no updated_by) are removed, never a row someone
+            # entered through the browser.
+            if tag_names & self._NO_FINANCE_TAGS and (
+                not event.no_financial_activity or event.cost_type
+            ):
+                event.no_financial_activity = True
+                event.cost_type = None
+                update_fields += ["no_financial_activity", "cost_type"]
+                ShowingSettlement.objects.filter(
+                    showing__event=event, updated_by__isnull=True
+                ).delete()
+
+            if event.cost_type is None and not event.no_financial_activity:
+                if tag_names & self._NO_FINANCE_TAGS:
+                    event.no_financial_activity = True
+                    update_fields.append("no_financial_activity")
+                elif "film" in tag_names:
+                    event.cost_type = Event.COST_TYPE_FILM_LICENSE
+                    event.cost_distributor = random.choice(self._DISTRIBUTORS)
+                    event.cost_fee_includes_vat = random.random() < 0.5
+                    if random.random() < 0.5:
+                        event.cost_flat_fee_gbp = Decimal(
+                            random.choice([45, 60, 75, 90, 120])
+                        )
+                        update_fields.append("cost_flat_fee_gbp")
+                    else:
+                        event.cost_percentage_split = Decimal(
+                            random.choice([35, 40, 50])
+                        )
+                        event.cost_minimum_guarantee_gbp = Decimal(
+                            random.choice([30, 50])
+                        )
+                        update_fields += [
+                            "cost_percentage_split",
+                            "cost_minimum_guarantee_gbp",
+                        ]
+                    update_fields += [
+                        "cost_type",
+                        "cost_distributor",
+                        "cost_fee_includes_vat",
+                    ]
+                elif tag_names & self._MUSIC_TAGS or event.outside_hire:
+                    event.cost_type = Event.COST_TYPE_PERFORMER_FEE
+                    event.cost_distributor = random.choice(
+                        self._PERFORMER_BOOKERS
+                    )
+                    event.cost_total_gbp = Decimal(
+                        random.choice([80, 120, 150, 200, 300])
+                    )
+                    event.cost_fee_includes_vat = random.random() < 0.3
+                    update_fields += [
+                        "cost_type",
+                        "cost_distributor",
+                        "cost_total_gbp",
+                        "cost_fee_includes_vat",
+                    ]
+                elif tag_names & {"workshop", "exhibition"}:
+                    event.cost_type = Event.COST_TYPE_INTERNAL
+                    update_fields.append("cost_type")
+                else:
+                    event.cost_type = Event.COST_TYPE_TBC
+                    update_fields.append("cost_type")
+
+            if (
+                event.programmer_id is None
+                and programmers
+                and not event.no_financial_activity
+            ):
+                event.programmer = programmers[idx % len(programmers)]
+                update_fields.append("programmer")
+
+            if update_fields:
+                event.save(update_fields=update_fields)
+
+            if not event.has_financial_terms():
+                continue
+
+            elapsed = sorted(
+                (
+                    s
+                    for s in event.showings.all()
+                    if s.in_past() and not s.cancelled
+                ),
+                key=lambda s: s.start,
+            )
+            if not elapsed:
+                continue
+            # Settlement actuals only for the window _seed_historical_
+            # programme fills with real paid events (~6 months): some
+            # events here (the historical-shift placeholders) span back
+            # to 2022, and older showings stay a realistic, untouched
+            # "not_recorded" backlog rather than generating thousands of
+            # settlement rows nobody will browse to.
+            settlement_cutoff = now - datetime.timedelta(
+                weeks=self.HISTORICAL_PROGRAMME_WEEKS
+            )
+            recent_elapsed = [
+                s for s in elapsed if s.start >= settlement_cutoff
+            ]
+
+            # Distributor-payment outcome, varied by event index so the
+            # finance review screen shows a mix of outstanding/invoiced/paid.
+            if (
+                event.distributor_invoiced_date is None
+                and event.distributor_paid_date is None
+            ):
+                outcome = idx % 4
+                latest_date = elapsed[-1].start.date()
+                payment_fields = []
+                if outcome in (1, 2):
+                    event.distributor_invoiced_date = (
+                        latest_date + datetime.timedelta(days=3)
+                    )
+                    payment_fields.append("distributor_invoiced_date")
+                if outcome == 2:
+                    event.distributor_paid_date = (
+                        latest_date + datetime.timedelta(days=14)
+                    )
+                    event.distributor_paid_amount_gbp = (
+                        event.cost_total_gbp
+                        or event.cost_flat_fee_gbp
+                        or Decimal(random.choice([50, 100, 150]))
+                    )
+                    payment_fields += [
+                        "distributor_paid_date",
+                        "distributor_paid_amount_gbp",
+                    ]
+                # outcome == 0 or 3: leave outstanding, a realistic mix
+                if payment_fields:
+                    event.save(update_fields=payment_fields)
+
+            for s_idx, showing in enumerate(recent_elapsed):
+                if hasattr(showing, "settlement"):
+                    continue
+                # Spread states across not_recorded / nothing_to_report /
+                # partial / fully recorded (twice, for variety of amounts),
+                # so every state finance_settlement_review can show is
+                # actually exercised somewhere in the seed data.
+                state = (idx + s_idx) % 5
+                if state == 0:
+                    continue  # not_recorded: deliberately leave nothing
+                settlement = ShowingSettlement.objects.create(showing=showing)
+                counts["settlements"] += 1
+                if state == 1:
+                    settlement.nothing_to_report = True
+                    settlement.save(update_fields=["nothing_to_report"])
+                    continue
+                attendance = random.randint(8, 60)
+                settlement.attendance = attendance
+                if state == 2:
+                    # partial: attendance only, no line items yet
+                    settlement.save(update_fields=["attendance"])
+                    continue
+                settlement.bar_contribution_gbp = Decimal(
+                    random.choice(["0.00", "12.50", "24.00", "38.50", "55.00"])
+                )
+                if state == 4:
+                    settlement.notes = (
+                        "Door split with the touring collective -- see "
+                        "event terms for the agreed percentage."
+                    )
+                settlement.save(
+                    update_fields=[
+                        "attendance",
+                        "bar_contribution_gbp",
+                        "notes",
+                    ]
+                )
+                for order, li in enumerate(
+                    self._make_settlement_line_items(attendance, tag_names)
+                ):
+                    SettlementLineItem.objects.create(
+                        settlement=settlement, order=order, **li
+                    )
+                    counts["settlement_line_items"] += 1
+
+            # PRS/PPL performer registration for a sample of music/film
+            # events with elapsed showings, so the report generator and
+            # the Event Hub's PRS badge both have real rows to show.
+            if (
+                (tag_names & self._MUSIC_TAGS or "film" in tag_names)
+                and idx % 3 == 0
+                and not hasattr(event, "performer_registration")
+            ):
+                registration = PerformerRegistration.objects.create(
+                    event=event,
+                    filled_in_by=random.choice(
+                        ["Programmer", "Duty keyholder"]
+                    ),
+                    vat_on_tickets=random.choice([True, False, None]),
+                )
+                counts["performer_registrations"] += 1
+                performer_names = (
+                    ["Headline act", "Support act"]
+                    if tag_names & self._MUSIC_TAGS
+                    else ["Visiting director / guest speaker"]
+                )
+                for p_idx, perf_name in enumerate(performer_names):
+                    PRSPerformerEntry.objects.create(
+                        registration=registration,
+                        name=perf_name,
+                        registered=random.choice(["yes", "no", "unknown"]),
+                        is_volunteer_or_amateur=random.choice(
+                            [True, False, None]
+                        ),
+                        order=p_idx,
+                    )
 
     def _make_poster_image(self, event_name, bg_colour, width=600, height=900):
         from toolkit.diary.poster import make_poster_image

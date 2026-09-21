@@ -1,0 +1,1210 @@
+# Real Star and Shadow programme (Jan-Dec 2026) for the demo site.
+#
+# Titles come from the public programme and archive at
+# starandshadow.org.uk; synopsis, director, runtime, poster, BBFC
+# certificate and trailer were pulled from TMDB. Pools are consumed by
+# seed_dev_data ahead of the older pools in films.toml, so the recent and
+# upcoming weeks look like the live listing. Extra tags (horror, lgbtq,
+# silent-film, live-score, tv-on-the-big-screen, documentary, family,
+# twenty-for-twenty, noirvember) are defined in tags.toml.
+
+# -------------------- sunday_programme --------------------
+
+[[sunday_programme]]
+name = "The Social Network"
+copy_summary = "In 2003, Harvard undergrad and computer programmer Mark Zuckerberg begins work on a new concept that eventually turns into the global social network known as Facebook."
+copy = "In 2003, Harvard undergrad and computer programmer Mark Zuckerberg begins work on a new concept that eventually turns into the global social network known as Facebook. Six years later, Mark is one of the youngest billionaires ever, but his unprecedented success leads to both personal and legal complications when he ends up on the receiving end of two lawsuits, one involving his former friend."
+film_information = "Dir. David Fincher, US 2010, 121 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "12A"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/n0ybibhJtQ5icDqTp8eRytcIHJx.jpg"
+trailer_url = "https://www.youtube.com/watch?v=rBCNU0XT9GY"
+
+[[sunday_programme]]
+name = "Who Wants to Kill Jessie?"
+copy_summary = "Czechoslovak absurdist sci-fi comedy. In this zany Czechoslovakian comedy, a scientist invents a machine that projects a sleeping person's dream on a screen; disaster soon follows when the machine malfunctions and the cartoon-like dream characters become very real!"
+copy = "Czechoslovak absurdist sci-fi comedy. In this zany Czechoslovakian comedy, a scientist invents a machine that projects a sleeping person's dream on a screen; disaster soon follows when the machine malfunctions and the cartoon-like dream characters become very real!"
+film_information = "Dir. Václav Vorlíček, CS 1966, 81 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/vTyGH9bn948xMGaLjInhZp9tqyJ.jpg"
+
+[[sunday_programme]]
+name = "Be Natural: The Untold Story of Alice Guy-Blaché"
+copy_summary = "The epic life story of Alice Guy-Blaché (1873–1968), a French screenwriter, director and producer, true pioneer of cinema, the first person who made a narrative fiction film; author of hundreds of movies, but banished from…"
+copy = "The epic life story of Alice Guy-Blaché (1873–1968), a French screenwriter, director and producer, true pioneer of cinema, the first person who made a narrative fiction film; author of hundreds of movies, but banished from history books. Ignored and forgotten. At last remembered."
+film_information = "Dir. Pamela B. Green, US 2018, 103 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "PG"
+tags = ["film", "documentary"]
+image_url = "https://image.tmdb.org/t/p/w780/o5fz4qNgI5nfDirf6UcX0SpAG6T.jpg"
+trailer_url = "https://www.youtube.com/watch?v=bPUJRtrp_EE"
+
+[[sunday_programme]]
+name = "Green for Danger"
+copy_summary = "Wartime thriller. In the midst of Nazi air raids, a postman dies on the operating table at a rural hospital. But was the death accidental?"
+copy = "Wartime thriller. In the midst of Nazi air raids, a postman dies on the operating table at a rural hospital. But was the death accidental?"
+film_information = "Dir. Sidney Gilliat, GB 1946, 91 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "PG"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/a4DKicJXJc2IZ5Ze8fU34sZTT4L.jpg"
+
+[[sunday_programme]]
+name = "Dead of Night"
+copy_summary = "An architect, visiting an English country house, realizes the other guests are familiar from his recurring nightmare. When they share their tales of the supernatural, he is filled with a growing dread."
+copy = "An architect, visiting an English country house, realizes the other guests are familiar from his recurring nightmare. When they share their tales of the supernatural, he is filled with a growing dread."
+film_information = "Dir. Alberto Cavalcanti and Charles Crichton, GB 1945, 103 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "PG"
+tags = ["film", "horror"]
+image_url = "https://image.tmdb.org/t/p/w780/6bpPtLRMbfSkH0k6sLdJRIcEeq3.jpg"
+trailer_url = "https://www.youtube.com/watch?v=8UCJz617E8s"
+
+[[sunday_programme]]
+name = "Port of Shadows"
+copy_summary = "Down a foggy, desolate road to the port city of Le Havre travels Jean, an army deserter looking for another chance to make good on life."
+copy = "Down a foggy, desolate road to the port city of Le Havre travels Jean, an army deserter looking for another chance to make good on life. Fate, however, has a different plan for him, as acts of both revenge and kindness render him front-page news."
+film_information = "Dir. Marcel Carné, FR 1938, 93 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/2S8O2V50TZlXV8uabOvGUJ1i5CZ.jpg"
+trailer_url = "https://www.youtube.com/watch?v=KeBE4ASz_I0"
+
+[[sunday_programme]]
+name = "The Cinema of Ritwik Ghatak: The Cloud-Capped Star"
+copy_summary = "Part of our two-day Ritwik Ghatak retrospective. A selfless young woman, the daughter of a middle-class refugee family from East Pakistan, sacrifices her own happiness for her unappreciative family."
+copy = "Part of our two-day Ritwik Ghatak retrospective. A selfless young woman, the daughter of a middle-class refugee family from East Pakistan, sacrifices her own happiness for her unappreciative family."
+film_information = "Dir. Ritwik Ghatak, IN 1960, 127 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/uIlt1x2eBMzuQHwyU54CNPTSK6A.jpg"
+trailer_url = "https://www.youtube.com/watch?v=ZAAv6fBh8q8"
+
+[[sunday_programme]]
+name = "Incubus"
+copy_summary = "Cult classic, shot entirely in Esperanto. On a strange island inhabited by demons and spirits, a man battles the forces of evil."
+copy = "Cult classic, shot entirely in Esperanto. On a strange island inhabited by demons and spirits, a man battles the forces of evil."
+film_information = "Dir. Leslie Stevens, US 1966, 74 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "horror"]
+image_url = "https://image.tmdb.org/t/p/w780/xek3INIVvqlWXGeYl1vZxN2pMIk.jpg"
+trailer_url = "https://www.youtube.com/watch?v=VZBvqfHN1Vk"
+
+[[sunday_programme]]
+name = "Muppet Treasure Island"
+copy_summary = "Young Jim Hawkins and his two best friends, Gonzo and Rizzo, embark on a voyage across the high seas in search of buried treasure, but soon find that not everyone onboard can be trusted."
+copy = "Young Jim Hawkins and his two best friends, Gonzo and Rizzo, embark on a voyage across the high seas in search of buried treasure, but soon find that not everyone onboard can be trusted."
+film_information = "Dir. Brian Henson, US 1996, 100 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "U"
+tags = ["film", "family"]
+image_url = "https://image.tmdb.org/t/p/w780/k4KW2CUkzDKaCy4H4cS02cO8gvV.jpg"
+trailer_url = "https://www.youtube.com/watch?v=-37gsH0ideE"
+
+
+# -------------------- thursday_programme --------------------
+
+[[thursday_programme]]
+name = "Love Lies Bleeding"
+copy_summary = "Reclusive gym manager Lou falls hard for Jackie, an ambitious bodybuilder headed through town to Las Vegas in pursuit of her dream. But their love ignites violence, pulling them deep into the web of Lou’s criminal family."
+copy = "Reclusive gym manager Lou falls hard for Jackie, an ambitious bodybuilder headed through town to Las Vegas in pursuit of her dream. But their love ignites violence, pulling them deep into the web of Lou’s criminal family."
+film_information = "Dir. Rose Glass, GB/US 2024, 104 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film", "lgbtq"]
+image_url = "https://image.tmdb.org/t/p/w780/xImj8RLe39YK0lyVu9kXv7ApN8p.jpg"
+trailer_url = "https://www.youtube.com/watch?v=AULR_GPteNQ"
+
+[[thursday_programme]]
+name = "The New World (Extended Cut)"
+copy_summary = "Extended cut. A drama about explorer John Smith and the clash between Native Americans and English settlers in the 17th century."
+copy = "Extended cut. A drama about explorer John Smith and the clash between Native Americans and English settlers in the 17th century."
+film_information = "Dir. Terrence Malick, US/GB 2005, 151 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "12A"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/dPyWMlQd54r3pK17GKG3iqjvNZ7.jpg"
+trailer_url = "https://www.youtube.com/watch?v=i2LdlqW26zc"
+
+[[thursday_programme]]
+name = "Les Diaboliques"
+copy_summary = "Part of our 20 for 20 season. The cruel and abusive headmaster of a boarding school, Michel Delassalle, is murdered by an unlikely duo -- his meek wife and the mistress he brazenly flaunts."
+copy = "Part of our 20 for 20 season. The cruel and abusive headmaster of a boarding school, Michel Delassalle, is murdered by an unlikely duo -- his meek wife and the mistress he brazenly flaunts. The women become increasingly unhinged by a series of odd occurrences after Delassalle's corpse mysteriously disappears."
+film_information = "Dir. Henri-Georges Clouzot, FR 1955, 118 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "12A"
+tags = ["film", "twenty-for-twenty"]
+image_url = "https://image.tmdb.org/t/p/w780/jE8ygUYBUGyUcM4sR6iinPqYeDK.jpg"
+trailer_url = "https://www.youtube.com/watch?v=BzbGtjtfZwA"
+
+[[thursday_programme]]
+name = "Pet Sematary"
+copy_summary = "After the Creed family's cat is accidentally killed, a friendly neighbor advises its burial in a mysterious nearby cemetery."
+copy = "After the Creed family's cat is accidentally killed, a friendly neighbor advises its burial in a mysterious nearby cemetery."
+film_information = "Dir. Mary Lambert, US 1989, 103 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "18"
+tags = ["film", "horror"]
+image_url = "https://image.tmdb.org/t/p/w780/8ZtH1V4rhrtP53ezlEWrCaMALXF.jpg"
+trailer_url = "https://www.youtube.com/watch?v=jpjpUOXQZac"
+
+[[thursday_programme]]
+name = "La Chimera"
+copy_summary = "Everyone has their own Chimera, something they try to achieve but never manage to find. For Arthur, the Chimera looks like the woman he lost, Beniamina."
+copy = "Everyone has their own Chimera, something they try to achieve but never manage to find. For Arthur, the Chimera looks like the woman he lost, Beniamina. In an adventurous journey between the living and the dead, between forests and cities, between celebrations and solitudes, the intertwined destinies of these characters unfold, all in search of the Chimera."
+film_information = "Dir. Alice Rohrwacher, IT/FR/CH 2023, 131 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/dV6SYHmmFLXQU7oKRfK4pOFCX6M.jpg"
+trailer_url = "https://www.youtube.com/watch?v=TkIC8YI9-eU"
+
+[[thursday_programme]]
+name = "The Witch"
+copy_summary = "In 1630, a farmer relocates his family to a remote plot of land on the edge of a forest where strange, unsettling things happen."
+copy = "In 1630, a farmer relocates his family to a remote plot of land on the edge of a forest where strange, unsettling things happen. With suspicion and paranoia mounting, each family member's faith, loyalty and love are tested in shocking ways."
+film_information = "Dir. Robert Eggers, BR/CA/GB 2016, 92 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film", "horror"]
+image_url = "https://image.tmdb.org/t/p/w780/zap5hpFCWSvdWSuPGAQyjUv2wAC.jpg"
+trailer_url = "https://www.youtube.com/watch?v=97OQ7MQC5Ck"
+
+[[thursday_programme]]
+name = "Ju-On: The Grudge"
+copy_summary = "When a social worker is sent to check on a traumatized elderly woman whose family have moved in at the site of a notorious murder case, she unwittingly unleashes a cycle of terror that transmits via its victims."
+copy = "When a social worker is sent to check on a traumatized elderly woman whose family have moved in at the site of a notorious murder case, she unwittingly unleashes a cycle of terror that transmits via its victims."
+film_information = "Dir. Takashi Shimizu, JP 2002, 92 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film", "horror"]
+image_url = "https://image.tmdb.org/t/p/w780/6q1hlBC6rudc3mHwXsbMBR2xAT6.jpg"
+trailer_url = "https://www.youtube.com/watch?v=AmjiUxnZBpo"
+
+[[thursday_programme]]
+name = "Sisters with Transistors"
+copy_summary = "Part of our 20 for 20 season. Think of early electronic music and you’ll likely see men pushing buttons, knobs, and boundaries."
+copy = "Part of our 20 for 20 season. Think of early electronic music and you’ll likely see men pushing buttons, knobs, and boundaries. While electronic music is often perceived as a boys' club, the truth is that from the very beginning women have been integral in inventing the devices, techniques and tropes that would define the shape of sound for years to come."
+film_information = "Dir. Lisa Rovner, GB/US/FR 2021, 86 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "PG"
+tags = ["film", "documentary", "twenty-for-twenty"]
+image_url = "https://image.tmdb.org/t/p/w780/1k8bgFmHdnnIh3g4kAZ9osXVTFH.jpg"
+trailer_url = "https://www.youtube.com/watch?v=7r-3hlzpV7M"
+
+[[thursday_programme]]
+name = "Deep Cover"
+copy_summary = "Noirvember. Black police officer Russell Stevens applies for a special anti-drug squad which targets the highest boss of cocaine delivery to LA—the Colombian foreign minister's nephew."
+copy = "Noirvember. Black police officer Russell Stevens applies for a special anti-drug squad which targets the highest boss of cocaine delivery to LA—the Colombian foreign minister's nephew. Russell works his way up from the bottom undercover, until he reaches the boss."
+film_information = "Dir. Bill Duke, US 1992, 108 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "18"
+tags = ["film", "noirvember"]
+image_url = "https://image.tmdb.org/t/p/w780/etr2mCm7gMufAJkSLuB23XocDtd.jpg"
+trailer_url = "https://www.youtube.com/watch?v=a_G3_4Z4ZTc"
+
+[[thursday_programme]]
+name = "Appropriate Behaviour"
+copy_summary = "Shirin is struggling to become an ideal Persian daughter, politically correct bisexual and hip young Brooklynite but fails miserably in her attempt at all identities."
+copy = "Shirin is struggling to become an ideal Persian daughter, politically correct bisexual and hip young Brooklynite but fails miserably in her attempt at all identities."
+film_information = "Dir. Desiree Akhavan, GB 2015, 90 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "lgbtq"]
+image_url = "https://image.tmdb.org/t/p/w780/vRuAZqThUY4j03at79q4Foe9FIT.jpg"
+trailer_url = "https://www.youtube.com/watch?v=IjZ80dLFFfE"
+
+[[thursday_programme]]
+name = "The Endless"
+copy_summary = "Two brothers return to the cult they fled from years ago to discover that the group's beliefs may be more sane than they once thought."
+copy = "Two brothers return to the cult they fled from years ago to discover that the group's beliefs may be more sane than they once thought."
+film_information = "Dir. Aaron Moorhead and Justin Benson, US 2017, 112 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/uVHPBTLb6Sj1Eso9HzyBAOMRheM.jpg"
+trailer_url = "https://www.youtube.com/watch?v=_DTbx7c7ez8"
+
+
+# -------------------- friday_programme --------------------
+
+[[friday_programme]]
+name = "Teenage Sex and Death at Camp Miasma"
+copy_summary = "After years of slapdash sequels, the Camp Miasma franchise is handed over to an enthusiastic young director for resurrection."
+copy = "After years of slapdash sequels, the Camp Miasma franchise is handed over to an enthusiastic young director for resurrection. But when she visits the original’s star, a now-reclusive actress shrouded in mystery, the two women fall into a blood-soaked world of desire, fear, and delirium."
+film_information = "Dir. Jane Schoenbrun, GB/US 2026, 112 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film", "lgbtq", "horror"]
+image_url = "https://image.tmdb.org/t/p/w780/kereiSEFjFa2Rc0hIVpfeqwuXq4.jpg"
+trailer_url = "https://www.youtube.com/watch?v=j9TsiTgYZGw"
+
+[[friday_programme]]
+name = "Fire in the Sky"
+copy_summary = "After clearing brush for the government, a group of men return to town claiming their friend was abducted."
+copy = "After clearing brush for the government, a group of men return to town claiming their friend was abducted. Despite no apparent motive or evidence of foul play, no-one believes their story and his disappearance is treated as murder."
+film_information = "Dir. Rob Lieberman, US 1993, 109 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/rTFrjAp1YV49DSTUGCyKSkaEHC8.jpg"
+trailer_url = "https://www.youtube.com/watch?v=vkSGgVdJLwc"
+
+[[friday_programme]]
+name = "Audition"
+copy_summary = "Seven years after the death of his wife, widower Shigeharu seeks advice on how to find a new wife from a colleague. Taking advantage of their position as a film company, they stage an audition."
+copy = "Seven years after the death of his wife, widower Shigeharu seeks advice on how to find a new wife from a colleague. Taking advantage of their position as a film company, they stage an audition. Interviewing a series of women, Shigeharu is enchanted by the quiet Asami. But soon things take a twisted turn as Asami isn’t what she seems to be."
+film_information = "Dir. Takashi Miike, JP 2000, 115 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "18"
+tags = ["film", "horror"]
+image_url = "https://image.tmdb.org/t/p/w780/zwGaUMm0wAqi0wkO7LJDlwoA5LP.jpg"
+trailer_url = "https://www.youtube.com/watch?v=2wr_om5LsuI"
+
+[[friday_programme]]
+name = "The Texas Chainsaw Massacre 2"
+copy_summary = "A radio host is victimised by the notorious cannibal family while a former Texas Marshal hunts them."
+copy = "A radio host is victimised by the notorious cannibal family while a former Texas Marshal hunts them."
+film_information = "Dir. Tobe Hooper, US 1986, 100 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "18"
+tags = ["film", "horror"]
+image_url = "https://image.tmdb.org/t/p/w780/cO1Dvg7k87lHSPOdumn3ddJEKdX.jpg"
+trailer_url = "https://www.youtube.com/watch?v=cJi0AOSoKXA"
+
+[[friday_programme]]
+name = "Nacho Libre"
+copy_summary = "Ignacio, a disrespected cook at a Mexican monastery, can barely afford to feed the orphans who live there."
+copy = "Ignacio, a disrespected cook at a Mexican monastery, can barely afford to feed the orphans who live there. Inspired by a local wrestling hero, he decides to moonlight as the not-so-famous Luchador \"Nacho Libre\" to earn money for the monastery -- not to mention the admiration of beautiful nun Sister Encarnación."
+film_information = "Dir. Jared Hess, DE/US 2006, 92 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/kh7B91bMl2lZ0mH9WhPfaNUIEQH.jpg"
+trailer_url = "https://www.youtube.com/watch?v=m2Vh4tfnvKk"
+
+[[friday_programme]]
+name = "Frances Ha"
+copy_summary = "An aspiring dancer moves to New York City and becomes caught up in a whirlwind of flighty fair-weather friends, diminishing fortunes and career setbacks."
+copy = "An aspiring dancer moves to New York City and becomes caught up in a whirlwind of flighty fair-weather friends, diminishing fortunes and career setbacks."
+film_information = "Dir. Noah Baumbach, BR/US 2013, 86 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/jrq1NoKvsxWCcffVOjegiYwloFN.jpg"
+trailer_url = "https://www.youtube.com/watch?v=YdxCnCvCngk"
+
+[[friday_programme]]
+name = "Eternal Sunshine of the Spotless Mind"
+copy_summary = "Joel Barish, heartbroken that his girlfriend underwent a procedure to erase him from her memory, decides to do the same."
+copy = "Joel Barish, heartbroken that his girlfriend underwent a procedure to erase him from her memory, decides to do the same. However, as he watches his memories of her fade away, he realises that he still loves her, and may be too late to correct his mistake."
+film_information = "Dir. Michel Gondry, US 2004, 108 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/5MwkWH9tYHv3mV9OdYTMR5qreIz.jpg"
+trailer_url = "https://www.youtube.com/watch?v=c2e-bj6qy8Y"
+
+[[friday_programme]]
+name = "Streets of Fire"
+copy_summary = "Raven Shaddock and his gang of merciless biker friends kidnap rock singer Ellen Aim. Ellen's former lover, soldier-for-hire Tom Cody, happens to be passing through town on a visit."
+copy = "Raven Shaddock and his gang of merciless biker friends kidnap rock singer Ellen Aim. Ellen's former lover, soldier-for-hire Tom Cody, happens to be passing through town on a visit. In an attempt to save his star act, Ellen's manager hires Tom to rescue her. Along with a former soldier, they battle through dangerous cityscapes, determined to get Ellen back."
+film_information = "Dir. Walter Hill, US 1984, 93 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/tmYHBKCZkbmiUfhfOQKgfh0jvXK.jpg"
+trailer_url = "https://www.youtube.com/watch?v=eWB09th5cgw"
+
+[[friday_programme]]
+name = "Cecil B. Demented"
+copy_summary = "A young lunatic director and his devoted cult of cinema terrorists kidnap a Hollywood movie goddess and force her to star in their radical underground movie."
+copy = "A young lunatic director and his devoted cult of cinema terrorists kidnap a Hollywood movie goddess and force her to star in their radical underground movie."
+film_information = "Dir. John Waters, US/FR 2000, 88 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "18"
+tags = ["film", "lgbtq"]
+image_url = "https://image.tmdb.org/t/p/w780/gCXUA9BUOSDmOFVfkVBF4v15Td6.jpg"
+trailer_url = "https://www.youtube.com/watch?v=LMmKfKCZoTk"
+
+[[friday_programme]]
+name = "The Adventures of Priscilla, Queen of the Desert"
+copy_summary = "Two drag performers and a transgender woman travel across the desert to perform their unique style of cabaret."
+copy = "Two drag performers and a transgender woman travel across the desert to perform their unique style of cabaret."
+film_information = "Dir. Stephan Elliott, AU/US 1994, 103 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film", "lgbtq"]
+image_url = "https://image.tmdb.org/t/p/w780/rSkhcbHkk23fR3qhYJestqtamWK.jpg"
+trailer_url = "https://www.youtube.com/watch?v=VFmwVI-5lfU"
+
+[[friday_programme]]
+name = "Hot Fuzz"
+copy_summary = "Former London constable Nicholas Angel finds it difficult to adapt to his new assignment in the sleepy British village of Sandford."
+copy = "Former London constable Nicholas Angel finds it difficult to adapt to his new assignment in the sleepy British village of Sandford. Not only does he miss the excitement of the big city, but he also has a well-meaning oaf for a partner. However, when a series of grisly accidents rocks Sandford, Angel smells something rotten in the idyllic village."
+film_information = "Dir. Edgar Wright, FR/GB 2007, 121 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/zPib4ukTSdXvHP9pxGkFCe34f3y.jpg"
+trailer_url = "https://www.youtube.com/watch?v=L6PKkxn7pq0"
+
+[[friday_programme]]
+name = "The Animatrix"
+copy_summary = "Straight from the creators of the groundbreaking Matrix trilogy, this collection of short animated films from the world's leading anime directors fuses computer graphics and Japanese anime to provide the background of the Matrix…"
+copy = "Straight from the creators of the groundbreaking Matrix trilogy, this collection of short animated films from the world's leading anime directors fuses computer graphics and Japanese anime to provide the background of the Matrix universe and the conflict between man and machines. The shorts include Final Flight of the Osiris, The Second Renaissance, Kid's Story, Program, World Record, Beyond, A Detective Story and Matriculated."
+film_information = "Dir. Peter Chung and Yoshiaki Kawajiri, JP/US/KR 2003, 102 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/eDjIG2hAeMU5cxLrd6oiQqdqoZt.jpg"
+trailer_url = "https://www.youtube.com/watch?v=94fPVqJqBGA"
+
+[[friday_programme]]
+name = "Bottoms"
+copy_summary = "Unpopular best friends PJ and Josie start a high school self-defense club to meet girls and lose their virginity."
+copy = "Unpopular best friends PJ and Josie start a high school self-defense club to meet girls and lose their virginity. They soon find themselves in over their heads when the most popular students start beating each other up in the name of self-defense."
+film_information = "Dir. Emma Seligman, US 2023, 91 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film", "lgbtq"]
+image_url = "https://image.tmdb.org/t/p/w780/jeyTQrNEpyE1LZIgVlswYh3sc34.jpg"
+trailer_url = "https://www.youtube.com/watch?v=vH5NAahf76s"
+
+[[friday_programme]]
+name = "A Nightmare on Elm Street 2: Freddy's Revenge"
+copy_summary = "A teenage boy is haunted in his dreams by deceased child murderer Freddy Krueger, who is out to possess him in order to continue his reign of terror in the real world."
+copy = "A teenage boy is haunted in his dreams by deceased child murderer Freddy Krueger, who is out to possess him in order to continue his reign of terror in the real world."
+film_information = "Dir. Jack Sholder, GB/US 1985, 87 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "18"
+tags = ["film", "horror", "lgbtq"]
+image_url = "https://image.tmdb.org/t/p/w780/53kxYw0G3o55yJ23K7s7KMaOyAM.jpg"
+trailer_url = "https://www.youtube.com/watch?v=9iqNVyjwLFA"
+
+
+# -------------------- saturday_programme --------------------
+
+[[saturday_programme]]
+name = "The Passion of Joan of Arc with Live Score"
+copy_summary = "Silent film with a live score, part of our Signals Presents series. A classic of the silent age, this film tells the story of the doomed but ultimately canonized 15th-century teenage warrior."
+copy = "Silent film with a live score, part of our Signals Presents series. A classic of the silent age, this film tells the story of the doomed but ultimately canonized 15th-century teenage warrior. On trial for claiming she'd spoken to God, Jeanne d'Arc is subjected to inhumane treatment and scare tactics at the hands of church court officials. Initially bullied into changing her story, Jeanne eventually opts for what she sees as the truth. Her punishment, a famously brutal execution, earns her perpetual martyrdom."
+film_information = "Dir. Carl Theodor Dreyer, FR 1928, 81 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "silent-film", "live-score"]
+image_url = "https://image.tmdb.org/t/p/w780/tAgV9yxY6AC1bsPt3qJJQpD4s8.jpg"
+trailer_url = "https://www.youtube.com/watch?v=Iz3XmfNzrNs"
+
+[[saturday_programme]]
+name = "Man with a Movie Camera with Live Soundtrack"
+copy_summary = "Silent film with a live soundtrack, part of our Signals Presents series. A cameraman wanders around with a camera slung over his shoulder, documenting urban life with dazzling inventiveness."
+copy = "Silent film with a live soundtrack, part of our Signals Presents series. A cameraman wanders around with a camera slung over his shoulder, documenting urban life with dazzling inventiveness."
+film_information = "Dir. Dziga Vertov, SU 1929, 68 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "silent-film", "live-score"]
+image_url = "https://image.tmdb.org/t/p/w780/vJgAdgJWX54v0oXfIvhwjlZnmgn.jpg"
+trailer_url = "https://www.youtube.com/watch?v=BtTlgxtoqhg"
+
+[[saturday_programme]]
+name = "A Page of Madness with Live Score"
+copy_summary = "Silent film with a live score, part of our Signals Presents series. A man takes a job at an asylum with hopes of freeing his imprisoned wife."
+copy = "Silent film with a live score, part of our Signals Presents series. A man takes a job at an asylum with hopes of freeing his imprisoned wife."
+film_information = "Dir. Teinosuke Kinugasa, JP 1926, 71 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "silent-film", "live-score", "horror"]
+image_url = "https://image.tmdb.org/t/p/w780/oENG5j37qSJEk9htJYeSQrUZaDz.jpg"
+trailer_url = "https://www.youtube.com/watch?v=inZy5os7Aq4"
+
+[[saturday_programme]]
+name = "Carrie Halloween Prom + Cinema"
+copy_summary = "Halloween prom: dress up, then stay for the film. Withdrawn and sensitive teenager Carrie White faces bullying from her classmates and abuse from her fanatically pious mother. When she begins to suspect that she has supernatural powers, things take a dark and violent turn."
+copy = "Halloween prom: dress up, then stay for the film. Withdrawn and sensitive teenager Carrie White faces bullying from her classmates and abuse from her fanatically pious mother. When she begins to suspect that she has supernatural powers, things take a dark and violent turn."
+film_information = "Dir. Brian De Palma, US 1976, 98 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film", "horror"]
+image_url = "https://image.tmdb.org/t/p/w780/bJJ3xK4pMnfao0wfzySfC47dp8G.jpg"
+trailer_url = "https://www.youtube.com/watch?v=zbdIXI1s3aU"
+
+[[saturday_programme]]
+name = "We're All Going to the World's Fair"
+copy_summary = "Reality and fantasy begin to blur when a teenager, alone in her attic bedroom, immerses herself in a role-playing horror game online."
+copy = "Reality and fantasy begin to blur when a teenager, alone in her attic bedroom, immerses herself in a role-playing horror game online."
+film_information = "Dir. Jane Schoenbrun, US 2022, 86 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film", "horror"]
+image_url = "https://image.tmdb.org/t/p/w780/fXn4Nz1WCTEmzAFvwgEZoPHvptR.jpg"
+trailer_url = "https://www.youtube.com/watch?v=y0AnGfzgh_w"
+
+[[saturday_programme]]
+name = "Green Border"
+copy_summary = "In the treacherous and swampy forests that make up the so called “green border” between Belarus and Poland, refugees from the Middle East and Africa trying to reach the European Union are trapped in a geopolitical crisis…"
+copy = "In the treacherous and swampy forests that make up the so called “green border” between Belarus and Poland, refugees from the Middle East and Africa trying to reach the European Union are trapped in a geopolitical crisis cynically engineered by Belarusian dictator Alexander Lukashenko. In an attempt to provoke Europe, refugees are lured to the border by propaganda promising easy passage to the EU. Pawns in this hidden war, the lives of Julia, a newly minted activist who has given up her comfortable life, Jan, a young border guard, and a Syrian family intertwine."
+film_information = "Dir. Agnieszka Holland, BE/CZ/FR 2023, 152 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film", "documentary"]
+image_url = "https://image.tmdb.org/t/p/w780/oV5UYkwCq1ZnPhjc6y53LxhRcue.jpg"
+trailer_url = "https://www.youtube.com/watch?v=7sfSUzVNNio"
+
+
+# -------------------- historical_programme --------------------
+
+[[historical_programme]]
+name = "The Producers"
+copy_summary = "A conniving Broadway producer and his meek accountant plan to profit from charming wealthy old biddies to invest in an overbudget production, and then put on a sure-fire disaster, so nobody will ask for their money back — and…"
+copy = "A conniving Broadway producer and his meek accountant plan to profit from charming wealthy old biddies to invest in an overbudget production, and then put on a sure-fire disaster, so nobody will ask for their money back — and what's more disastrous than a tasteless musical celebrating Adolf Hitler."
+film_information = "Dir. Mel Brooks, US 1968, 89 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/9qCIkNWGuRj5lMyeOXwJs8z9nRz.jpg"
+trailer_url = "https://www.youtube.com/watch?v=Lt19Wna_sG4"
+
+[[historical_programme]]
+name = "Nina Forever"
+copy_summary = "Rob is grief-stricken following the death of his girlfriend Nina, but after a failed suicide attempt he begins to move on from the tragedy and falls for his colleague Holly."
+copy = "Rob is grief-stricken following the death of his girlfriend Nina, but after a failed suicide attempt he begins to move on from the tragedy and falls for his colleague Holly. Holly loves Rob and tries to help him through his grief – even if it means contending with Nina, who comes back from the dead, bloody and broken, every time they make love."
+film_information = "Dir. Ben Blaine and Chris Blaine, GB 2016, 98 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "18"
+tags = ["film", "horror"]
+image_url = "https://image.tmdb.org/t/p/w780/jiEXXGnNMLRmlvmchDZkPNdbhXD.jpg"
+trailer_url = "https://www.youtube.com/watch?v=fNlcFY6dUl8"
+
+[[historical_programme]]
+name = "Aguirre, the Wrath of God"
+copy_summary = "A few decades after the destruction of the Inca Empire, a Spanish expedition led by the infamous Aguirre leaves the mountains of Peru and goes down the Amazon River in search of the lost city of El Dorado."
+copy = "A few decades after the destruction of the Inca Empire, a Spanish expedition led by the infamous Aguirre leaves the mountains of Peru and goes down the Amazon River in search of the lost city of El Dorado. When great difficulties arise, Aguirre’s men start to wonder whether their quest will lead them to prosperity or certain death."
+film_information = "Dir. Werner Herzog, DE/MX/PE 1972, 95 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "PG"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/zU1FLiGJw3m3iFrakwA0SzFvIPV.jpg"
+trailer_url = "https://www.youtube.com/watch?v=eJDuicFyJPg"
+
+[[historical_programme]]
+name = "Anomalisa"
+copy_summary = "An inspirational speaker becomes reinvigorated after meeting a lively woman who shakes up his mundane existence."
+copy = "An inspirational speaker becomes reinvigorated after meeting a lively woman who shakes up his mundane existence."
+film_information = "Dir. Duke Johnson and Charlie Kaufman, US 2015, 91 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/4DJ1zNr4Y6q7zQ27goEYla46VdO.jpg"
+trailer_url = "https://www.youtube.com/watch?v=WQkHA3fHk_0"
+
+[[historical_programme]]
+name = "Battle Royale"
+copy_summary = "In the future, the Japanese government captures a class of ninth-grade students and forces them to kill each other under the revolutionary \"Battle Royale\" act."
+copy = "In the future, the Japanese government captures a class of ninth-grade students and forces them to kill each other under the revolutionary \"Battle Royale\" act."
+film_information = "Dir. Kinji Fukasaku, JP 2000, 113 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "18"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/aLGKAQKgzWpJ6egyWzzC11jXBRJ.jpg"
+trailer_url = "https://www.youtube.com/watch?v=s4AFmGjndAA"
+
+[[historical_programme]]
+name = "Inherit the Wind"
+copy_summary = "Schoolteacher Bertram Cates is arrested for teaching his students Darwin's theory of evolution. The case receives national attention and one of the newspaper reporters, E.K."
+copy = "Schoolteacher Bertram Cates is arrested for teaching his students Darwin's theory of evolution. The case receives national attention and one of the newspaper reporters, E.K. Hornbeck, arranges to bring in renowned defense attorney and atheist Henry Drummond to defend Cates. The prosecutor, Matthew Brady is a former presidential candidate, famous evangelist, and old adversary of Drummond."
+film_information = "Dir. Stanley Kramer, US 1960, 128 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/7oaHcF0gCOt2lKaT2zajhajP0Zo.jpg"
+trailer_url = "https://www.youtube.com/watch?v=1PKkLSCuiEE"
+
+[[historical_programme]]
+name = "DuBarry Was A Lady"
+copy_summary = "Hat check man Louis Blore is in love with nightclub star May Daly. May, however, is in love with a poor dancer but wants to marry for money."
+copy = "Hat check man Louis Blore is in love with nightclub star May Daly. May, however, is in love with a poor dancer but wants to marry for money. When Louis wins the Irish Sweepstakes, he asks May to marry him and she accepts even though she doesn't love him. Soon after, Louis has an accident and gets knocked on the head, where he dreams that he's King Louis XV pursuing the infamous Madame Du Barry."
+film_information = "Dir. Roy Del Ruth, US 1943, 101 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/hYeTXHxdWw1UzR62zLE9n88N2dZ.jpg"
+trailer_url = "https://www.youtube.com/watch?v=yhEyoDXcZs8"
+
+[[historical_programme]]
+name = "The Duke of Burgundy"
+copy_summary = "Day in and day out, lovers Cynthia and Evelyn enact an elaborate sadomasochistic fantasy as mistress and maid."
+copy = "Day in and day out, lovers Cynthia and Evelyn enact an elaborate sadomasochistic fantasy as mistress and maid. But as their ritual of domination and submission begins to turn stale, Cynthia yearns for something more conventional, while Evelyn tries to push their taboos even further."
+film_information = "Dir. Peter Strickland, HU/GB 2015, 104 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "18"
+tags = ["film", "lgbtq"]
+image_url = "https://image.tmdb.org/t/p/w780/72ctjjts0j8OFQkIFODT6RnYbBK.jpg"
+trailer_url = "https://www.youtube.com/watch?v=P-xIMBnclyA"
+
+[[historical_programme]]
+name = "The Voice of Hind Rajab"
+copy_summary = "January 29, 2024. Red Crescent volunteers receive an emergency call. A five-year old girl is trapped in a car under fire in Gaza, pleading for rescue."
+copy = "January 29, 2024. Red Crescent volunteers receive an emergency call. A five-year old girl is trapped in a car under fire in Gaza, pleading for rescue. While trying to keep her on the line, they do everything they can to get an ambulance to her. Her name was Hind Rajab."
+film_information = "Dir. Kaouther Ben Hania, FR/TN/US 2025, 89 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film", "documentary"]
+image_url = "https://image.tmdb.org/t/p/w780/q7M8kQB46T11vmDMD6E239jsqTz.jpg"
+trailer_url = "https://www.youtube.com/watch?v=JkeKrG0YONQ"
+
+[[historical_programme]]
+name = "Laura"
+copy_summary = "Half of a Gene Tierney double bill. A police detective falls in love with the woman whose murder he's investigating."
+copy = "Half of a Gene Tierney double bill. A police detective falls in love with the woman whose murder he's investigating."
+film_information = "Dir. Otto Preminger, US 1944, 88 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "U"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/utpUn9TdBIx6x2QX91YhYzFZxg1.jpg"
+trailer_url = "https://www.youtube.com/watch?v=KgGtRJY516E"
+
+[[historical_programme]]
+name = "Leave Her to Heaven"
+copy_summary = "Half of a Gene Tierney double bill. A socialite marries a prominent novelist, which spurs a violent, obsessive, and dangerous jealousy in her."
+copy = "Half of a Gene Tierney double bill. A socialite marries a prominent novelist, which spurs a violent, obsessive, and dangerous jealousy in her."
+film_information = "Dir. John M. Stahl, US 1945, 110 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "U"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/aUzQZt2UlaurZ3wlhzVXQb6PQk8.jpg"
+trailer_url = "https://www.youtube.com/watch?v=vfMZ5HKHN1o"
+
+[[historical_programme]]
+name = "Women in Love"
+copy_summary = "Growing up in the sheltered confines of a 1920s English coal-mining community, free-spirited sisters Gudrun and Ursula explore erotic love with a wealthy playboy and a philosophical educator, with cataclysmic results for all four."
+copy = "Growing up in the sheltered confines of a 1920s English coal-mining community, free-spirited sisters Gudrun and Ursula explore erotic love with a wealthy playboy and a philosophical educator, with cataclysmic results for all four."
+film_information = "Dir. Ken Russell, GB 1969, 131 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/uHfThxdQC99LLoe2jKZ1u3vIge2.jpg"
+trailer_url = "https://www.youtube.com/watch?v=Rn8EPZtnsrE"
+
+[[historical_programme]]
+name = "Ornette: Made in America"
+copy_summary = "Shirley Clarke's frenetic documentary about multi-talented musician Ornette Coleman."
+copy = "Shirley Clarke's frenetic documentary about multi-talented musician Ornette Coleman."
+film_information = "Dir. Shirley Clarke, US 1986, 78 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "documentary"]
+image_url = "https://image.tmdb.org/t/p/w780/8rRBNmyZ94ckQc4H3StS8O4IwmV.jpg"
+
+[[historical_programme]]
+name = "Blancanieves"
+copy_summary = "A black and white silent movie, based on the Snow White fairy tale, that is set in a romantic version of 1920s Seville and centered on a female bullfighter."
+copy = "A black and white silent movie, based on the Snow White fairy tale, that is set in a romantic version of 1920s Seville and centered on a female bullfighter."
+film_information = "Dir. Pablo Berger, ES/FR/BE 2012, 104 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "silent-film"]
+image_url = "https://image.tmdb.org/t/p/w780/yJzYcX23DdwR6S4XBEy1SDdiApe.jpg"
+trailer_url = "https://www.youtube.com/watch?v=yNlG0nAxX9I"
+
+[[historical_programme]]
+name = "Bound"
+copy_summary = "Corky, a tough female ex-convict working on an apartment renovation in a Chicago building, meets a couple living next door, Caesar, a paranoid mobster, and Violet, his seductive girlfriend, who is immediately attracted to her."
+copy = "Corky, a tough female ex-convict working on an apartment renovation in a Chicago building, meets a couple living next door, Caesar, a paranoid mobster, and Violet, his seductive girlfriend, who is immediately attracted to her."
+film_information = "Dir. Lilly Wachowski and Lana Wachowski, US 1996, 105 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "18"
+tags = ["film", "lgbtq"]
+image_url = "https://image.tmdb.org/t/p/w780/9qAy6UWVw44dGrsyKrdEMt5qIUM.jpg"
+trailer_url = "https://www.youtube.com/watch?v=ToCMwdOaWh4"
+
+[[historical_programme]]
+name = "It's Such a Beautiful Day"
+copy_summary = "Part of our Don Hertzfeldt retrospective. Bill struggles to put together his shattered psyche."
+copy = "Part of our Don Hertzfeldt retrospective. Bill struggles to put together his shattered psyche."
+film_information = "Dir. Don Hertzfeldt, US 2012, 62 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "12A"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/hop0dsM4nxyNENGhBhpJWTCJ5rS.jpg"
+trailer_url = "https://www.youtube.com/watch?v=ecn9YiqqHyw"
+
+[[historical_programme]]
+name = "The Taking of Pelham One Two Three"
+copy_summary = "In New York, armed men hijack a subway car and demand a ransom for the passengers while the authorities question about the method of their escape."
+copy = "In New York, armed men hijack a subway car and demand a ransom for the passengers while the authorities question about the method of their escape."
+film_information = "Dir. Joseph Sargent, US 1974, 105 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/vNhywp9w1DVG6BytxKp4kjtaaGC.jpg"
+trailer_url = "https://www.youtube.com/watch?v=_WnD63TiceA"
+
+[[historical_programme]]
+name = "Nights of Cabiria"
+copy_summary = "Rome, 1957. A woman, Cabiria, is robbed and left to drown by her boyfriend, Giorgio. Rescued, she resumes her life and tries her best to find happiness in a cynical world."
+copy = "Rome, 1957. A woman, Cabiria, is robbed and left to drown by her boyfriend, Giorgio. Rescued, she resumes her life and tries her best to find happiness in a cynical world. Even when she thinks her struggles are over and she has found happiness and contentment, things may not be what they seem."
+film_information = "Dir. Federico Fellini, IT/FR 1957, 110 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/xF4oCG3PLNbcrtPZbqB3BtkIbKg.jpg"
+trailer_url = "https://www.youtube.com/watch?v=nG91owD7UjM"
+
+[[historical_programme]]
+name = "Battleship Potemkin"
+copy_summary = "A dramatized account of a great Russian naval mutiny and a resultant public demonstration, showing support, which brought on a police massacre."
+copy = "A dramatized account of a great Russian naval mutiny and a resultant public demonstration, showing support, which brought on a police massacre."
+film_information = "Dir. Sergei Eisenstein, SU 1925, 75 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "12A"
+tags = ["film", "silent-film"]
+image_url = "https://image.tmdb.org/t/p/w780/hZmsRLsCnE9Zshf1YJONUpCOhds.jpg"
+trailer_url = "https://www.youtube.com/watch?v=VC66LgoOlCs"
+
+[[historical_programme]]
+name = "5 Centimetres per Second"
+copy_summary = "Three moments in Takaki's life: his relationship with Akari and their forced separation; his friendship with Kanae, who is secretly in love with him; the demands and disappointments of adulthood, an unhappy life in a cold city."
+copy = "Three moments in Takaki's life: his relationship with Akari and their forced separation; his friendship with Kanae, who is secretly in love with him; the demands and disappointments of adulthood, an unhappy life in a cold city."
+film_information = "Dir. Makoto Shinkai, JP 2007, 63 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "U"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/dFipUR6W0y3PPkuVS8gjFd929m2.jpg"
+trailer_url = "https://www.youtube.com/watch?v=iPsu_sk-e7Q"
+
+[[historical_programme]]
+name = "Jules et Jim"
+copy_summary = "In the carefree days before World War I, introverted Austrian author Jules strikes up a friendship with the exuberant Frenchman Jim and both men fall for the impulsive and beautiful Catherine."
+copy = "In the carefree days before World War I, introverted Austrian author Jules strikes up a friendship with the exuberant Frenchman Jim and both men fall for the impulsive and beautiful Catherine."
+film_information = "Dir. François Truffaut, FR 1962, 106 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/kuFjZlcZhQFDtIjuI3GQJjsQG03.jpg"
+trailer_url = "https://www.youtube.com/watch?v=X9OzdWczCfQ"
+
+[[historical_programme]]
+name = "SLC Punk!"
+copy_summary = "Two former geeks become 1980s punks, then party and go to concerts while deciding what to do with their lives."
+copy = "Two former geeks become 1980s punks, then party and go to concerts while deciding what to do with their lives."
+film_information = "Dir. James Merendino, US 1998, 97 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/7u3IZPuIOPjICi55K7cJgzV3e3B.jpg"
+trailer_url = "https://www.youtube.com/watch?v=MsZziQvRWCg"
+
+[[historical_programme]]
+name = "Fantasia"
+copy_summary = "Walt Disney's timeless masterpiece is an extravaganza of sight and sound! See the music come to life, hear the pictures burst into song and experience the excitement that is Fantasia over and over again."
+copy = "Walt Disney's timeless masterpiece is an extravaganza of sight and sound! See the music come to life, hear the pictures burst into song and experience the excitement that is Fantasia over and over again."
+film_information = "Dir. Samuel Armstrong and James Algar, US 1940, 124 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "U"
+tags = ["film", "family"]
+image_url = "https://image.tmdb.org/t/p/w780/5m9njnidjR0syG2gpVPVgcEMB2X.jpg"
+trailer_url = "https://www.youtube.com/watch?v=eD8U083gQmY"
+
+[[historical_programme]]
+name = "Shirley Valentine"
+copy_summary = "Wondering what has happened to herself, now feeling stagnant and in a rut, Shirley Valentine finds herself regularly talking to the wall while preparing her husband's chips and egg."
+copy = "Wondering what has happened to herself, now feeling stagnant and in a rut, Shirley Valentine finds herself regularly talking to the wall while preparing her husband's chips and egg. When her best friend wins a trip-for-two to Greece Shirley begins to see the world, and herself, in a different light."
+film_information = "Dir. Lewis Gilbert, GB/US 1989, 108 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/rrRrHNhur1DTp1KOp0YfFWvymQD.jpg"
+trailer_url = "https://www.youtube.com/watch?v=G_7MJQnk4M8"
+
+[[historical_programme]]
+name = "Twin Peaks: Fire Walk with Me"
+copy_summary = "Shown after the series finale. In the questionable town of Deer Meadow, Washington, FBI Agent Desmond inexplicably disappears while hunting for the man who murdered a teen girl."
+copy = "Shown after the series finale. In the questionable town of Deer Meadow, Washington, FBI Agent Desmond inexplicably disappears while hunting for the man who murdered a teen girl. The killer is never apprehended, and, after experiencing dark visions and supernatural encounters, Agent Dale Cooper chillingly predicts that the culprit will claim another life. Meanwhile, in the more cozy town of Twin Peaks, hedonistic beauty Laura Palmer hangs with lowlifes and seems destined for a grisly fate."
+film_information = "Dir. David Lynch, US 1992, 135 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "18"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/mxsGXqetGnirf99qapYd5MMY1VL.jpg"
+trailer_url = "https://www.youtube.com/watch?v=vCUxM9UZrd0"
+
+[[historical_programme]]
+name = "The Cameraman"
+copy_summary = "Buster Keaton silent. A photographer takes up newsreel shooting to impress a secretary."
+copy = "Buster Keaton silent. A photographer takes up newsreel shooting to impress a secretary."
+film_information = "Dir. Edward Sedgwick, US 1928, 74 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "silent-film"]
+image_url = "https://image.tmdb.org/t/p/w780/cLVJMJNW3VavnB1CZqbEC9GwSkR.jpg"
+trailer_url = "https://www.youtube.com/watch?v=lWQTXkb5VYQ"
+
+[[historical_programme]]
+name = "Eyes without a Face"
+copy_summary = "Dr. Génessier is riddled with guilt after an accident that he caused disfigures the face of his daughter, the once beautiful Christiane, who outsiders believe is dead. Dr."
+copy = "Dr. Génessier is riddled with guilt after an accident that he caused disfigures the face of his daughter, the once beautiful Christiane, who outsiders believe is dead. Dr. Génessier, along with accomplice and laboratory assistant Louise, kidnaps young women and brings them to the Génessier mansion. After rendering his victims unconscious, Dr. Génessier removes their faces and attempts to graft them on to Christiane's."
+film_information = "Dir. Georges Franju, FR/IT 1960, 84 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "horror"]
+image_url = "https://image.tmdb.org/t/p/w780/8y7Z9Gvcq52uOlJlUWyn2epGGRd.jpg"
+trailer_url = "https://www.youtube.com/watch?v=CEjrg-L8lvs"
+
+[[historical_programme]]
+name = "Zombie Flesh Eaters"
+copy_summary = "After an abandoned boat sails into New York harbor with a zombie aboard, a reporter teams up with the daughter of the boat's missing captain to investigate the island where he was last seen conducting research—the site of an…"
+copy = "After an abandoned boat sails into New York harbor with a zombie aboard, a reporter teams up with the daughter of the boat's missing captain to investigate the island where he was last seen conducting research—the site of an alleged zombie outbreak."
+film_information = "Dir. Lucio Fulci, IT 1979, 91 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "18"
+tags = ["film", "horror"]
+image_url = "https://image.tmdb.org/t/p/w780/jc17a3PqDnQeBzT7GbK0dp8TDvx.jpg"
+trailer_url = "https://www.youtube.com/watch?v=JnDFVqNl2Mw"
+
+[[historical_programme]]
+name = "Lawrence of Arabia"
+copy_summary = "During World War I, English officer Thomas Edward 'T.E.' Lawrence sets out to unite and lead the diverse, often warring, Arab tribes to fight the Turks."
+copy = "During World War I, English officer Thomas Edward 'T.E.' Lawrence sets out to unite and lead the diverse, often warring, Arab tribes to fight the Turks."
+film_information = "Dir. David Lean, GB 1962, 228 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "PG"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/AiAm0EtDvyGqNpVoieRw4u65vD1.jpg"
+trailer_url = "https://www.youtube.com/watch?v=KR1yTI8zFJk"
+
+[[historical_programme]]
+name = "Kiss Me Deadly"
+copy_summary = "One evening, Hammer gives a ride to Christina, an attractive hitchhiker on a lonely country road, who has escaped from the nearby lunatic asylum. Thugs waylay them and force his car to crash."
+copy = "One evening, Hammer gives a ride to Christina, an attractive hitchhiker on a lonely country road, who has escaped from the nearby lunatic asylum. Thugs waylay them and force his car to crash. When Hammer returns to semi-consciousness, he hears Christina being tortured until she dies. Hammer, both for vengeance and in hopes that \"something big\" is behind it all, decides to pursue the case."
+film_information = "Dir. Robert Aldrich, US 1955, 106 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/z7me91nrpWLHY1mZOB2v20cK0zY.jpg"
+trailer_url = "https://www.youtube.com/watch?v=ss4AF91KOFw"
+
+[[historical_programme]]
+name = "Sunrise: A Song of Two Humans"
+copy_summary = "A married farmer falls under the spell of a slatternly woman from the city, who tries to convince him to drown his wife."
+copy = "A married farmer falls under the spell of a slatternly woman from the city, who tries to convince him to drown his wife."
+film_information = "Dir. F. W. Murnau, US 1927, 94 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "silent-film"]
+image_url = "https://image.tmdb.org/t/p/w780/5V9jDm4u2QemGHbqjUyP5HmFmzf.jpg"
+trailer_url = "https://www.youtube.com/watch?v=PCgbFay53BA"
+
+[[historical_programme]]
+name = "The Breakfast Club"
+copy_summary = "Five high school students from different walks of life endure a Saturday detention under a power-hungry principal. The disparate group includes rebel John, princess Claire, outcast Allison, brainy Brian and Andrew, the jock."
+copy = "Five high school students from different walks of life endure a Saturday detention under a power-hungry principal. The disparate group includes rebel John, princess Claire, outcast Allison, brainy Brian and Andrew, the jock. Each has a chance to tell his or her story, making the others see them a little differently -- and when the day ends, they question whether school will ever be the same."
+film_information = "Dir. John Hughes, US 1985, 98 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/gp4zlj7wgbiofLMNsTPndMuO3PN.jpg"
+trailer_url = "https://www.youtube.com/watch?v=c7VUZ29Ezcc"
+
+[[historical_programme]]
+name = "Samurai Cop"
+copy_summary = "So bad it is wonderful. When Japanese organized crime imbeds itself within LA, the police turn to one man to take down the deadly Yakuza — Joe Marshall, aka \"The Samurai.\" With his fearless swagger and rock hard jaw, The Samurai tears a two-fisted hole…"
+copy = "So bad it is wonderful. When Japanese organized crime imbeds itself within LA, the police turn to one man to take down the deadly Yakuza — Joe Marshall, aka \"The Samurai.\" With his fearless swagger and rock hard jaw, The Samurai tears a two-fisted hole through the mob and doesn't stop until the job is done."
+film_information = "Dir. Amir Shervan, US 1991, 96 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/4M2FSwfTvhmP4ubF47UKS86BKYO.jpg"
+trailer_url = "https://www.youtube.com/watch?v=R6OoZNdAQuA"
+
+[[historical_programme]]
+name = "My Own Private Idaho"
+copy_summary = "In this loose adaptation of Shakespeare's \"Henry IV,\" Mike Waters is a hustler afflicted with narcolepsy. Scott Favor is the rebellious son of a mayor."
+copy = "In this loose adaptation of Shakespeare's \"Henry IV,\" Mike Waters is a hustler afflicted with narcolepsy. Scott Favor is the rebellious son of a mayor. Together, the two travel from Portland, Oregon to Idaho and finally to the coast of Italy in a quest to find Mike's estranged mother. Along the way they turn tricks for money and drugs, eventually attracting the attention of a wealthy benefactor and sexual deviant."
+film_information = "Dir. Gus Van Sant, US 1991, 104 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film", "lgbtq"]
+image_url = "https://image.tmdb.org/t/p/w780/p9TF90Pb5yg2MNb2UztzyXktMm4.jpg"
+trailer_url = "https://www.youtube.com/watch?v=cNENMVQfOus"
+
+[[historical_programme]]
+name = "The Host"
+copy_summary = "A teenage girl is captured by a giant mutated squid-like creature that appears from Seoul's Han River after toxic waste was dumped in it, prompting her family into a frantic search for her."
+copy = "A teenage girl is captured by a giant mutated squid-like creature that appears from Seoul's Han River after toxic waste was dumped in it, prompting her family into a frantic search for her."
+film_information = "Dir. Bong Joon Ho, KR 2006, 120 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/dEDLY3KeghKFzks5nTDWdigVikr.jpg"
+trailer_url = "https://www.youtube.com/watch?v=xrLY0wO06l4"
+
+[[historical_programme]]
+name = "I Saw the TV Glow"
+copy_summary = "In late-90s suburbia, a lonely teenager meets a girl at school who introduces him to a mysterious late-night T.V. show — a vision of a supernatural world pulsing beneath their own."
+copy = "In late-90s suburbia, a lonely teenager meets a girl at school who introduces him to a mysterious late-night T.V. show — a vision of a supernatural world pulsing beneath their own. As time goes on, however, questions begin to arise about why the show sometimes seems more real than their own lives. In the pale glow of the television, their view of reality begins to crack."
+film_information = "Dir. Jane Schoenbrun, US 2024, 100 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film", "lgbtq"]
+image_url = "https://image.tmdb.org/t/p/w780/hS4GYkYpN1rfl4GIxyc02sCyfAj.jpg"
+trailer_url = "https://www.youtube.com/watch?v=kymDzCgPwj0"
+
+[[historical_programme]]
+name = "The General"
+copy_summary = "Buster Keaton silent. During America’s Civil War, Union spies steal engineer Johnny Gray's beloved locomotive, 'The General'—with Johnnie's lady love aboard an attached boxcar—and he single-handedly must do all in his power to both get The General…"
+copy = "Buster Keaton silent. During America’s Civil War, Union spies steal engineer Johnny Gray's beloved locomotive, 'The General'—with Johnnie's lady love aboard an attached boxcar—and he single-handedly must do all in his power to both get The General back and to rescue Annabelle."
+film_information = "Dir. Clyde Bruckman and Buster Keaton, US 1926, 79 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "U"
+tags = ["film", "silent-film"]
+image_url = "https://image.tmdb.org/t/p/w780/4NmV1Wei4LxT2lpjViCAScgCZLq.jpg"
+trailer_url = "https://www.youtube.com/watch?v=eEVWb9NcSuY"
+
+[[historical_programme]]
+name = "Mishima: A Life in Four Chapters"
+copy_summary = "A fictional account of the life of Japanese author Yukio Mishima, combining dramatizations of three of his novels and a depiction of the events of November 25th, 1970."
+copy = "A fictional account of the life of Japanese author Yukio Mishima, combining dramatizations of three of his novels and a depiction of the events of November 25th, 1970."
+film_information = "Dir. Paul Schrader, JP/US 1985, 121 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/4kIXsE4SwUjO0eUqpolsHNO5GLH.jpg"
+trailer_url = "https://www.youtube.com/watch?v=5nVKJDSrxNg"
+
+[[historical_programme]]
+name = "A Marilyn Monroe Double-Bill: Some Like It Hot"
+copy_summary = "Half of a Marilyn Monroe double bill. In Prohibition-era Chicago, musicians Joe and Jerry witness a mob hit, and flee the state in an all-female band disguised as Josephine and Daphne, but further complications set in."
+copy = "Half of a Marilyn Monroe double bill. In Prohibition-era Chicago, musicians Joe and Jerry witness a mob hit, and flee the state in an all-female band disguised as Josephine and Daphne, but further complications set in."
+film_information = "Dir. Billy Wilder, US 1959, 123 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "PG"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/hVIKyTK13AvOGv7ICmJjK44DTzp.jpg"
+trailer_url = "https://www.youtube.com/watch?v=97TYs2YXbJw"
+
+[[historical_programme]]
+name = "I Saw the Devil"
+copy_summary = "Kyung-chul is a dangerous psychopath who kills for pleasure. Soo-hyeon, a top-secret agent, decides to track down the murderer himself."
+copy = "Kyung-chul is a dangerous psychopath who kills for pleasure. Soo-hyeon, a top-secret agent, decides to track down the murderer himself. He promises himself that he will do everything in his power to take vengeance against the killer, even if it means that he must become a monster himself."
+film_information = "Dir. Kim Jee-woon, KR 2010, 144 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "18"
+tags = ["film", "horror"]
+image_url = "https://image.tmdb.org/t/p/w780/zp5NrmYp80axIGiEiYPmm1CW6uH.jpg"
+trailer_url = "https://www.youtube.com/watch?v=xwWgp1bqVwE"
+
+[[historical_programme]]
+name = "Playtime"
+copy_summary = "Clumsy Monsieur Hulot finds himself perplexed by the intimidating complexity of a gadget-filled Paris. He attempts to meet with a business contact but soon becomes lost."
+copy = "Clumsy Monsieur Hulot finds himself perplexed by the intimidating complexity of a gadget-filled Paris. He attempts to meet with a business contact but soon becomes lost. His roundabout journey parallels that of an American tourist, and as they weave through the inventive urban environment, they intermittently meet, developing an interest in one another. They eventually get together at a chaotic restaurant, along with several other quirky characters."
+film_information = "Dir. Jacques Tati, FR/IT 1967, 115 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/kQOrS0DLUXYsqPMedM2G6NJcJBq.jpg"
+trailer_url = "https://www.youtube.com/watch?v=zrYB8hgyq4s"
+
+[[historical_programme]]
+name = "Pan's Labyrinth"
+copy_summary = "In post–civil war Spain, 10-year-old Ofelia moves with her pregnant mother to live under the control of her cruel stepfather."
+copy = "In post–civil war Spain, 10-year-old Ofelia moves with her pregnant mother to live under the control of her cruel stepfather. Drawn into a mysterious labyrinth, she meets a faun who reveals that she may be a lost princess from an underground kingdom. To return to her true father, she must complete a series of surreal and perilous tasks that blur the line between reality and fantasy."
+film_information = "Dir. Guillermo del Toro, MX/ES/US 2006, 118 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/7wb2Ldp0oAx1lcZvffq9RfWoI2h.jpg"
+trailer_url = "https://www.youtube.com/watch?v=OBGKGm3RYos"
+
+[[historical_programme]]
+name = "To Live and Die in L.A."
+copy_summary = "When his longtime partner on the force is killed, reckless U.S. Secret Service agent Richard Chance vows revenge, setting out to nab dangerous counterfeit artist Eric Masters."
+copy = "When his longtime partner on the force is killed, reckless U.S. Secret Service agent Richard Chance vows revenge, setting out to nab dangerous counterfeit artist Eric Masters."
+film_information = "Dir. William Friedkin, US 1985, 116 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "18"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/2iW3pSihBIhXjnBQmUJ0mAiZbB5.jpg"
+trailer_url = "https://www.youtube.com/watch?v=BQGB-wufbQU"
+
+[[historical_programme]]
+name = "A Man Escaped"
+copy_summary = "A captured French Resistance fighter during World War II engineers a daunting escape from prison."
+copy = "A captured French Resistance fighter during World War II engineers a daunting escape from prison."
+film_information = "Dir. Robert Bresson, FR 1956, 101 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/gkoZ8fFib24zhB2DKpjQ09SK9FU.jpg"
+trailer_url = "https://www.youtube.com/watch?v=o6nHFpKK6Lc"
+
+[[historical_programme]]
+name = "Something Wild"
+copy_summary = "A free-spirited woman \"kidnaps\" a yuppie for a weekend of adventure. But the fun quickly takes a dangerous turn when her ex-con husband shows up."
+copy = "A free-spirited woman \"kidnaps\" a yuppie for a weekend of adventure. But the fun quickly takes a dangerous turn when her ex-con husband shows up."
+film_information = "Dir. Jonathan Demme, US 1986, 114 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/344lhBozqFWKxBb4fp6azYQMLEy.jpg"
+trailer_url = "https://www.youtube.com/watch?v=r_B6fLIdhgo"
+
+[[historical_programme]]
+name = "The Beach"
+copy_summary = "Twenty-something Richard travels to Thailand and finds himself in possession of a strange map. Rumours state that it leads to a solitary beach paradise, a tropical bliss - excited and intrigued, he sets out to find it."
+copy = "Twenty-something Richard travels to Thailand and finds himself in possession of a strange map. Rumours state that it leads to a solitary beach paradise, a tropical bliss - excited and intrigued, he sets out to find it."
+film_information = "Dir. Danny Boyle, GB 2000, 119 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/4y7LxD8TSi6AtsM2xSYqUm1gu7u.jpg"
+trailer_url = "https://www.youtube.com/watch?v=t99_nC_tYVM"
+
+[[historical_programme]]
+name = "Happy Together"
+copy_summary = "A couple travels from Hong Kong to Argentina to revive their relationship but experience turbulence when both men's lives drift in separate directions."
+copy = "A couple travels from Hong Kong to Argentina to revive their relationship but experience turbulence when both men's lives drift in separate directions."
+film_information = "Dir. Wong Kar-Wai, HK/KR/JP 1997, 96 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "lgbtq"]
+image_url = "https://image.tmdb.org/t/p/w780/kO4KjUkQOfWSBw06Bdl7m6AlEP7.jpg"
+trailer_url = "https://www.youtube.com/watch?v=cU_u8xQspQg"
+
+[[historical_programme]]
+name = "But I'm a Cheerleader"
+copy_summary = "Megan is an all-American girl. A cheerleader. She has a boyfriend. But Megan doesn't like kissing her boyfriend very much. And she's pretty touchy with her cheerleader friends."
+copy = "Megan is an all-American girl. A cheerleader. She has a boyfriend. But Megan doesn't like kissing her boyfriend very much. And she's pretty touchy with her cheerleader friends. Her conservative parents worry that she must be a lesbian and send her off to \"sexual redirection\" school, where she must, with other lesbians and gays learn how to be straight."
+film_information = "Dir. Jamie Babbit, US 2000, 85 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "lgbtq"]
+image_url = "https://image.tmdb.org/t/p/w780/8huDg3Q0EmcWuN9HgYsO8ylAp9f.jpg"
+trailer_url = "https://www.youtube.com/watch?v=HnUvneNxoz8"
+
+[[historical_programme]]
+name = "The Talented Mr. Ripley"
+copy_summary = "Tom Ripley is a calculating young man who believes it's better to be a fake somebody than a real nobody. Opportunity knocks in the form of a wealthy U.S."
+copy = "Tom Ripley is a calculating young man who believes it's better to be a fake somebody than a real nobody. Opportunity knocks in the form of a wealthy U.S. shipbuilder who hires Tom to travel to Italy to bring back his playboy son, Dickie. Ripley worms his way into the idyllic lives of Dickie and his girlfriend, plunging into a daring scheme of duplicity, lies and murder."
+film_information = "Dir. Anthony Minghella, US 1999, 140 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/6ojHgqtIR41O2qLKa7LFUVj0cZa.jpg"
+trailer_url = "https://www.youtube.com/watch?v=Ylc5ToQoLg0"
+
+[[historical_programme]]
+name = "Chinese Roulette"
+copy_summary = "Ariane and Gerhard Christ, a wealthy Munich couple, plan for the weekend on separate trips, lying to the other about their trysts."
+copy = "Ariane and Gerhard Christ, a wealthy Munich couple, plan for the weekend on separate trips, lying to the other about their trysts. However, their itineraries are complicated when they both arrive at the family's country home with their respective lovers."
+film_information = "Dir. Rainer Werner Fassbinder, DE/FR 1977, 86 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "18"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/9I0YkoGDM8nqHZcEsrGMcy9WhVy.jpg"
+trailer_url = "https://www.youtube.com/watch?v=qpBzi_NkJUY"
+
+[[historical_programme]]
+name = "Predestination"
+copy_summary = "Predestination chronicles the life of a Temporal Agent sent on an intricate series of time-travel journeys designed to prevent future killers from committing their crimes."
+copy = "Predestination chronicles the life of a Temporal Agent sent on an intricate series of time-travel journeys designed to prevent future killers from committing their crimes. Now, on his final assignment, the Agent must stop the one criminal that has eluded him throughout time and prevent a devastating attack in which thousands of lives will be lost."
+film_information = "Dir. Michael Spierig and Peter Spierig, AU 2014, 98 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/38Xr1JnV1ZcLQ55zmdSp6n475cZ.jpg"
+trailer_url = "https://www.youtube.com/watch?v=xxG-YfedrfU"
+
+[[historical_programme]]
+name = "Olivia"
+copy_summary = "\"Olivia\" captures the awakening passions of an English adolescent sent away for a year to a small finishing school outside Paris."
+copy = "\"Olivia\" captures the awakening passions of an English adolescent sent away for a year to a small finishing school outside Paris. The innocent but watchful Olivia develops an infatuation for her headmistress Julie and through this screen of love observes the tense romance between Julie and the other head of the school Cara in its final months."
+film_information = "Dir. Jacqueline Audry, FR 1951, 96 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "lgbtq"]
+image_url = "https://image.tmdb.org/t/p/w780/6kVDX2TRoRPFoduH64vLnX4Yr8Q.jpg"
+trailer_url = "https://www.youtube.com/watch?v=idTsal0PxUs"
+
+[[historical_programme]]
+name = "Children of Men"
+copy_summary = "In 2027, in a chaotic world in which humans can no longer procreate, a former activist agrees to help transport a miraculously pregnant woman to a sanctuary at sea, where her child's birth may help scientists save the future of…"
+copy = "In 2027, in a chaotic world in which humans can no longer procreate, a former activist agrees to help transport a miraculously pregnant woman to a sanctuary at sea, where her child's birth may help scientists save the future of humankind."
+film_information = "Dir. Alfonso Cuarón, GB/US 2006, 109 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/k9IAS4TehZFcKi4HVByxZNPfqex.jpg"
+trailer_url = "https://www.youtube.com/watch?v=2VT2apoX90o"
+
+[[historical_programme]]
+name = "A Katharine Hepburn Double Bill: Bringing Up Baby & The African Queen"
+copy_summary = "A double bill. David Huxley is waiting to get a bone he needs for his museum collection. Through a series of strange circumstances, he meets Susan Vance, and the duo have a series of misadventures which include a leopard called Baby."
+copy = "A double bill. David Huxley is waiting to get a bone he needs for his museum collection. Through a series of strange circumstances, he meets Susan Vance, and the duo have a series of misadventures which include a leopard called Baby."
+film_information = "Dir. Howard Hawks, US 1938, 102 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "U"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/vTNNOtemaYmtx3k2NpsLMRJKEwZ.jpg"
+trailer_url = "https://www.youtube.com/watch?v=Qlf6gHD-YEM"
+
+[[historical_programme]]
+name = "Little Amélie or the Character of Rain"
+copy_summary = "The world is a perplexing, peaceful mystery to Amélie until a miraculous encounter with chocolate ignites her wild sense of curiosity."
+copy = "The world is a perplexing, peaceful mystery to Amélie until a miraculous encounter with chocolate ignites her wild sense of curiosity. As she develops a deep attachment to her family's housekeeper, Nishio-san, Amélie discovers the wonders of nature as well as the emotional truths hidden beneath the surface of her family's idyllic life as foreigners in post-war Japan."
+film_information = "Dir. Maïlys Vallade and Liane-cho Han, FR 2025, 77 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "PG"
+tags = ["film", "family"]
+image_url = "https://image.tmdb.org/t/p/w780/qoqDvTUVPoZJWw24AjGDt3J4tZN.jpg"
+trailer_url = "https://www.youtube.com/watch?v=VRDBXP9QQwg"
+
+[[historical_programme]]
+name = "3 Women"
+copy_summary = "Two co-workers, one a vain woman and the other an awkward teenager, share an increasingly bizarre relationship after becoming roommates."
+copy = "Two co-workers, one a vain woman and the other an awkward teenager, share an increasingly bizarre relationship after becoming roommates."
+film_information = "Dir. Robert Altman, US 1977, 124 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "PG"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/uL5Yg8MEgHGXymTaJBYXn9g0xsH.jpg"
+trailer_url = "https://www.youtube.com/watch?v=9K8nRZBZvqc"
+
+[[historical_programme]]
+name = "Mon Oncle"
+copy_summary = "Genial, bumbling Monsieur Hulot loves his top-floor apartment in a grimy corner of the city, and cannot fathom why his sister's family has moved to the suburbs."
+copy = "Genial, bumbling Monsieur Hulot loves his top-floor apartment in a grimy corner of the city, and cannot fathom why his sister's family has moved to the suburbs. Their house is an ultra-modern nightmare, which Hulot only visits for the sake of stealing away his rambunctious young nephew. Hulot's sister, however, wants to win him over to her new way of life, and conspires to set him up with a wife and job."
+film_information = "Dir. Jacques Tati, FR/IT 1958, 118 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/wH6RyPiXFy8INLbViVkchLVOmBc.jpg"
+trailer_url = "https://www.youtube.com/watch?v=vqVpQ6S0BDA"
+
+[[historical_programme]]
+name = "Joyland"
+copy_summary = "As a patriarchal family yearns for the birth of a son to continue their family line, their youngest son secretly joins an erotic dance theatre and falls for its transgender starlet."
+copy = "As a patriarchal family yearns for the birth of a son to continue their family line, their youngest son secretly joins an erotic dance theatre and falls for its transgender starlet."
+film_information = "Dir. Saim Sadiq, PK/US 2022, 127 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film", "lgbtq"]
+image_url = "https://image.tmdb.org/t/p/w780/7InKwVFgvIgfwuPKd0C3R9OeoN7.jpg"
+trailer_url = "https://www.youtube.com/watch?v=Ksx0U0vNym0"
+
+[[historical_programme]]
+name = "Ghost in the Shell"
+copy_summary = "In the year 2029, the barriers of our world have been broken down by the net and by cybernetics, but this brings new vulnerability to humans in the form of brain-hacking."
+copy = "In the year 2029, the barriers of our world have been broken down by the net and by cybernetics, but this brings new vulnerability to humans in the form of brain-hacking. When a highly-wanted hacker known as 'The Puppetmaster' begins involving them in politics, Section 9, a group of cybernetically enhanced cops, are called in to investigate and stop the Puppetmaster."
+film_information = "Dir. Mamoru Oshii, JP/GB 1995, 83 mins"
+pricing = "£7/£5/£3/£0"
+age_rating = "15"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/9gC88zYUBARRSThcG93MvW14sqx.jpg"
+trailer_url = "https://www.youtube.com/watch?v=R1K__7QhLaA"
+
+[[historical_programme]]
+name = "The Boss of It All"
+copy_summary = "The owner of an IT firm wants to sell his business for profit; however, when he started his firm, he invented a nonexistent president to hide behind when unpopular steps needed to be taken."
+copy = "The owner of an IT firm wants to sell his business for profit; however, when he started his firm, he invented a nonexistent president to hide behind when unpopular steps needed to be taken. When potential purchasers insist on negotiating with 'The Boss' face to face, the owner hires a failed actor to play the part."
+film_information = "Dir. Lars von Trier, DK/FR/IT 2006, 99 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+image_url = "https://image.tmdb.org/t/p/w780/rwEtK0YLHLzT13uPtXyXCHoWMwR.jpg"
+trailer_url = "https://www.youtube.com/watch?v=OyPBZsli7e0"
+
+
+# ---- Hand-written entries (TV, community, compilations, quizzes) ----
+
+[[saturday_programme]]
+name = "Children of the Stones"
+copy_summary = "The 1977 children's TV serial that gave a generation nightmares, on the big screen. Part of our TV on the Big Screen series."
+copy = "HTV's folk-horror serial about a village of standing stones, shown as part of our TV on the Big Screen series."
+film_information = "Dir. Peter Graham Scott, GB 1977, HTV serial"
+pricing = "£5/£3/£0"
+tags = ["film", "tv-on-the-big-screen"]
+
+[[saturday_programme]]
+name = "TV on the Big Screen: Doctor Who, Earthshock"
+copy_summary = "The 1982 Cybermen story, part of our TV on the Big Screen series."
+copy = "Classic television, on the cinema screen."
+film_information = "Dir. Peter Grimwade, GB 1982, BBC TV"
+pricing = "£5/£3/£0"
+tags = ["film", "tv-on-the-big-screen"]
+
+[[saturday_programme]]
+name = "Cat Video Fest 2026"
+copy_summary = "A feature-length compilation of the year's best cat videos, on a screen far too big for them."
+copy = "A compilation of cat videos from across the internet. The matinee is suitable for all the family."
+film_information = "Compilation, US 2026, 70 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "family"]
+
+[[saturday_programme]]
+name = "Star & Shadow Halloween Film Quiz"
+copy_summary = "Our monthly film quiz goes to the dark side. Teams of up to six, spooky prizes."
+copy = "Our monthly film quiz, Halloween edition. Bring a team or join one on the night."
+film_information = "Quiz night"
+pricing = "£3 / pay what you can"
+tags = ["film"]
+
+[[sunday_programme]]
+name = "Behind the Rent Strike (1974)"
+copy_summary = "Nick Broomfield's film on a rent strike, shown as a fundraiser for local tenants' organising."
+copy = "An early documentary on tenants organising against rent rises. Shown as a fundraiser for local tenants' organising."
+film_information = "Dir. Nick Broomfield, GB 1974"
+pricing = "Pay what you can"
+tags = ["film", "documentary", "free"]
+
+[[sunday_programme]]
+name = "Disobeying Orders: GI Resistance to the Vietnam War"
+copy_summary = "Free community screening on soldiers who refused to fight, followed by a discussion."
+copy = "A free screening on GI resistance to the Vietnam War, part of our Community Kitchen series."
+film_information = "Documentary"
+pricing = "Free"
+tags = ["film", "documentary", "free"]
+
+[[sunday_programme]]
+name = "Everybody to Kenmure Street"
+copy_summary = "A documentary on the community stand against an immigration raid in Glasgow."
+copy = "A documentary on the day a Glasgow street stopped a Home Office van."
+film_information = "Documentary"
+pricing = "Pay what you can"
+tags = ["film", "documentary"]
+
+[[historical_programme]]
+name = "Newcastle Film Club: Deja View Film Challenge"
+copy_summary = "Newcastle Film Club's Deja View Film Challenge, a screening of short films made to a shared prompt."
+copy = "A screening of short films by local filmmakers."
+film_information = "Shorts programme, GB 2026"
+pricing = "£5/£3/£0"
+tags = ["film"]
+
+[[historical_programme]]
+name = "Filmed at The Star & Shadow"
+copy_summary = "Films shot at the Star and Shadow, shown for our 20th birthday."
+copy = "A programme of films made at the Star and Shadow."
+film_information = "Compilation, GB, 90 mins"
+pricing = "Pay what you can"
+tags = ["film", "documentary"]
+
+[[historical_programme]]
+name = "Twin Peaks: The Return Marathon"
+copy_summary = "All eighteen parts of The Return, over two days. Bring snacks and a coffee."
+copy = "David Lynch and Mark Frost's season of Twin Peaks, shown across two days."
+film_information = "Dir. David Lynch, US 2017, TV, 18 episodes"
+pricing = "£10/£8/£5"
+tags = ["film", "tv-on-the-big-screen"]
+
+[[historical_programme]]
+name = "Nuts in May"
+copy_summary = "Mike Leigh's 1976 TV play about a very particular camping holiday. Part of our TV on the Big Screen series."
+copy = "A couple's camping holiday in Dorset."
+film_information = "Dir. Mike Leigh, GB 1976, BBC TV"
+pricing = "£5/£3/£0"
+tags = ["film", "tv-on-the-big-screen"]
+
+[[historical_programme]]
+name = "Star & Shadow 20th Birthday Throwdown"
+copy_summary = "A birthday party for the building, with film and music."
+copy = "A birthday party for the building, with film and live music."
+film_information = "Special event"
+pricing = "Pay what you can"
+tags = ["film", "party"]
+
+[[historical_programme]]
+name = "Polar Film Fest"
+copy_summary = "A festival screening of polar films."
+copy = "Festival screening."
+film_information = "Festival programme, 2026"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "documentary"]
+
+[[historical_programme]]
+name = "Burma's Fight for Freedom and Democracy"
+copy_summary = "A free documentary screening."
+copy = "A free community screening."
+film_information = "Documentary"
+pricing = "Free"
+tags = ["film", "documentary", "free"]
+
+[[sunday_programme]]
+name = "The Cinema of Ritwik Ghatak: A River Called Titas"
+copy_summary = "Part of our two-day Ritwik Ghatak retrospective: Ghatak's adaptation of Advaita Malla Barman's novel about a fishing community on the Titas river."
+copy = "Part of our two-day Ritwik Ghatak retrospective. Ghatak's film follows the lives of a fishing community on the banks of the Titas river in Bengal."
+film_information = "Dir. Ritwik Ghatak, IN / BD 1973, 158 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]

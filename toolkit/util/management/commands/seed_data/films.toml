@@ -564,3 +564,242 @@ tags = ["film"]
 image_url = "https://image.tmdb.org/t/p/w780/lUFZsUuJ0YyhBXH8D2BFUd6wODm.jpg"
 trailer_url = "https://www.youtube.com/watch?v=aLXW-oVbTxE"
 
+
+# ── Historical programme (past ~6 months, for finance reporting) ───────
+#
+# Real titles from the Star and Shadow archive (2009-2015 scrape held in
+# the sns-analysis project), used to fill the past ~6 months with paid film
+# screenings and gigs that carry cost terms and settlement actuals, so the
+# Finance review and PRS/PPL report have more than six weeks of history to
+# work with. Seeded on Sundays/Thursdays (films) and occasional Saturdays
+# (gigs) before the recent-past window of sunday_films/thursday_films.
+
+[[historical_films]]
+name = "Into Great Silence"
+copy_summary = "Six months inside a Carthusian monastery in the French Alps. Meditative, near-wordless, and a Sundance prize winner. Entry includes a bowl of soup."
+film_information = "Dir. Philip Groning, DE 2006, 169 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+
+[[historical_films]]
+name = "Even Dwarfs Started Small"
+copy_summary = "Herzog's most controversial film: rebellion and anarchy in an unidentified institution. Exhilarating and not for the faint-hearted."
+film_information = "Dir. Werner Herzog, DE 1970, 96 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+age_rating = "18_plus"
+
+[[historical_films]]
+name = "The Marriage of Maria Braun"
+copy_summary = "Fassbinder's portrait of a woman determined to emerge from the war a success, whatever it costs."
+film_information = "Dir. Rainer Werner Fassbinder, DE 1979, 120 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+
+[[historical_films]]
+name = "Killer's Kiss"
+copy_summary = "Kubrick's first feature (more or less). Written, directed, photographed and edited by the man himself. Short and brilliant."
+film_information = "Dir. Stanley Kubrick, US 1955, 67 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+
+[[historical_films]]
+name = "Paths of Glory"
+copy_summary = "Kubrick's WWI courtroom drama. Chilly, symmetrical, beautiful, and furious about injustice."
+film_information = "Dir. Stanley Kubrick, US 1957, 87 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+
+[[historical_films]]
+name = "Claire's Knee"
+copy_summary = "Rohmer's summer of small temptations by Lake Annecy. Original, mysterious, practically perfect."
+film_information = "Dir. Eric Rohmer, FR 1970, 105 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "subtitles"]
+
+[[historical_films]]
+name = "My Night at Maud's"
+copy_summary = "A snowbound night of talk about faith, chance and desire. One of the most influential films of its decade."
+film_information = "Dir. Eric Rohmer, FR 1969, 110 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "subtitles"]
+
+[[historical_films]]
+name = "Scanners"
+copy_summary = "Cronenberg's telepathic sci-fi horror. You know the scene."
+film_information = "Dir. David Cronenberg, CA 1981, 103 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+age_rating = "18_plus"
+
+[[historical_films]]
+name = "Jailhouse Rock"
+copy_summary = "For the first time at Star and Shadow: Elvis. The definitive con-turned-good-guy musical."
+film_information = "Dir. Richard Thorpe, US 1957, 96 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+
+[[historical_films]]
+name = "The Sound of Music"
+copy_summary = "The hills are alive. Come and sing along, or don't, but come."
+film_information = "Dir. Robert Wise, US 1965, 165 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+
+[[historical_films]]
+name = "The Devil and Daniel Johnston"
+copy_summary = "Portrait of the reclusive Texan songwriter and artist, from home recordings to cult fame."
+film_information = "Dir. Jeff Feuerzeig, US 2005, 110 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+
+[[historical_films]]
+name = "Pulgasari"
+copy_summary = "The giant-monster movie produced by Kim Jong-Il and directed by a kidnapped South Korean director. Genuinely."
+film_information = "Dir. Shin Sang-ok, KP 1985, 95 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "subtitles"]
+
+[[historical_films]]
+name = "Shirin"
+copy_summary = "Kiarostami films an audience of women watching a film we never see. Cinema reimagined from the other side of the screen."
+film_information = "Dir. Abbas Kiarostami, IR 2008, 92 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "subtitles"]
+
+[[historical_films]]
+name = "Red River"
+copy_summary = "No Western season is complete without John Wayne, here in one of his finest performances."
+film_information = "Dir. Howard Hawks, US 1948, 133 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+
+[[historical_films]]
+name = "Jour de Fête"
+copy_summary = "Tati's inept, easily-distracted village postman decides to modernise. French poetic comedy at its gentlest."
+film_information = "Dir. Jacques Tati, FR 1949, 76 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "subtitles"]
+
+[[historical_films]]
+name = "Made in Dagenham"
+copy_summary = "Sally Hawkins leads the 1968 Ford sewing machinists' strike for equal pay. Part of our people's history strand."
+film_information = "Dir. Nigel Cole, GB 2010, 113 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+
+[[historical_films]]
+name = "Ikarie XB-1"
+copy_summary = "The Czech pioneer of deep-space cinema, much imitated since. A cornerstone of contemporary sci-fi."
+film_information = "Dir. Jindřich Polák, CZ 1963, 86 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "subtitles"]
+
+[[historical_films]]
+name = "La Planète Sauvage"
+copy_summary = "Surreal stop-motion psychedelia. Grand Prix winner at Cannes 1973."
+film_information = "Dir. René Laloux, FR 1973, 72 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film", "subtitles"]
+
+[[historical_films]]
+name = "Detour"
+copy_summary = "Baby-faced piano player hitch-hikes across America and into the bleakest 68 minutes of film noir ever made."
+film_information = "Dir. Edgar G. Ulmer, US 1945, 68 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+
+[[historical_films]]
+name = "Zelig"
+copy_summary = "Leonard Zelig, the human chameleon, profiled in Allen's technically dazzling mock-documentary."
+film_information = "Dir. Woody Allen, US 1983, 84 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+
+[[historical_films]]
+name = "The Killing of Sister George"
+copy_summary = "Outstanding performances in Aldrich's 1968 drama of a soap actress and her lover. From our lesbians-on-screen strand."
+film_information = "Dir. Robert Aldrich, GB 1968, 135 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+age_rating = "18_plus"
+
+[[historical_films]]
+name = "Threads"
+copy_summary = "Sheffield, 1984, and the bomb drops. The BBC television film that traumatised a generation, on the big screen."
+film_information = "Dir. Mick Jackson, GB 1984, 112 mins, BBC TV"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+age_rating = "16_plus"
+
+[[historical_films]]
+name = "Doomsday"
+copy_summary = "Neil Marshall's gleeful post-apocalyptic Scotland. Pretend it's a long-lost mid-80s film and you'll have a great time."
+film_information = "Dir. Neil Marshall, GB 2008, 108 mins"
+pricing = "£7/£5/£3/£0"
+tags = ["film"]
+age_rating = "18_plus"
+
+# Gigs: seeded on Saturdays through the same historical window. Tagged so
+# _seed_event_finances gives them performer-fee cost terms, ticket and bar
+# takings, and a PRS/PPL registration where the index falls that way.
+
+[[historical_gigs]]
+name = "Star Busk Collective: Open Mic Night"
+copy_summary = "The monthly open mic. Sign up on the night, five minutes each, bar open."
+pricing = "£3 / pay what you can"
+tags = ["music", "performance"]
+roles = ["Keyholder", "Programmer", "Bar Staff - Shift 1", "Bar Staff - Shift 2", "Sound Technician level 1"]
+room = "Venue Space"
+hour = 19
+duration = 180
+
+[[historical_gigs]]
+name = "Dub Replacement Service"
+copy_summary = "Late-night dub and roots sound system in the venue space."
+pricing = "£8 / £6"
+tags = ["music", "party"]
+roles = ["Keyholder", "Programmer", "Bar Staff - Shift 1", "Bar Staff - Shift 2", "Sound Technician level 1", "Usher - Fire Trained"]
+room = "Venue Space"
+hour = 21
+duration = 240
+
+[[historical_gigs]]
+name = "Multilingual Choir & La Sonora Boreal"
+copy_summary = "Newcastle's multilingual community choir with Latin American collective La Sonora Boreal."
+pricing = "£7 / £5"
+tags = ["music", "performance"]
+roles = ["Keyholder", "Programmer", "Bar Staff - Shift 1", "Sound Technician level 1"]
+room = "Venue Space"
+hour = 19
+duration = 150
+
+[[historical_gigs]]
+name = "Noise Night"
+copy_summary = "Three acts of the loud and the strange. Earplugs on the bar."
+pricing = "£6 / £4"
+tags = ["music", "performance"]
+roles = ["Keyholder", "Programmer", "Bar Staff - Shift 1", "Sound Technician level 1"]
+room = "Venue Space"
+hour = 20
+duration = 180
+
+[[historical_gigs]]
+name = "Benefit Gig for the Building Fund"
+copy_summary = "Four local bands, all playing for the roof. Every penny to the building fund."
+pricing = "£10 / £8"
+tags = ["music", "performance", "party"]
+roles = ["Keyholder", "Programmer", "Bar Staff - Shift 1", "Bar Staff - Shift 2", "Sound Technician level 1", "Usher - Fire Trained"]
+room = "Venue Space"
+hour = 19
+duration = 240
+
+[[historical_gigs]]
+name = "Folk Session with the Tyne Singers"
+copy_summary = "An evening of Northumbrian and Tyneside song. Bring a voice, or just an ear."
+pricing = "£5 / £3"
+tags = ["music", "performance"]
+roles = ["Keyholder", "Programmer", "Bar Staff - Shift 1"]
+room = "Venue Space"
+hour = 19
+duration = 150

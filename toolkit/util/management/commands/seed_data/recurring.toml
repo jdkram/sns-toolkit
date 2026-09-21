@@ -18,9 +18,10 @@ image_url = "https://images.pexels.com/photos/376464/pexels-photo-376464.jpeg?au
 
 [[weekly_sunday_events]]
 name = "Art Club"
-copy_summary = "Open workshop in art room. All welcome, no experience needed."
-copy = "Drop in, pick up some materials, make something. Art Club meets weekly and is open to everyone."
-tags = ["workshop", "exhibition"]
+copy_summary = "Open workshop in art room. All welcome, no experience needed. Free, runs alongside the Sunday café."
+copy = "Drop in, pick up some materials, make something. Art Club meets weekly while the café is open and is free to everyone."
+pricing = "Free"
+tags = ["workshop", "cafe", "free"]
 roles = ["Programmer", "Facilitator"]
 room = "Print Room"
 hour = 12
@@ -42,9 +43,10 @@ image_url = "https://images.pexels.com/photos/733856/pexels-photo-733856.jpeg?au
 
 [[biweekly_sunday_events]]
 name = "Knitting Circle"
-copy_summary = "Weekly knitting and crafts drop-in. All levels welcome."
-copy = "Bring your needles, bring your wool, bring your half-finished scarf from 2019. No agenda, just knitting, chat, and tea."
-tags = ["workshop"]
+copy_summary = "Knitting and crafts drop-in while the café is open. Free, all levels welcome."
+copy = "Bring your needles, bring your wool, bring your half-finished scarf from 2019. No agenda, just knitting, chat, and tea from the café."
+pricing = "Free"
+tags = ["workshop", "cafe", "free"]
 roles = ["Keyholder", "Programmer", "Extra Hands (no training needed)"]
 room = "Venue Space"
 hour = 14

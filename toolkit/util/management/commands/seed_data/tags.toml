@@ -91,6 +91,51 @@ promoted = false
 description = "Events run by an external organisation hiring the venue. Tick the Outside Hire checkbox on the event too: this tag is for public programme filtering only."
 
 
+[[tags]]
+name = "horror"
+promoted = false
+description = "Horror and genre screenings, from Halloween season to cult favourites."
+
+[[tags]]
+name = "lgbtq"
+promoted = false
+description = "Queer cinema and LGBTQ+ programming."
+
+[[tags]]
+name = "documentary"
+promoted = false
+description = "Documentary screenings, often with a talk or discussion."
+
+[[tags]]
+name = "silent-film"
+promoted = false
+description = "Silent-era films."
+
+[[tags]]
+name = "live-score"
+promoted = false
+description = "Screenings with a live score or soundtrack performed in the room."
+
+[[tags]]
+name = "tv-on-the-big-screen"
+promoted = false
+description = "Classic television shown on the cinema screen."
+
+[[tags]]
+name = "family"
+promoted = false
+description = "Suitable for children and families."
+
+[[tags]]
+name = "twenty-for-twenty"
+promoted = false
+description = "The 20 for 20 season: twenty films for the venue's twentieth year."
+
+[[tags]]
+name = "noirvember"
+promoted = false
+description = "The Noirvember season of film noir."
+
 # Background colours used when generating placeholder event images,
 # keyed by primary tag. Chosen to be visually distinct and cinema-appropriate.
 # rgb values are [R, G, B] integers 0-255.

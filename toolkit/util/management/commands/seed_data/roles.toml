@@ -20,21 +20,25 @@ description = "Point of contact for questions about this event. The person who s
 [[roles]]
 name = "Projectionist - DCP"
 standard = true
+is_projectionist = true
 description = "Run the main digital cinema projector (DCP). Requires level 1 projectionist induction."
 
 [[roles]]
 name = "Projectionist - MP4"
 standard = false
+is_projectionist = true
 description = "Play back MP4 or laptop files through the projector. Requires level 1 projectionist induction."
 
 [[roles]]
 name = "Projectionist - Video/DVD"
 standard = false
+is_projectionist = true
 description = "Run video or DVD playback. Requires level 1 projectionist induction."
 
 [[roles]]
 name = "Projectionist (trained shadowing)"
 standard = false
+is_projectionist = true
 beginner_friendly = true
 description = "Shadow an experienced projectionist and learn the system. Arrive early! Requires level 1 projectionist training."
 

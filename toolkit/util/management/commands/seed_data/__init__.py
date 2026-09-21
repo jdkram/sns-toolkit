@@ -48,10 +48,27 @@ WEEKLY_SUNDAY_EVENTS = recurring_data.get("weekly_sunday_events", [])
 BIWEEKLY_SUNDAY_EVENTS = recurring_data.get("biweekly_sunday_events", [])
 MONTHLY_EVENTS = recurring_data.get("monthly_events", [])
 
-# Films (curated film pools for Sunday and Thursday screenings)
+# Films (curated film pools for the weekly screenings). The real 2026
+# programme (programme_2026.toml) comes first in each pool, so the recent and
+# upcoming weeks mirror the live listing; the older curated pools in
+# films.toml follow and fill any remaining weeks.
 films_data = _load_toml("films.toml")
-SUNDAY_FILMS = films_data.get("sunday_films", [])
-THURSDAY_FILMS = films_data.get("thursday_films", [])
+programme_data = _load_toml("programme_2026.toml")
+SUNDAY_FILMS = programme_data.get("sunday_programme", []) + films_data.get(
+    "sunday_films", []
+)
+THURSDAY_FILMS = programme_data.get("thursday_programme", []) + films_data.get(
+    "thursday_films", []
+)
+FRIDAY_FILMS = programme_data.get("friday_programme", [])
+# Saturday specials: silent films with live scores, TV on the big screen,
+# compilations and one-off nights. Seeded on alternate Saturdays.
+SATURDAY_FILMS = programme_data.get("saturday_programme", [])
+# Older programme (past ~6 months) for finance reporting -- see films.toml
+HISTORICAL_FILMS = programme_data.get(
+    "historical_programme", []
+) + films_data.get("historical_films", [])
+HISTORICAL_GIGS = films_data.get("historical_gigs", [])
 
 # Collectives
 collectives_data = _load_toml("collectives.toml")
@@ -89,6 +106,8 @@ __all__ = [
     "MONTHLY_EVENTS",
     "SUNDAY_FILMS",
     "THURSDAY_FILMS",
+    "HISTORICAL_FILMS",
+    "HISTORICAL_GIGS",
     "_RECURRING_FILM_IMAGE_URL",
     "COLLECTIVES",
     "DONATION_ITEMS",
