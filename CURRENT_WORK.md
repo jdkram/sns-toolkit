@@ -3,6 +3,17 @@
 **Purpose:** Single source of truth for task status. Completed items stay here, struck through with a date — nothing moves to another file.
 
 **Last updated:** 2026-09-21
+**Mobile overflow fixes (2026-09-21, latest):** ✅ **Bug BE** — dashboard cards spilled out of
+their boxes at phone width, which also pushed the navbar's hamburger off-screen (a fixed-position
+element is sized against a layout viewport that a mobile browser widens to fit any overflow, so
+the navbar is a symptom, not a separate bug). Two root causes fixed at source — the dashboard's
+blanket `td:first-child { white-space: nowrap }`, which also caught the text-led cards, and the
+finance review header's non-wrapping flex row of badges and buttons — plus four guards in
+`base_admin.html` covering every admin page, and a `min-width` on the film readiness tables so
+their `.table-responsive` wrappers scroll rather than squeezing six columns to one word per line.
+Written up as rule **C9** in [docs/CSS_CONVENTIONS.md](docs/CSS_CONVENTIONS.md), since this is the
+third instance of the same failure (Bugs W and AO). Rendering confirmed via the test client; **no
+phone has looked at it yet** — add it to the browser-verification queue below.
 **Review pass before committing 9.174 + the seed rebuild (2026-09-21):** ruff, black and the
 full suite (1,619) green. Three findings fixed in the same commit, each with a regression
 test: (1) `_events_with_elapsed_showings_in_range` had lost its DB-side date filter when the

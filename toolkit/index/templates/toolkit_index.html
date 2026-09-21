@@ -48,10 +48,17 @@
         padding: 0.2rem 0.5rem 0.2rem 0;
         vertical-align: top;
         font-size: 0.9em;
+        /* Free text (event names, job titles) must be allowed to break, or a
+         * single long word widens the table past the card. See C9. */
+        overflow-wrap: anywhere;
     }
-    .shift-row td:first-child {
+    /* Opt-in, not blanket: this used to be td:first-child, which also caught
+     * the text-led cards (Open jobs, Shopping, Maintenance) and made their
+     * titles unwrappable — the table then spilled out of the card on mobile. */
+    .shift-row td.shift-when {
         white-space: nowrap;
         color: #555;
+        overflow-wrap: normal;
     }
     .starred-list {
         list-style: none;
@@ -297,7 +304,7 @@
         <table class="w-100">
           {% for entry in upcoming_shifts %}
           <tr class="shift-row">
-            <td>{{ entry.showing.start|date:"D j M" }}</td>
+            <td class="shift-when">{{ entry.showing.start|date:"D j M" }}</td>
             <td>
               <a href="{% url "rota-edit-month" year=entry.showing.start.year month=entry.showing.start.month %}#showing-{{ entry.showing.pk }}">{{ entry.showing.event.name }}</a>
               <small class="text-muted">{{ entry.role.name }}</small>
@@ -349,7 +356,7 @@
         <table class="w-100">
           {% for showing in new_showings %}
           <tr class="shift-row">
-            <td>{{ showing.start|date:"D j M" }}</td>
+            <td class="shift-when">{{ showing.start|date:"D j M" }}</td>
             <td><a href="{% url "edit-event-details-view" event_id=showing.event.pk %}">{{ showing.event.name }}</a></td>
           </tr>
           {% endfor %}
@@ -369,7 +376,7 @@
         <table class="w-100">
           {% for showing in showings_with_gaps %}
           <tr class="shift-row">
-            <td>{{ showing.start|date:"D j M" }}</td>
+            <td class="shift-when">{{ showing.start|date:"D j M" }}</td>
             <td><a href="{% url "rota-edit-month" year=showing.start.year month=showing.start.month %}#showing-{{ showing.pk }}">{{ showing.event.name }}</a></td>
             <td class="text-end"><span class="badge text-bg-warning">{{ showing.missing }}</span></td>
           </tr>
@@ -390,7 +397,7 @@
         <table class="w-100">
           {% for showing in unconfirmed_showings %}
           <tr class="shift-row">
-            <td>{{ showing.start|date:"D j M" }}</td>
+            <td class="shift-when">{{ showing.start|date:"D j M" }}</td>
             <td><a href="{% url "edit-event-details-view" event_id=showing.event.pk %}">{{ showing.event.name }}</a></td>
             {% if showing.booked_by %}<td class="text-end text-muted" style="font-size:0.85em">{{ showing.booked_by }}</td>{% endif %}
           </tr>
@@ -412,7 +419,7 @@
         <table class="w-100">
           {% for row in outstanding_settlements %}
           <tr class="shift-row">
-            <td>{{ row.latest_showing.start|date:"D j M" }}</td>
+            <td class="shift-when">{{ row.latest_showing.start|date:"D j M" }}</td>
             <td><a href="{% url "edit-event-details-view" event_id=row.event.pk %}">{{ row.event.name }}</a></td>
             <td class="text-end">
               {% if row.status == "partial" %}<span class="badge text-bg-warning text-dark">Partial</span>
@@ -437,7 +444,7 @@
           {% for row in film_prep_mine %}
           {% if row.kind == "missing" %}
           <tr class="shift-row">
-            <td>{{ row.start|date:"D j M" }}</td>
+            <td class="shift-when">{{ row.start|date:"D j M" }}</td>
             <td>
               <a href="{% url "edit-event-details-view" event_id=row.event.pk %}#film-readiness">{{ row.event.name }}</a>
               <div class="small text-muted">No film recorded for this date yet</div>
@@ -446,7 +453,7 @@
           </tr>
           {% else %}
           <tr class="shift-row">
-            <td>{{ row.start|date:"D j M" }}</td>
+            <td class="shift-when">{{ row.start|date:"D j M" }}</td>
             <td>
               <a href="{% url "edit-event-details-view" event_id=row.event.pk %}#film-readiness">{{ row.title }}</a>
               {% if row.prep.film_title %}<span class="small text-muted">({{ row.event.name }})</span>{% endif %}
@@ -482,7 +489,7 @@
         <table class="w-100">
           {% for row in film_tests %}
           <tr class="shift-row">
-            <td>{{ row.start|date:"D j M" }}</td>
+            <td class="shift-when">{{ row.start|date:"D j M" }}</td>
             <td>
               {{ row.title }}{% if row.prep.film_title %} <span class="small text-muted">({{ row.event.name }})</span>{% endif %}
               {% if row.urgency == "urgent" %}<span class="badge text-bg-danger">Urgent</span>{% endif %}
@@ -528,7 +535,7 @@
         <table class="w-100">
           {% for r in film_returns %}
           <tr class="shift-row">
-            <td>{{ r.last_showing|date:"D j M" }}</td>
+            <td class="shift-when">{{ r.last_showing|date:"D j M" }}</td>
             <td>
               {{ r.title }}{% if r.prep.film_title %} <span class="small text-muted">({{ r.event.name }})</span>{% endif %}
               <div class="small text-muted">
@@ -595,7 +602,7 @@
         <table class="w-100">
           {% for showing in upcoming_training %}
           <tr class="shift-row">
-            <td>{{ showing.start|date:"D j M" }}</td>
+            <td class="shift-when">{{ showing.start|date:"D j M" }}</td>
             <td><a href="{% url "single-event-view" event_id=showing.event.pk %}">{{ showing.event.name }}</a></td>
           </tr>
           {% endfor %}

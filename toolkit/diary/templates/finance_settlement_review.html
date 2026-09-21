@@ -41,7 +41,7 @@
       <a href="{% url 'edit-event-details-view' row.event.pk %}"><strong>{{ row.event.name }}</strong></a>
       <span class="text-muted small">&mdash; last showing {{ row.latest_showing.start|date:"D j M Y, H:i" }}</span>
     </div>
-    <div class="d-flex gap-2 align-items-center">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
       {% if row.settlement_status == "recorded" %}<span class="badge text-bg-success">Finances recorded</span>
       {% elif row.settlement_status == "partial" %}<span class="badge text-bg-warning text-dark">Finances partial</span>
       {% elif row.settlement_status == "not_recorded" %}<span class="badge text-bg-danger">Finances not recorded</span>

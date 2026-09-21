@@ -46,6 +46,42 @@ outstanding). Bug AZ is unchanged.
 
 ## Current bugs
 
+**Bug BE** — Dashboard cards spill sideways on mobile, taking the navbar hamburger with them ✅ fixed 2026-09-21
+
+**Symptom.** On a phone, the Open jobs card's "Urgent" / "Soon" / claimed-by columns sat
+outside the card's right edge. The whole page scrolled horizontally, and the navbar's
+hamburger button was off-screen until you scrolled sideways to reach it. The finance review
+page (`/diary/edit/events/finance-review/`) showed the same spill from its card header's row
+of badges and buttons.
+
+**Root cause.** Two separate widenings, one shared consequence. On the dashboard,
+`.shift-row td:first-child { white-space: nowrap }` was written for the date-led cards, but
+applies to every card — including the three whose first column is free text (Open jobs,
+Shopping, Maintenance), so a long job title could not wrap and forced the table wider than
+its card. On the finance review page, the card header's inner `.d-flex` had no `flex-wrap`,
+so five badges and buttons stayed on one line. The hamburger is a consequence, not a separate
+bug: when anything overflows horizontally, a mobile browser widens the layout viewport to
+fit, and `position: fixed` is sized against that viewport, so the `fixed-top` navbar grows
+wider than the screen and its right-aligned toggle goes off the visible area.
+
+**Fix.** Root causes: `nowrap` is now an opt-in `.shift-when` class on the date cells rather
+than a positional `td:first-child` selector, and the finance review header's inner flex row
+wraps. Guards against the class of bug, in `base_admin.html` so they cover every admin page:
+`min-width: 0` on columns/cards/card bodies/headers so they can shrink below their content,
+`overflow-wrap: anywhere` inside cards, flex rows inside cards wrapping by default under
+576px (`.flex-nowrap` opts out), and `.card > .card-body { overflow-x: auto }` as a last
+resort. Separately, the film readiness tables got an explicit `min-width` inside their
+existing `.table-responsive` wrappers — the wrapper alone let the browser squeeze six columns
+to one word per line rather than scrolling. Written up as rule C9 in
+[../CSS_CONVENTIONS.md](../CSS_CONVENTIONS.md). Not browser-verified: pages confirmed to
+render via the test client, but nobody has looked at them on a phone yet.
+
+**Third time this has happened.** Bug W (2026-04-28, `.showing-meta` with `flex-wrap: nowrap`
+on the rota) and Bug AO (still open, public pages at ≥1000px) are the same failure with
+different causes, and Bug W's entry already identified the fixed-navbar consequence. That is
+why this round's fixes are mostly guards in the shared base template rather than three more
+one-page patches.
+
 **Bug AZ** — `seed_dev_data` reruns can duplicate a showing (dev tooling only) — open, found 2026-09-21
 
 **Symptom.** Re-running `seed_dev_data` on an already-seeded dev DB occasionally adds a

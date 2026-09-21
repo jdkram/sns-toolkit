@@ -1,6 +1,20 @@
 {% extends "form_base.html" %}
 {% block title %}Film readiness{% endblock %}
 
+{% block css %}
+{{ block.super }}
+<style>
+/* Six columns of dense text won't fit a phone. The .table-responsive wrapper
+ * scrolls, but without a floor the browser squeezes every column down to
+ * roughly one word per line instead — technically not overflowing, unreadable
+ * in practice. Give the table a minimum width so the wrapper does its job and
+ * the columns stay legible. See docs/CSS_CONVENTIONS.md C9. */
+.film-readiness-wide {
+    min-width: 46rem;
+}
+</style>
+{% endblock %}
+
 {% block body %}
 <h1>Film readiness</h1>
 <p class="text-muted mb-3">
@@ -20,7 +34,7 @@
 <p class="text-muted">No upcoming films have readiness recorded yet.</p>
 {% else %}
 <div class="table-responsive">
-<table class="table table-sm align-top">
+<table class="table table-sm align-top film-readiness-wide">
   <thead>
     <tr>
       <th scope="col">Date</th>
@@ -111,7 +125,7 @@
   then confirm once the distributor has received it. Confirmed drives stay listed for {{ return_keep_days }} days, so a mistaken click can be undone.
 </p>
 <div class="table-responsive">
-<table class="table table-sm align-top">
+<table class="table table-sm align-top film-readiness-wide">
   <thead>
     <tr>
       <th scope="col">Film</th>

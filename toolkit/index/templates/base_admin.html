@@ -11,6 +11,47 @@ body {
   padding: 5rem 1.4rem;
   overflow-x: clip; /* prevents horizontal overflow from making position:fixed navbar disappear on iOS Safari */
 }
+/* Horizontal-overflow guards (2026-09-21). One over-wide element anywhere on
+ * the page is not a local problem: a mobile browser widens the whole layout
+ * viewport to fit it, and position:fixed is sized against that viewport, so
+ * the fixed navbar grows wider than the screen and its right-hand hamburger
+ * ends up off-screen, reachable only by scrolling sideways. The fix has to be
+ * stopping the overflow, not patching the navbar. These three rules make
+ * shrinking the default for the containers we put content in:
+ *   1. flex and grid children default to min-width:auto, meaning "never
+ *      shrink below my content" — this is what lets one long word push a card
+ *      wider than its column. Set min-width:0 so they can shrink.
+ *   2. long unbroken strings (URLs, filenames, an untitled event's slug) wrap
+ *      inside cards rather than setting the card's minimum width.
+ *   3. last resort: a table or button row that genuinely cannot shrink any
+ *      further scrolls inside its own card, where it is a local annoyance,
+ *      instead of widening the page. See docs/CSS_CONVENTIONS.md C9. */
+.row > [class*="col-"],
+.card,
+.card-body,
+.card-header {
+  min-width: 0;
+}
+.card-body,
+.card-header {
+  overflow-wrap: anywhere;
+}
+.card > .card-body {
+  overflow-x: auto;
+}
+/* A row of badges and buttons in a card header is the other common source of
+ * the same overflow: .d-flex alone does not wrap, so a header with three
+ * badges and two buttons stays on one line and pushes out of the card at
+ * phone width (seen on the finance review page, 2026-09-21). Rather than
+ * auditing every .d-flex in every template, make wrapping the default inside
+ * cards on narrow screens only — desktop layout is untouched, and Bootstrap's
+ * own .flex-nowrap remains the opt-out for a row that must stay on one line.
+ * Excludes .flex-column, where flex-wrap would change the axis behaviour. */
+@media (max-width: 576px) {
+  .card .d-flex:not(.flex-nowrap):not(.flex-column) {
+    flex-wrap: wrap;
+  }
+}
 @media (max-width: 576px) {
   body {
     padding: 4.5rem 0.5rem;

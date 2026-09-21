@@ -155,6 +155,41 @@ an oversight — don't "fix" it to `em` in a drive-by; if it's ever revisited, d
 pass across every file at once, since the breakpoint values are shared critical constants
 across `layout.css`, `programme.css`, `event.css`, and `static_pages.css`.
 
+### C9 — Nothing may be wider than its container, because overflow is never local
+
+A single over-wide element is not a local problem. When anything overflows horizontally, a
+mobile browser widens the *layout viewport* to fit it, and `position: fixed` is sized against
+that viewport — so `base_admin.html`'s `fixed-top` navbar becomes wider than the screen and
+its right-hand hamburger ends up off the visible area, reachable only by scrolling sideways.
+The navbar cannot be patched out of this; the only fix is not overflowing. Found 2026-09-21
+on the dashboard, where `.shift-row td:first-child { white-space: nowrap }` was written for
+the date-led cards but also caught the text-led ones (Open jobs, Shopping, Maintenance),
+making a job title unwrappable and pushing the table out of its card.
+
+Three things cause it, and `base_admin.html` now carries a guard for each:
+
+1. **Flex and grid children default to `min-width: auto`** — "never shrink below my content".
+   That is what lets one long word push a card wider than its column. Columns, cards, card
+   bodies and card headers are now `min-width: 0`.
+2. **Long unbroken strings** (URLs, filenames, an untitled event's slug) set a container's
+   minimum width. Card bodies and headers now get `overflow-wrap: anywhere`.
+3. **`.d-flex` does not wrap**, so a header with three badges and two buttons stays on one
+   line and pushes out of the card. Inside `.card`, under 576px, flex rows now wrap by
+   default; `.flex-nowrap` is the opt-out.
+
+As a last resort `.card > .card-body` is `overflow-x: auto`, so a table that genuinely cannot
+shrink scrolls inside its own card — a local annoyance rather than a broken page. Note the
+cost, already documented in `edit_event_index.html`: **a scroll container breaks
+`position: sticky` inside it**, so don't put a sticky header in a card body (nothing does
+today; it was checked when the guard went in).
+
+Writing new markup, the three habits that follow: prefer `white-space: nowrap` as an opt-in
+class on the cells that need it rather than a positional selector like `td:first-child`; put
+any table with more than about four columns in a `.table-responsive` wrapper; and give such a
+table an explicit `min-width` (see `film_readiness_overview.html`), since a wrapper alone lets
+the browser squeeze columns to one word per line instead of scrolling — not technically
+overflow, but just as unusable.
+
 ---
 
 ## Second-opinion pass (2026-09-10)
