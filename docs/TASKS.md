@@ -25,6 +25,7 @@ This file is the index. Full specs live in [`docs/tasks/`](tasks/) split by doma
 | [tasks/operations.md](tasks/operations.md) | Community tools, donations, bulletins, lost & found, permission model, dashboard prefs, favourites, collectives, shopping list — sections 9.49, 9.51, 9.68, 9.74, 9.78–9.80, 9.88, 9.90, 9.94, 9.101, 9.126–9.129, 9.146, 9.148, 9.153 |
 | [tasks/infrastructure.md](tasks/infrastructure.md) | Accessibility, test coverage, backup, Bootstrap migration, logging & email observability — sections 9.16–9.17, 9.19–9.20, 9.42, 9.46, 9.70, 9.117, 9.154–9.159 |
 | [tasks/finance.md](tasks/finance.md) | Event financial settlement: attendance, ticket/bar income, distributor payment — section 9.171 |
+| [tasks/hires.md](tasks/hires.md) | Outside hires: enquiry intake, reply clock and auto-decline, availability and holds, hire income vs volunteer programme, hirer history — section 9.175 |
 
 ---
 
