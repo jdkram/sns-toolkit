@@ -555,3 +555,97 @@ class ErrorSummaryTests(HireBase):
         self.assertContains(r, 'href="#date-row-1"', count=1)
         self.assertContains(r, 'href="#field-contact_name"')
         self.assertNotContains(r, 'href="#field-get_in_1"')
+
+
+class MessageHistoryTests(HireBase):
+    def log(self, enquiry, source, success=True, to=None, subject="Subject"):
+        from toolkit.audit.models import SentEmailLog
+
+        return SentEmailLog.objects.create(
+            recipients=to or enquiry.contact_email,
+            subject=subject,
+            success=success,
+            error="" if success else "smtp down",
+            backend="x",
+            trigger_source=source,
+        )
+
+    def test_detail_lists_messages_and_hides_other_addresses(self):
+        e = self.make_enquiry()
+        self.log(e, "Hire enquiry: acknowledgement", subject="We got it")
+        self.log(
+            e,
+            "Hire enquiry: declined",
+            to="bada@example.org",
+            subject="Not for you",
+        )
+        self.log(
+            e,
+            "Hire enquiry: declined",
+            to="x@example.org, ada@example.org",
+            subject="Shared",
+        )
+        self.client.force_login(self.programmer)
+        r = self.client.get(reverse("hires:detail", kwargs={"pk": e.pk}))
+        self.assertContains(r, "We got it")
+        self.assertContains(r, "Shared")
+        self.assertNotContains(r, "Not for you")
+
+    def test_failed_email_shows_banner_and_queue_badge(self):
+        e = self.make_enquiry()
+        self.log(e, "Hire enquiry: acknowledgement", success=False)
+        self.client.force_login(self.programmer)
+        r = self.client.get(reverse("hires:detail", kwargs={"pk": e.pk}))
+        self.assertContains(r, "did not send")
+        self.assertContains(r, "Try sending again")
+        self.assertContains(
+            self.client.get(reverse("hires:queue")), "Hirer email failed"
+        )
+
+    def test_later_success_clears_the_problem(self):
+        e = self.make_enquiry()
+        self.log(e, "Hire enquiry: acknowledgement", success=False)
+        self.log(e, "Hire enquiry: acknowledgement", success=True)
+        self.client.force_login(self.programmer)
+        r = self.client.get(reverse("hires:detail", kwargs={"pk": e.pk}))
+        self.assertNotContains(r, "did not send")
+        self.assertNotContains(
+            self.client.get(reverse("hires:queue")), "Hirer email failed"
+        )
+
+    def test_old_mail_before_the_enquiry_is_ignored(self):
+        from toolkit.audit.models import SentEmailLog
+
+        e = self.make_enquiry()
+        row = self.log(e, "Hire enquiry: acknowledgement", success=False)
+        SentEmailLog.objects.filter(pk=row.pk).update(
+            sent_at=e.submitted_at - datetime.timedelta(days=5)
+        )
+        self.client.force_login(self.programmer)
+        r = self.client.get(reverse("hires:detail", kwargs={"pk": e.pk}))
+        self.assertNotContains(r, "did not send")
+
+    def test_retry_resends_and_unknown_key_is_refused(self):
+        e = self.make_enquiry()
+        e.status = E.DECLINED
+        e.save()
+        self.client.force_login(self.programmer)
+        url = reverse("hires:act", kwargs={"pk": e.pk})
+        self.client.post(url, {"action": "resend", "key": "declined"})
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["ada@example.org"])
+        self.client.post(url, {"action": "resend", "key": "nonsense"})
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_other_users_cannot_resend(self):
+        e = self.make_enquiry()
+        from django.contrib.auth.models import User
+
+        User.objects.create_user("plain", password="x")
+        self.client.login(username="plain", password="x")
+        r = self.client.post(
+            reverse("hires:act", kwargs={"pk": e.pk}),
+            {"action": "resend", "key": "declined"},
+        )
+        self.assertIn(r.status_code, (302, 403))
+        self.assertEqual(len(mail.outbox), 0)

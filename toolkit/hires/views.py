@@ -232,6 +232,13 @@ def queue(request):
     closed = [
         e for e in enquiries if e.status in E.CLOSED_NEGATIVE + (E.COMPLETED,)
     ][:30]
+    rows = services.hire_email_rows(
+        since=timezone.now() - timezone.timedelta(days=120)
+    )
+    for e in enquiries:
+        e.email_problem = bool(
+            services.email_problems(services.messages_for(e, rows))
+        )
     return render(
         request,
         "hires/queue.html",
@@ -255,11 +262,24 @@ def detail(request, pk):
         pk=pk,
     )
     suggested = Hirer.objects.filter(email__iexact=enquiry.contact_email)
+    sent = services.messages_for(enquiry, services.hire_email_rows())
+    problems = services.email_problems(sent)
     return render(
         request,
         "hires/detail.html",
         {
             "e": enquiry,
+            "sent": [
+                (r, services.label_for_source(r.trigger_source)) for r in sent
+            ],
+            "email_problems": [
+                (
+                    r,
+                    services.label_for_source(r.trigger_source),
+                    services._KEY_FOR_SOURCE.get(r.trigger_source),
+                )
+                for r in problems
+            ],
             "dates": enquiry.dates(),
             "estimate": enquiry.estimate_gbp(),
             "suggested_hirers": suggested if not enquiry.hirer else [],
@@ -341,6 +361,11 @@ def act(request, pk):
             services.replied_outside_toolkit(enquiry, note)
             messages.success(
                 request, "Noted. The clock moved on to the next meeting."
+            )
+        elif action == "resend":
+            services.resend(enquiry, request.POST.get("key", ""))
+            messages.success(
+                request, "Email re-sent. See Messages sent below."
             )
         elif action == "withdraw":
             services.withdraw(enquiry)

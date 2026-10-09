@@ -629,6 +629,8 @@ addresses: `{privacy_contact}` and `{venue}` come from venue settings.
   holds with static text, removing the income-figure provenance, and collapsing goodwill notes
   into one text field.
 
+**Message history (added 2026-10-09).** Each enquiry's detail page lists every email sent to the hirer's address since the enquiry arrived, read from the audit `SentEmailLog` (body-free by design). A failed send with no later success of the same kind shows a red banner with a retry button and a "Hirer email failed" badge on the queue, so a failed acknowledgement can't turn into silence. Matches the exact address, so two enquiries from one shared inbox will see each other's later emails (the panel says so). Internal digest, last-call and callout times come from fields on the enquiry itself.
+
 **Related:** 9.4 (inductions custom questions, to be extracted and shared), 9.30 (`hire_name`),
 9.73 (outside-hire badge on rota), 9.113/9.162 (programming queue), 9.49 (runtime perms),
 9.157 (scheduler), 9.164 (internal decision emails, same mailer plumbing), 9.171 (settlement

@@ -7,6 +7,13 @@
   <p class="text-muted">{{ e.contact_name }}{% if e.contact_organisation %}, {{ e.contact_organisation }}{% endif %} · <a href="mailto:{{ e.contact_email }}">{{ e.contact_email }}</a>{% if e.contact_phone %} · {{ e.contact_phone }}{% endif %}</p>
   {% if past %}<div class="alert alert-info" role="status">Repeat contact: {{ past|length }} earlier enquir{{ past|length|pluralize:"y,ies" }} from this email.
     {% for p in past %}<a href="{% url 'hires:detail' p.pk %}">{{ p.title }}</a> ({{ p.get_status_display }}){% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+  {% for row, label, key in email_problems %}
+  <div class="alert alert-danger d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
+    <span><strong>The "{{ label }}" email to {{ e.contact_email }} did not send</strong> ({{ row.sent_at|date:"j M, H:i" }}). The hirer may not have received it.</span>
+    {% if key and key != "booking_confirmation" and feature_perms.hire_enquiries %}<form method="post" action="{% url 'hires:act' e.pk %}">{% csrf_token %}<input type="hidden" name="action" value="resend"><input type="hidden" name="key" value="{{ key }}"><button class="btn btn-danger btn-sm">Try sending again</button></form>
+    {% elif key == "booking_confirmation" %}<span class="small">Use "Send booking confirmation" below.</span>{% endif %}
+  </div>
+  {% endfor %}
   {% if e.beyond_booking_window %}<div class="alert alert-secondary">Dates are beyond the current booking window: for season planning.</div>{% endif %}
   {% if tech_unlisted %}<div class="alert alert-warning">Bringing their own sound tech: <strong>{{ e.sound_tech_name }}</strong>. Check they are on the approved list.</div>{% endif %}
 
@@ -61,6 +68,17 @@
   <form method="post" action="{% url 'hires:act' e.pk %}">{% csrf_token %}<input type="hidden" name="action" value="send_confirmation"><button class="btn btn-primary btn-sm" {% if not event_terms_ok %}disabled{% endif %}>{% if e.status == "awaiting_agreement" %}Re-send{% else %}Send{% endif %} booking confirmation</button></form>
   {% endif %}
   {% if e.status == "booked" %}<div class="alert alert-success mt-3">Hirer agreed {{ e.terms_agreed_at|date:"j M Y H:i" }}.<details><summary>Frozen terms</summary><pre style="white-space:pre-wrap">{{ e.terms_agreed_snapshot }}</pre></details></div>{% endif %}
+
+  <h2 class="h5 mt-4">Messages sent</h2>
+  <p class="small text-muted">Every email the system has sent to {{ e.contact_email }} since this enquiry arrived (subjects and outcomes only, never the text). If two enquiries share an inbox, each will list the other's later emails.</p>
+  {% if sent %}<table class="table table-sm small"><thead><tr><th>When</th><th>What</th><th>Subject</th><th>Result</th></tr></thead><tbody>
+  {% for row, label in sent %}<tr><td class="text-nowrap">{{ row.sent_at|date:"j M, H:i" }}</td><td>{{ label }}</td><td>{{ row.subject }}</td><td>{% if row.success %}<span class="text-success">&#10003; Sent</span>{% else %}<span class="text-danger fw-bold">&#10007; Failed</span> <span class="text-muted">{{ row.error|truncatechars:60 }}</span>{% endif %}</td></tr>{% endfor %}
+  </tbody></table>{% else %}<p class="text-muted">Nothing recorded yet.</p>{% endif %}
+  <ul class="small text-muted">
+    {% if e.digest_sent_at %}<li>Listed in the pre-meeting digest to the notification list on {{ e.digest_sent_at|date:"j M, H:i" }}.</li>{% endif %}
+    {% if e.warning_sent_at %}<li>Included in a "last call" to the notification list on {{ e.warning_sent_at|date:"j M, H:i" }}.</li>{% endif %}
+    {% if e.callout_warning_sent_at %}<li>Callout last call sent on {{ e.callout_warning_sent_at|date:"j M, H:i" }}.</li>{% endif %}
+  </ul>
 
   <h2 class="h5 mt-4">Housekeeping</h2>
   <p class="small text-muted">Tidying that doesn't email the hirer. A hirer record lets us remember repeat hirers; it is only ever linked by a person, never automatically.</p>

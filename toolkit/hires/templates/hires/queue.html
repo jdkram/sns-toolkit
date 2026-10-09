@@ -35,6 +35,7 @@
   <div class="hq-card {% if e.status == 'maybe' %}maybe{% elif e.status == 'booked' %}booked{% endif %}">
     <a class="fw-bold" href="{% url 'hires:detail' e.pk %}">{{ e.title }}</a>
     <span class="hq-meta">{{ e.contact_organisation|default:e.contact_name }} · {{ e.hire_type|default:"no type" }} · {{ e.get_status_display }}</span>
+    {% if e.email_problem %}<span class="badge text-bg-danger" title="An email to this hirer failed to send. Open the enquiry to retry.">Hirer email failed</span>{% endif %}
     <div>{% for d in e.hire_dates.all %}<span class="badge text-bg-light border">{{ d.start|date:"D j M Y H:i" }}</span> {% endfor %}</div>
     <div class="hq-meta">About £{{ e.estimate_gbp|floatformat:0 }}{% if e.meeting %} · meeting {{ e.meeting.date|date:"j M" }}{% endif %}{% if e.reply_deadline and e.status == "acknowledged" or e.reply_deadline and e.status == "to_discuss" %} · auto-declines {{ e.reply_deadline|date:"j M" }} ({{ e.reply_deadline|timeuntil }}){% endif %}{% if e.callout_deadline and e.status == "maybe" %} · callout ends {{ e.callout_deadline|date:"j M" }}{% endif %}</div>
   </div>

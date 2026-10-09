@@ -34,6 +34,21 @@ logger = logging.getLogger(__name__)
 E = HireEnquiry
 
 
+# key -> the trigger_source recorded in SentEmailLog for each hirer email.
+HIRER_EMAIL_SOURCES = {
+    "acknowledgement": "Hire enquiry: acknowledgement",
+    "accepted": "Hire enquiry: accepted",
+    "maybe": "Hire enquiry: maybe",
+    "declined": "Hire enquiry: declined",
+    "declined_capacity": "Hire enquiry: auto capacity decline",
+    "declined_no_support": "Hire enquiry: auto no-support decline",
+    "meeting_moved": "Hire enquiry: meeting moved",
+    "booking_confirmation": "Hire enquiry: booking confirmation",
+    "booked": "Hire enquiry: booked",
+}
+_KEY_FOR_SOURCE = {v: k for k, v in HIRER_EMAIL_SOURCES.items()}
+
+
 def _venue():
     return password_emails.venue_name()
 
@@ -244,7 +259,7 @@ def send_acknowledgement(enquiry):
     send_to_hirer(
         enquiry,
         "acknowledgement",
-        "Hire enquiry: acknowledgement",
+        HIRER_EMAIL_SOURCES["acknowledgement"],
         timing=timing,
         window_note=window_note,
     )
@@ -331,21 +346,21 @@ def accept(
         enquiry.event = event
         _set_status(enquiry, E.ACCEPTED)
         enquiry.save()
-    coordinator_user = enquiry.coordinator
-    coordinator_line = (
-        f"{coordinator_user.get_full_name() or coordinator_user.username} "
-        "will be your contact."
-        if coordinator_user
-        else ""
-    )
     send_to_hirer(
         enquiry,
         "accepted",
-        "Hire enquiry: accepted",
-        coordinator_line=coordinator_line,
+        HIRER_EMAIL_SOURCES["accepted"],
+        coordinator_line=_coordinator_line(enquiry),
         techs=_approved_tech_text(),
     )
     return event
+
+
+def _coordinator_line(enquiry):
+    user = enquiry.coordinator
+    if not user:
+        return ""
+    return f"{user.get_full_name() or user.username} will be your contact."
 
 
 def mark_maybe(enquiry, user, what_we_need, cfg=None):  # noqa: ARG001
@@ -359,7 +374,7 @@ def mark_maybe(enquiry, user, what_we_need, cfg=None):  # noqa: ARG001
     enquiry.callout_warning_sent_at = None
     _set_status(enquiry, E.MAYBE)
     enquiry.save()
-    send_to_hirer(enquiry, "maybe", "Hire enquiry: maybe")
+    send_to_hirer(enquiry, "maybe", HIRER_EMAIL_SOURCES["maybe"])
     notify_internal(
         "callout",
         "Hire enquiry: maybe callout",
@@ -378,7 +393,7 @@ def mark_maybe(enquiry, user, what_we_need, cfg=None):  # noqa: ARG001
 def decline(enquiry, user):  # noqa: ARG001
     _set_status(enquiry, E.DECLINED)
     enquiry.save()
-    send_to_hirer(enquiry, "declined", "Hire enquiry: declined")
+    send_to_hirer(enquiry, "declined", HIRER_EMAIL_SOURCES["declined"])
 
 
 def withdraw(enquiry):
@@ -454,7 +469,7 @@ def send_confirmation(enquiry):
         send_to_hirer(
             enquiry,
             "booking_confirmation",
-            "Hire enquiry: booking confirmation",
+            HIRER_EMAIL_SOURCES["booking_confirmation"],
             terms=terms_text(enquiry),
             fee=fee_text(enquiry),
             agreement_url=abs_url(
@@ -516,7 +531,7 @@ def record_agreement(enquiry, ip=None):
         ev.programming_status = "active"
         ev.save()
     try:
-        send_to_hirer(enquiry, "booked", "Hire enquiry: booked")
+        send_to_hirer(enquiry, "booked", HIRER_EMAIL_SOURCES["booked"])
     except Exception:
         logger.exception("Booked email failed for %s", enquiry.pk)
 
@@ -625,7 +640,7 @@ def run_clock(today=None, cfg=None, dry_run=False):
             send_to_hirer(
                 enq,
                 "declined_capacity",
-                "Hire enquiry: auto capacity decline",
+                HIRER_EMAIL_SOURCES["declined_capacity"],
             )
         except Exception:
             logger.exception("Capacity decline email failed %s", enq.pk)
@@ -643,7 +658,7 @@ def run_clock(today=None, cfg=None, dry_run=False):
                 send_to_hirer(
                     enq,
                     "declined_no_support",
-                    "Hire enquiry: auto no-support decline",
+                    HIRER_EMAIL_SOURCES["declined_no_support"],
                 )
             except Exception:
                 logger.exception("No-support email failed %s", enq.pk)
@@ -695,7 +710,89 @@ def meeting_cancelled(meeting):
         if old and enq.reply_deadline and enq.reply_deadline > old:
             try:
                 send_to_hirer(
-                    enq, "meeting_moved", "Hire enquiry: meeting moved"
+                    enq, "meeting_moved", HIRER_EMAIL_SOURCES["meeting_moved"]
                 )
             except Exception:
                 logger.exception("Meeting-moved email failed %s", enq.pk)
+
+
+# --- Message history and retry ---------------------------------------------
+
+
+def _addresses(row):
+    return [a.strip().lower() for a in row.recipients.split(",")]
+
+
+def hire_email_rows(since=None):
+    """Hire-triggered SentEmailLog rows, newest first (one query)."""
+    from toolkit.audit.models import SentEmailLog
+
+    rows = SentEmailLog.objects.filter(
+        trigger_source__startswith="Hire enquiry:"
+    )
+    if since:
+        rows = rows.filter(sent_at__gte=since)
+    return list(rows.order_by("-sent_at"))
+
+
+def messages_for(enquiry, rows):
+    """Rows sent to this enquiry's hirer since it was submitted.
+
+    Matches the exact address (the log stores recipients comma-joined, so a
+    plain substring match would confuse ba@x.org with a@x.org). Two
+    enquiries from one shared inbox will each see the other's later mail;
+    the panel says so rather than guessing.
+    """
+    addr = enquiry.contact_email.lower()
+    start = enquiry.submitted_at - datetime.timedelta(minutes=1)
+    return [r for r in rows if r.sent_at >= start and addr in _addresses(r)]
+
+
+def email_problems(messages):
+    """Failed hirer emails not since followed by a success of the same kind.
+
+    Returns the newest failed row for each affected kind of email.
+    """
+    latest_ok = {}
+    for r in messages:  # newest first
+        if r.success and r.trigger_source not in latest_ok:
+            latest_ok[r.trigger_source] = r.sent_at
+    seen, problems = set(), []
+    for r in messages:
+        if r.success or r.trigger_source in seen:
+            continue
+        seen.add(r.trigger_source)
+        ok_at = latest_ok.get(r.trigger_source)
+        if ok_at is None or ok_at < r.sent_at:
+            problems.append(r)
+    return problems
+
+
+def label_for_source(source):
+    key = _KEY_FOR_SOURCE.get(source)
+    if key:
+        return defaults.EMAIL_LABELS[key][0]
+    return source.removeprefix("Hire enquiry: ")
+
+
+def resend(enquiry, key):
+    """Re-send one kind of hirer email that failed earlier."""
+    source = HIRER_EMAIL_SOURCES.get(key)
+    if not source:
+        raise ValueError("Unknown email")
+    if key == "booking_confirmation":
+        raise ValueError(
+            "Use 'Send booking confirmation' to re-send the terms."
+        )
+    if key == "acknowledgement":
+        send_acknowledgement(enquiry)
+    elif key == "accepted":
+        send_to_hirer(
+            enquiry,
+            key,
+            source,
+            coordinator_line=_coordinator_line(enquiry),
+            techs=_approved_tech_text(),
+        )
+    else:
+        send_to_hirer(enquiry, key, source)
