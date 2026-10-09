@@ -1,0 +1,15 @@
+{% extends "base_public.html" %}
+{% block title %}Enquiry received{% endblock %}
+{% block body %}
+<main style="max-width:640px;margin:2rem auto;padding:0 1rem;line-height:1.5">
+  <h1>Thank you, we've got your enquiry</h1>
+  {% if title %}<p>For: <strong>{{ title }}</strong>{% if ref %} (reference <strong>{{ ref }}</strong>){% endif %}.</p>{% endif %}
+  <h2>What happens next</h2>
+  <ol>
+    <li>You'll get an email from us shortly confirming this. Check your spam folder if it doesn't arrive.</li>
+    <li>Volunteers discuss hire enquiries at our programming meetings.{% if reply_by %} You will hear from us <strong>by {{ reply_by }}</strong>, whatever the answer.{% endif %}</li>
+    <li>If we'd like to go ahead, we'll send you the terms and fee to agree to. Nothing is booked until you agree.</li>
+  </ol>
+  <p>We're entirely volunteer run, so if you need to change or withdraw your enquiry, just reply to the email we send you.</p>
+</main>
+{% endblock %}

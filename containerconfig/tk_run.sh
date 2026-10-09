@@ -85,6 +85,7 @@ case "$COMMAND" in
         echo "  send_consent_renewal_reminders: daily at 08:30"
         echo "  send_volunteer_digest:          daily at 09:00 (day controlled by SiteConfiguration)"
         echo "  purge_email_archive:            daily after auto_dormancy (60-day retention)"
+        echo "  process_hire_enquiries:         daily at 08:15 (no-op while hire_enquiries_enabled is off)"
 
         _sleep_until() {
             # Sleep until the next occurrence of HH:MM today (or tomorrow if past).
@@ -129,6 +130,9 @@ case "$COMMAND" in
 
             _sleep_until "send_induction_reminders" "08:00"
             _run "send_induction_reminders" /venv/bin/python3 /site/manage.py send_induction_reminders
+
+            _sleep_until "process_hire_enquiries" "08:15"
+            _run "process_hire_enquiries" /venv/bin/python3 /site/manage.py process_hire_enquiries
 
             _sleep_until "send_consent_renewal_reminders" "08:30"
             _run "send_consent_renewal_reminders" /venv/bin/python3 /site/manage.py send_consent_renewal_reminders

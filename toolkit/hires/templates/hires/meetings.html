@@ -1,0 +1,21 @@
+{% extends "base_admin.html" %}
+{% block title %}Programming meetings{% endblock %}
+{% block body %}
+<div class="container py-3" style="max-width:760px">
+  <p><a href="{% url 'hires:queue' %}">&larr; Hire enquiries</a></p>
+  <h1 class="h3">Programming meetings</h1>
+  <p class="text-muted">Enter a season's meeting dates. Hire enquiries are assigned to the next one, and the hirer is promised a reply a few days after it.</p>
+  <form method="post" class="row g-2 align-items-end mb-4">{% csrf_token %}
+    <div class="col-auto"><label class="form-label small">Date</label>{{ form.date }}</div>
+    <div class="col-auto"><label class="form-label small">Type of meeting</label>{{ form.kind }}</div>
+    <div class="col-auto"><button class="btn btn-primary btn-sm">Add</button></div>
+    {{ form.errors }}
+  </form>
+  <table class="table table-sm"><thead><tr><th>Date</th><th>Kind</th><th>Enquiries assigned</th><th></th></tr></thead><tbody>
+  {% for m in meetings %}<tr class="{% if m.cancelled %}text-decoration-line-through text-muted{% endif %}"><td>{{ m.date|date:"D j M Y" }}</td><td>{{ m.get_kind_display }}</td><td>{{ m.enquiries.count }}</td>
+    <td>{% if not m.cancelled %}<form method="post" onsubmit="return confirm('Cancel this meeting? Its enquiries move to the next one.')">{% csrf_token %}<input type="hidden" name="cancel" value="{{ m.pk }}"><button class="btn btn-link btn-sm text-danger p-0">Cancel</button></form>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="4" class="text-muted">No meetings yet.</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+<script>document.querySelectorAll('form input[type=date],form select').forEach(function(el){el.classList.add(el.tagName==='SELECT'?'form-select':'form-control','form-control-sm');});</script>
+{% endblock %}

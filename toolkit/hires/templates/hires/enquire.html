@@ -1,0 +1,79 @@
+{% extends "base_public.html" %}
+{% block title %}Hire enquiry{% endblock %}
+{% block css %}
+{{ block.super }}
+<style>
+.hire-wrap { max-width: 760px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+.hire-wrap h2 { margin-top: 2.25rem; }
+.hire-wrap input[type=text], .hire-wrap input[type=email], .hire-wrap input[type=tel], .hire-wrap input[type=url], .hire-wrap input[type=number], .hire-wrap input[type=date], .hire-wrap input[type=time], .hire-wrap select, .hire-wrap textarea { width: 100%; box-sizing: border-box; padding: .5rem .6rem; border: 1px solid #6c757d; border-radius: 4px; font: inherit; }
+.hire-wrap input:focus, .hire-wrap select:focus, .hire-wrap textarea:focus { outline: 3px solid #0d6efd; outline-offset: 1px; }
+.hire-field { margin-bottom: 1.5rem; }
+.hire-label { display: block; font-weight: 600; margin-bottom: .25rem; }
+.hire-help { font-size: .9rem; color: #495057; margin-bottom: .4rem; }
+.hire-req { color: #b02a37; }
+.hire-err { color: #b02a37; font-weight: 600; margin-top: .35rem; }
+.hire-field--error input, .hire-field--error select, .hire-field--error textarea { border: 2px solid #b02a37; }
+.hire-panel { background: #f1f3f5; border-left: 4px solid #495057; padding: .75rem 1rem; margin-bottom: 1.5rem; }
+.hire-summary { border: 2px solid #b02a37; background: #fff5f5; padding: .75rem 1rem; margin-bottom: 1.5rem; border-radius: 4px; }
+.hire-summary ul { margin: .4rem 0 0 1.2rem; }
+.hire-date-row { border: 1px solid #ced4da; border-radius: 6px; padding: .75rem 1rem 1rem; margin-bottom: 1.25rem; }
+.hire-date-row legend { font-weight: 700; padding: 0 .4rem; }
+.hire-date-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem 1rem; align-items: start; }
+.hire-date-grid label { display: block; font-size: .9rem; font-weight: 600; margin-bottom: .2rem; }
+.hire-check ul { list-style: none; padding-left: 0; margin: 0; }
+.hire-check li { display: flex; gap: .6rem; align-items: flex-start; margin-bottom: .6rem; }
+.hire-check input[type=checkbox], .hire-wrap input[type=checkbox] { width: 1.25rem; height: 1.25rem; margin-top: .2rem; flex: none; }
+.hire-check label, .hire-field ul label { font-weight: 400; display: flex; gap: .6rem; }
+.hire-field ul { list-style: none; padding-left: 0; margin: 0; }
+.hire-hp { position: absolute; left: -9999px; }
+.hire-submit { background: #0d6efd; color: #fff; border: 0; border-radius: 4px; padding: .7rem 1.6rem; font: inherit; font-weight: 700; cursor: pointer; }
+.hire-submit:hover, .hire-submit:focus { background: #0a58ca; }
+.hire-privacy summary { cursor: pointer; color: #0a58ca; text-decoration: underline; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+{% endblock %}
+{% block body %}
+<main class="hire-wrap">
+  <h1>Hire &amp; enquire</h1>
+  <div class="hire-panel"><strong>How we work.</strong> {{ how_we_work }}</div>
+  {% if messages %}{% for m in messages %}<div class="hire-summary" role="alert">{{ m }}</div>{% endfor %}{% endif %}
+  {% if form.errors %}{% with problems=form.error_summary %}<div class="hire-summary" role="alert" tabindex="-1" id="hire-error-summary"><strong>Please fix the problems below before sending:</strong>
+    <ul>{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}{% for anchor, label in problems %}<li><a href="#{{ anchor }}">{{ label }}</a></li>{% endfor %}</ul></div>{% endwith %}
+  <script>document.getElementById('hire-error-summary').focus();</script>{% endif %}
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <div class="hire-hp" aria-hidden="true"><label>Leave blank <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+    {% for f in form %}{% if f.name == "contact_name" or f.name == "contact_organisation" or f.name == "contact_email" or f.name == "contact_phone" %}{% include "hires/_form_field.html" %}{% endif %}{% endfor %}
+    {% with f=form.hire_type %}{% include "hires/_form_field.html" %}{% endwith %}
+    {% with f=form.tier_requested %}{% include "hires/_form_field.html" %}{% endwith %}
+    {% with f=form.title %}{% include "hires/_form_field.html" %}{% endwith %}
+    {% with f=form.description %}{% include "hires/_form_field.html" %}{% endwith %}
+
+    <h2>When</h2>
+    <p>Please allow <strong>at least {{ min_hours }} hours in total</strong>, counting setup and pack-down, not just the event itself. Most hirers underestimate both, and the building has to be open, with a keyholder present, for all of it. Give a second or third date if you have alternatives.</p>
+    {% for row in form.date_rows %}
+    <fieldset class="hire-date-row" id="date-row-{{ row.n }}"><legend>Date {{ row.n }}{% if row.n > 1 %} (optional alternative){% endif %}</legend>
+      {% for f in row.fields %}{% if f.errors %}{% for err in f.errors %}<div class="hire-err" role="alert">&#9888; {{ err }}</div>{% endfor %}{% endif %}{% endfor %}
+      <div class="hire-date-grid">
+      {% for f in row.fields %}<div class="{% if f.errors %}hire-field--error{% endif %}"><label for="{{ f.id_for_label }}">{{ f.label }}</label>{{ f }}</div>{% endfor %}
+      </div>
+    </fieldset>
+    {% endfor %}
+    {% with f=form.date_flexible %}{% include "hires/_form_field.html" %}{% endwith %}
+    {% with f=form.flexibility_notes %}{% include "hires/_form_field.html" %}{% endwith %}
+
+    <h2>The event</h2>
+    {% with f=form.rooms_requested %}{% include "hires/_form_field.html" %}{% endwith %}
+    {% with f=form.expected_attendance %}{% include "hires/_form_field.html" %}{% endwith %}
+    {% with f=form.media_url %}{% include "hires/_form_field.html" %}{% endwith %}
+    {% with f=form.sound_tech %}{% include "hires/_form_field.html" %}{% endwith %}
+    {% with f=form.sound_tech_name %}{% include "hires/_form_field.html" %}{% endwith %}
+    {% with f=form.offers_to_volunteers %}{% include "hires/_form_field.html" %}{% endwith %}
+
+    <div class="hire-check">{% with f=form.acknowledgements %}{% include "hires/_form_field.html" %}{% endwith %}</div>
+
+    <details class="hire-privacy hire-field"><summary>How we use your information (privacy notice)</summary><div style="white-space: pre-line">{{ privacy_notice }}</div></details>
+    <button type="submit" class="hire-submit">Send enquiry</button>
+  </form>
+</main>
+{% endblock %}

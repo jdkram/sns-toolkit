@@ -18,6 +18,7 @@ import toolkit.diary.urls
 import toolkit.mailer.urls
 import toolkit.labs.urls
 import toolkit.inductions.urls
+import toolkit.hires.urls
 import toolkit.operations.urls
 
 from toolkit.index.urls import root_urlpatterns as index_root_urlpatterns
@@ -34,6 +35,7 @@ urlpatterns = [
     re_path(r"^mailout/", include(toolkit.mailer.urls)),
     re_path(r"^labs/", include(toolkit.labs.urls)),
     re_path(r"^inductions/", include(toolkit.inductions.urls)),
+    re_path(r"^hires/", include(toolkit.hires.urls)),
     re_path(r"^operations/", include(toolkit.operations.urls)),
     re_path(r"^audit/", include(toolkit.audit.urls)),
     re_path(r"^$", toolkit.diary.urls.view_diary, name="default-view"),

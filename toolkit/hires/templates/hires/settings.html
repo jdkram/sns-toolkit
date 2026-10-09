@@ -1,0 +1,25 @@
+{% extends "base_admin.html" %}
+{% block title %}Hire settings{% endblock %}
+{% block body %}
+<div class="container py-3" style="max-width:860px">
+  <p><a href="{% url 'hires:queue' %}">&larr; Hire enquiries</a></p>
+  <h1 class="h3">Hire settings</h1>
+  <p class="text-muted">The on/off switch for the whole feature lives in <a href="{% url 'edit-site-configuration' %}">Site settings</a> (section "Hire enquiries"). Email wording is under <a href="{% url 'hires:emails' %}">Emails</a>.</p>
+  <form method="post">{% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for title, intro, fields in groups %}
+    <fieldset class="border rounded p-3 mb-4">
+      <legend class="h5 float-none w-auto px-2">{{ title }}</legend>
+      {% if intro %}<p class="text-muted small">{{ intro }}</p>{% endif %}
+      {% for f in fields %}
+      <div class="mb-3"><label class="form-label fw-semibold" for="{{ f.id_for_label }}">{{ f.label }}</label>
+        {{ f }}{% if f.help_text %}<div class="form-text">{{ f.help_text }}</div>{% endif %}
+        {% for err in f.errors %}<div class="text-danger small" role="alert">{{ err }}</div>{% endfor %}</div>
+      {% endfor %}
+    </fieldset>
+    {% endfor %}
+    <button class="btn btn-primary">Save settings</button>
+  </form>
+</div>
+<script>document.querySelectorAll('form input[type=text],form input[type=number],form input[type=date],form input[type=time],form textarea,form select').forEach(function(el){el.classList.add(el.tagName==='SELECT'?'form-select':'form-control');});</script>
+{% endblock %}

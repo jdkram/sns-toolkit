@@ -1,0 +1,20 @@
+{% extends "base_public.html" %}
+{% block title %}Agree terms: {{ enquiry.title }}{% endblock %}
+{% block body %}
+<style>.hire-submit{background:#0d6efd;color:#fff;border:0;border-radius:4px;padding:.7rem 1.6rem;font:inherit;font-weight:700;cursor:pointer;margin-top:1rem}.hire-submit:hover,.hire-submit:focus{background:#0a58ca}</style>
+<main style="max-width:700px;margin:2rem auto;padding:0 1rem;line-height:1.5">
+  <h1>{{ enquiry.title }}</h1>
+  {% if enquiry.status == "booked" %}
+    <div class="alert alert-success" role="status">You agreed to these terms on {{ enquiry.terms_agreed_at|date:"j F Y, H:i" }}. Your hire is booked.</div>
+  {% endif %}
+  <h2 class="h5">Dates and access</h2><p style="white-space: pre-line">{{ dates }}</p>
+  <h2 class="h5">Fee</h2><p>{{ fee }}</p>
+  <h2 class="h5">Terms</h2><p style="white-space: pre-line">{{ terms }}</p>
+  <h2 class="h5">What is guaranteed</h2><p style="white-space: pre-line">{{ guarantee }}</p>
+  <h2 class="h5">What you acknowledged</h2>
+  <ul>{% for a in enquiry.acknowledgements %}<li>{{ a }}</li>{% endfor %}</ul>
+  {% if enquiry.status == "awaiting_agreement" %}
+  <form method="post">{% csrf_token %}<button class="hire-submit" type="submit">I agree to these terms</button></form>
+  {% endif %}
+</main>
+{% endblock %}

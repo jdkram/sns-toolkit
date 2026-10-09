@@ -388,6 +388,7 @@ INSTALLED_APPS = (
     "toolkit.mailer",
     "toolkit.labs",
     "toolkit.operations",
+    "toolkit.hires",
     "easy_thumbnails",
     "django.contrib.auth",
     "django.contrib.contenttypes",  # Needed by auth framework

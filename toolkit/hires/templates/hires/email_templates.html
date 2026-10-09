@@ -1,0 +1,20 @@
+{% extends "base_admin.html" %}
+{% block title %}Hire emails{% endblock %}
+{% block body %}
+<div class="container py-3" style="max-width:860px">
+  <p><a href="{% url 'hires:queue' %}">&larr; Hire enquiries</a></p>
+  <h1 class="h3">Hire emails</h1>
+  <p class="text-muted">Wording for every email the hire system sends. Placeholders like {name} and {title} are filled in when sending. Sent emails appear in the email log.</p>
+  <div class="d-flex flex-wrap gap-1 mb-3">{% for k, name in keys %}<a class="btn btn-sm {% if k == key %}btn-dark{% else %}btn-outline-dark{% endif %}" href="?key={{ k }}">{{ name }}</a>{% endfor %}</div>
+  <h2 class="h5">{{ label }}</h2>
+  <p class="text-muted">{{ when }}</p>
+  <form method="post">{% csrf_token %}{{ form.key }}
+    <div class="mb-2"><label class="form-label fw-semibold">Subject</label>{{ form.subject }}</div>
+    <div class="mb-2"><label class="form-label fw-semibold">Body</label>{{ form.body }}</div>
+    {{ form.errors }}
+    <button class="btn btn-primary">Save</button>
+    {% if customised %}<button name="reset" value="1" class="btn btn-outline-secondary">Reset to default</button>{% endif %}
+  </form>
+</div>
+<script>document.querySelectorAll('form input[type=text],form textarea').forEach(function(el){el.classList.add('form-control');});document.querySelector('textarea').rows=18;</script>
+{% endblock %}

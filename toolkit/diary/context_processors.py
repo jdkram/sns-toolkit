@@ -16,6 +16,8 @@ _FEATURE_NAMES = [
     "printed_programmes",
     "rota_vacancies",
     "donations_manage",
+    "hire_enquiries",
+    "hire_settings",
 ]
 
 

@@ -1,0 +1,46 @@
+{% extends "base_admin.html" %}
+{% block title %}Hire enquiries{% endblock %}
+{% block css %}{{ block.super }}
+<style>
+.hq-card { border:1px solid #dee2e6; border-left:4px solid #0d6efd; border-radius:6px; padding:1rem; margin-bottom:1rem; background:#fff; }
+.hq-card.maybe { border-left-color:#fd7e14; } .hq-card.booked { border-left-color:#198754; }
+.hq-meta { font-size:.85em; color:#6c757d; }
+.hq-summary { background:#f8f9fa; border:1px solid #dee2e6; border-radius:6px; padding:.75rem 1rem; margin-bottom:1.25rem; }
+</style>{% endblock %}
+{% block body %}
+<div class="container-fluid py-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2">
+    <h1 class="h3">Hire enquiries</h1>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-sm btn-outline-dark" href="{% url 'hires:enquire' %}">Public form</a>
+      {% if feature_perms.hire_settings %}
+      <a class="btn btn-sm btn-outline-dark" href="{% url 'hires:meetings' %}">Meetings</a>
+      <a class="btn btn-sm btn-outline-dark" href="{% url 'hires:types' %}">Hire types</a>
+      <a class="btn btn-sm btn-outline-dark" href="{% url 'hires:techs' %}">Sound techs</a>
+      <a class="btn btn-sm btn-outline-dark" href="{% url 'hires:emails' %}">Emails</a>
+      <a class="btn btn-sm btn-outline-dark" href="{% url 'hires:settings' %}">Settings</a>
+      {% endif %}
+    </div>
+  </div>
+  {% if no_meetings %}<div class="alert alert-warning mt-3" role="alert">No future programming meeting is entered, so enquiries run on the fallback clock. {% if feature_perms.hire_settings %}<a href="{% url 'hires:meetings' %}">Add meeting dates.</a>{% endif %}</div>{% endif %}
+  <div class="hq-summary mt-3">
+    <strong>Hires and the programme they fund.</strong>
+    Confirmed: about £{{ summary.confirmed|floatformat:0 }} (≈ {{ summary.confirmed_events }} volunteer events).
+    Under discussion: about £{{ summary.discussing|floatformat:0 }} (≈ {{ summary.discussing_events }}).
+    <span class="hq-meta">Admin estimate: £{{ summary.per_event|floatformat:0 }} net cost per volunteer event.</span>
+  </div>
+  {% for label, rows in groups %}
+  <h2 class="h5 mt-4">{{ label }} ({{ rows|length }})</h2>
+  {% for e in rows %}
+  <div class="hq-card {% if e.status == 'maybe' %}maybe{% elif e.status == 'booked' %}booked{% endif %}">
+    <a class="fw-bold" href="{% url 'hires:detail' e.pk %}">{{ e.title }}</a>
+    <span class="hq-meta">{{ e.contact_organisation|default:e.contact_name }} · {{ e.hire_type|default:"no type" }} · {{ e.get_status_display }}</span>
+    <div>{% for d in e.hire_dates.all %}<span class="badge text-bg-light border">{{ d.start|date:"D j M Y H:i" }}</span> {% endfor %}</div>
+    <div class="hq-meta">About £{{ e.estimate_gbp|floatformat:0 }}{% if e.meeting %} · meeting {{ e.meeting.date|date:"j M" }}{% endif %}{% if e.reply_deadline and e.status == "acknowledged" or e.reply_deadline and e.status == "to_discuss" %} · auto-declines {{ e.reply_deadline|date:"j M" }} ({{ e.reply_deadline|timeuntil }}){% endif %}{% if e.callout_deadline and e.status == "maybe" %} · callout ends {{ e.callout_deadline|date:"j M" }}{% endif %}</div>
+  </div>
+  {% empty %}<p class="text-muted">Nothing here.</p>{% endfor %}
+  {% endfor %}
+  {% if closed %}<h2 class="h5 mt-4">Recently closed</h2>
+  <ul>{% for e in closed %}<li><a href="{% url 'hires:detail' e.pk %}">{{ e.title }}</a> <span class="hq-meta">{{ e.get_status_display }}</span></li>{% endfor %}</ul>{% endif %}
+</div>
+{% endblock %}

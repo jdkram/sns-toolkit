@@ -17,6 +17,8 @@ the collective sees what hires are worth against the volunteer programme they fu
 
 #### Resume protocol (read first)
 
+**Build status (2026-10-09):** Phase A is built on `feature/9.175-hire-enquiries` behind the `hire_enquiries_enabled` site-settings flag; see CURRENT_WORK.md for the list of deviations and what is not built. The paragraph below is the pre-build scoping state, kept for context.
+
 **State as of 2026-10-08 (late):** spec scoped across one long session with Jonny and one
 external review. Not built, nothing committed yet (this file, the `docs/TASKS.md` index row and
 the `CURRENT_WORK.md` row are uncommitted on `sns_2026_overhaul`). Every row in "Decisions taken"
