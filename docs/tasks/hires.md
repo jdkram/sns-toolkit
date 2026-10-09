@@ -70,8 +70,10 @@ that let us do it".
    honest "we don't have capacity" by a date the hirer was told in advance.
 2. **Resilient to low volunteer capacity.** The honest outcome happens even if nobody acts. The
    system warns first, then sends.
-3. **Explicit about what is guaranteed.** The space and a keyholder are guaranteed. Bar, door and
-   other volunteer roles are best-effort, because nobody is paid to be there. Hirers are told this
+3. **Explicit about what is guaranteed.** The space and a keyholder are guaranteed, and so is
+   **door staff for late club nights** (a hire type flagged `provides_door_staff` that runs past
+   the late-night time; corrected by Jonny 2026-10-09). Bar and every other volunteer role, and
+   door staff at any other kind of event, are best-effort, because nobody is paid to be there. Hirers are told this
    before they enquire, when they enquire, and when they are accepted.
 4. **Make the money legible.** Show what a hire is worth in volunteer events it funds, at the
    moment the meeting is deciding.

@@ -13,9 +13,10 @@ CLOSED_MESSAGE = (
 
 HOW_WE_WORK = (
     "We are entirely volunteer run. The space and a keyholder are "
-    "guaranteed for your hire. Everything else (bar, door, projection, "
-    "stage help) depends on volunteers choosing to help, and events that "
-    "fit our ethos tend to get more support."
+    "guaranteed for your hire, and so is door staff for late club nights. "
+    "Everything else (bar, projection, stage help, and door staff at any "
+    "other kind of event) depends on volunteers choosing to help, and "
+    "events that fit our ethos tend to get more support."
 )
 
 TIER_GUIDANCE = (
@@ -25,10 +26,12 @@ TIER_GUIDANCE = (
 
 ACKNOWLEDGEMENTS = "\n".join(
     [
-        "I understand that bar and door staff are not guaranteed, because "
-        "everyone working here is a volunteer.",
-        "I understand that the venue and a keyholder are guaranteed, and "
-        "everything else is best-effort.",
+        "I understand that bar staff are not guaranteed, and neither is "
+        "door staff except for late club nights, because everyone working "
+        "here is a volunteer.",
+        "I understand that the space and a keyholder are guaranteed (and "
+        "door staff for late club nights), and everything else is "
+        "best-effort.",
         "Volunteers working my event will be offered food and drink.",
     ]
 )
@@ -79,7 +82,7 @@ _VOLUNTEER_ROUTE = (
 )
 
 GUARANTEE_BLOCK = (
-    "What is guaranteed: the space, your agreed times, and a keyholder.\n"
+    "What is guaranteed: {guaranteed}.\n"
     "What is best-effort: {best_effort}. Nobody is paid to be here, so "
     "these depend on volunteers choosing to help."
 )

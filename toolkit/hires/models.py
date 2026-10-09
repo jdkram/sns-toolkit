@@ -229,6 +229,13 @@ class HireType(models.Model):
         null=True, blank=True, help_text="Blank = the site default."
     )
     needs_sound_tech = models.BooleanField(default=False)
+    provides_door_staff = models.BooleanField(
+        default=False,
+        help_text=(
+            "We guarantee door staff for this kind of hire when it runs "
+            "late (club nights). Otherwise door staff are best-effort."
+        ),
+    )
     includes_late_night = models.BooleanField(
         default=False,
         help_text="Pricing already covers late finishes (no extra fee).",
@@ -464,6 +471,19 @@ class HireEnquiry(models.Model):
 
     def dates(self):
         return list(self.hire_dates.all())
+
+    def door_staff_guaranteed(self):
+        """Door staff are guaranteed for late club nights only.
+
+        Both must hold: the hire type is one we staff the door for (club
+        nights), and at least one requested date finishes after the
+        late-night time. Everything else about staffing is best-effort.
+        """
+        return bool(
+            self.hire_type
+            and self.hire_type.provides_door_staff
+            and any(d.is_late_night() for d in self.dates())
+        )
 
     @property
     def is_purged(self):

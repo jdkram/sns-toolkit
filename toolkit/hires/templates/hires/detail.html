@@ -23,6 +23,7 @@
     <dt class="col-sm-3">Description</dt><dd class="col-sm-9" style="white-space:pre-line">{{ e.description }}</dd>
     <dt class="col-sm-3">Rooms</dt><dd class="col-sm-9">{% for r in e.rooms_requested.all %}{{ r.name }}{% if not forloop.last %}, {% endif %}{% empty %}none specified{% endfor %}</dd>
     <dt class="col-sm-3">Attendance</dt><dd class="col-sm-9">{{ e.expected_attendance|default:"not given" }}</dd>
+    <dt class="col-sm-3">Door staff</dt><dd class="col-sm-9">{% if e.door_staff_guaranteed %}<strong>Guaranteed</strong>: this is a late club night, so the rota needs door cover. {% else %}Best-effort only (guaranteed for late club nights).{% endif %}</dd>
     <dt class="col-sm-3">Sound tech</dt><dd class="col-sm-9">{{ e.get_sound_tech_display }}</dd>
     <dt class="col-sm-3">Offers volunteers</dt><dd class="col-sm-9">{{ e.offers_to_volunteers|default:"nothing stated" }}</dd>
     <dt class="col-sm-3">Link</dt><dd class="col-sm-9">{% if e.media_url %}<a href="{{ e.media_url }}" rel="noopener">{{ e.media_url }}</a>{% else %}none{% endif %}</dd>

@@ -366,6 +366,7 @@ class HireTypeForm(forms.ModelForm):
             "min_duration_hours": "Minimum hours in the building",
             "needs_sound_tech": "Needs a sound tech (hirer can't say 'not needed')",
             "includes_late_night": "Price already covers late finishes",
+            "provides_door_staff": "We guarantee door staff when it runs late",
             "unit": "Fee is charged",
             "public_description": "Description shown to hirers",
             "order": "Position in the list",

@@ -77,7 +77,14 @@ class HireBase(TestCase):
         )
         from toolkit.hires.models import HireDate
 
-        day = timezone.now() + datetime.timedelta(days=30)
+        # Fixed 17:00 to 22:00 local, so "late night" never depends on the
+        # time of day the tests happen to run.
+        day = timezone.make_aware(
+            datetime.datetime.combine(
+                timezone.localdate() + datetime.timedelta(days=30),
+                datetime.time(17, 0),
+            )
+        )
         HireDate.objects.create(
             enquiry=e,
             get_in=day,
@@ -831,3 +838,66 @@ class PrivacySurfaceTests(HireBase):
         self.assertEqual(
             self.client.get(reverse("hires:privacy")).status_code, 404
         )
+
+
+class DoorStaffTests(HireBase):
+    def make_late(self, enquiry):
+        d = enquiry.hire_dates.get()
+        d.get_out = d.get_in.replace(hour=23, minute=50) + datetime.timedelta(
+            days=1
+        )
+        d.save()
+
+    def test_door_staff_guaranteed_only_for_late_club_nights(self):
+        e = self.make_enquiry()
+        # not a club-night type, not late
+        self.assertFalse(e.door_staff_guaranteed())
+        self.make_late(e)
+        # late, but the type doesn't get door staff
+        self.assertFalse(e.door_staff_guaranteed())
+        self.htype.provides_door_staff = True
+        self.htype.save()
+        e.refresh_from_db()
+        self.assertTrue(e.door_staff_guaranteed())
+
+    def test_club_night_type_not_late_is_best_effort(self):
+        self.htype.provides_door_staff = True
+        self.htype.save()
+        e = self.make_enquiry()
+        self.assertFalse(e.door_staff_guaranteed())
+
+    def test_guarantee_text_follows_the_rule(self):
+        e = self.make_enquiry()
+        self.assertIn(
+            "door staff", services.guarantee_text(e).split("best-effort:")[1]
+        )
+        self.htype.provides_door_staff = True
+        self.htype.save()
+        self.make_late(e)
+        e.refresh_from_db()
+        text = services.guarantee_text(e)
+        guaranteed, best_effort = text.split("best-effort:")
+        self.assertIn("door staff", guaranteed)
+        self.assertNotIn("door staff", best_effort)
+
+    def test_default_statements_do_not_promise_door_staff_blanket(self):
+        from toolkit.hires import defaults
+
+        self.assertNotIn(
+            "bar and door staff are not guaranteed",
+            defaults.ACKNOWLEDGEMENTS,
+        )
+        self.assertIn("late club nights", defaults.ACKNOWLEDGEMENTS)
+
+    def test_confirmation_email_states_door_staff_for_late_club_night(self):
+        self.htype.provides_door_staff = True
+        self.htype.save()
+        e = self.make_enquiry()
+        self.make_late(e)
+        e.refresh_from_db()
+        event = services.accept(e, self.programmer)
+        event.terms = "Terms."
+        event.save()
+        services.send_confirmation(e)
+        body = mail.outbox[-1].body
+        self.assertIn("door staff for your late night", body)

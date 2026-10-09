@@ -18,11 +18,12 @@ from toolkit.hires.models import (
     ProgrammingMeeting,
 )
 
+# name, community, corporate, unit, needs_sound_tech, provides_door_staff
 TYPES = [
-    ("Cinema screening", 120, 250, "flat", False),
-    ("Gig or club night", 150, 300, "flat", True),
-    ("Talk, workshop or meeting", 15, 30, "hour", False),
-    ("Something else (tell us about it)", 100, 200, "flat", False),
+    ("Cinema screening", 120, 250, "flat", False, False),
+    ("Gig or club night", 150, 300, "flat", True, True),
+    ("Talk, workshop or meeting", 15, 30, "hour", False, False),
+    ("Something else (tell us about it)", 100, 200, "flat", False, False),
 ]
 
 
@@ -30,7 +31,7 @@ class Command(BaseCommand):
     help = "Seed placeholder hire types and meetings; switch the flag on."
 
     def handle(self, *args, **opts):
-        for i, (name, com, corp, unit, tech) in enumerate(TYPES):
+        for i, (name, com, corp, unit, tech, door) in enumerate(TYPES):
             HireType.objects.get_or_create(
                 name=name,
                 defaults=dict(
@@ -38,6 +39,7 @@ class Command(BaseCommand):
                     corporate_fee_gbp=Decimal(corp),
                     unit=unit,
                     needs_sound_tech=tech,
+                    provides_door_staff=door,
                     order=i,
                 ),
             )

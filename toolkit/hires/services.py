@@ -100,10 +100,23 @@ def describe_dates(enquiry, accepted_only=False):
     )
 
 
-def guarantee_text(enquiry):  # noqa: ARG001 (per-enquiry wording later)
+def guarantee_text(enquiry):
+    """Plain statement of what is promised, for this enquiry."""
+    if enquiry.door_staff_guaranteed():
+        guaranteed = (
+            "the space, your agreed times, a keyholder, and door staff "
+            "for your late night"
+        )
+        best_effort = "bar staff, projection and any other volunteer help"
+    else:
+        guaranteed = "the space, your agreed times, and a keyholder"
+        best_effort = (
+            "bar staff, door staff, projection and any other volunteer help"
+        )
     return _format(
         defaults.GUARANTEE_BLOCK,
-        best_effort="bar, door, projection and any other volunteer help",
+        guaranteed=guaranteed,
+        best_effort=best_effort,
     )
 
 
