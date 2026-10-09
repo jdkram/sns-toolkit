@@ -7,6 +7,7 @@ app_name = "hires"
 
 urlpatterns = [
     path("enquire/", views.enquire, name="enquire"),
+    path("privacy/", views.privacy, name="privacy"),
     path("enquire/thanks/", views.thanks, name="thanks"),
     path("agree/<str:token>/", views.agree, name="agree"),
     path("manage/", views.queue, name="queue"),

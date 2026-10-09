@@ -143,8 +143,24 @@ def enquire(request):
             "how_we_work": cfg.how_we_work_text,
             "tier_guidance": cfg.tier_guidance_text,
             "privacy_notice": _template_text(cfg.privacy_notice_text),
+            "retention_notice": (
+                f"We'll keep your details for up to "
+                f"{cfg.declined_purge_months} months after we've dealt with "
+                f"your enquiry, or {cfg.hirer_purge_years} years after your "
+                "last contact if you hire from us. We then delete them."
+            ),
             "types": HireType.objects.filter(active=True),
         },
+    )
+
+
+@hires_gate
+def privacy(request):
+    cfg = get_hire_settings()
+    return render(
+        request,
+        "hires/privacy.html",
+        {"notice": _template_text(cfg.privacy_notice_text)},
     )
 
 
@@ -302,6 +318,7 @@ def detail(request, pk):
                     "first_name", "username"
                 )
             ],
+            "purge_on": enquiry.purge_due_on(),
             "can_decide": enquiry.status
             in (E.ACKNOWLEDGED, E.TO_DISCUSS, E.MAYBE),
             "tech_unlisted": enquiry.sound_tech == "own"

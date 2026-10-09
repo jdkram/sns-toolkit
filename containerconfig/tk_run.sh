@@ -80,6 +80,7 @@ case "$COMMAND" in
         echo "Scheduler started."
         echo "  auto_dormancy:                  daily at 03:00"
         echo "  purge_induction_signups:        daily at 03:30"
+        echo "  purge_hire_data:                daily at 03:40 (runs even when hires are switched off)"
         echo "  purge_audit_logs:               daily at 03:45"
         echo "  send_induction_reminders:       daily at 08:00"
         echo "  send_consent_renewal_reminders: daily at 08:30"
@@ -124,6 +125,9 @@ case "$COMMAND" in
 
             _sleep_until "purge_induction_signups" "03:30"
             _run "purge_induction_signups" /venv/bin/python3 /site/manage.py purge_induction_signups
+
+            _sleep_until "purge_hire_data" "03:40"
+            _run "purge_hire_data" /venv/bin/python3 /site/manage.py purge_hire_data
 
             _sleep_until "purge_audit_logs" "03:45"
             _run "purge_audit_logs" /venv/bin/python3 /site/manage.py purge_audit_logs

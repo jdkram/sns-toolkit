@@ -28,6 +28,7 @@
     <dt class="col-sm-3">Link</dt><dd class="col-sm-9">{% if e.media_url %}<a href="{{ e.media_url }}" rel="noopener">{{ e.media_url }}</a>{% else %}none{% endif %}</dd>
     <dt class="col-sm-3">Flexibility</dt><dd class="col-sm-9">{% if e.date_flexible %}Flexible. {% endif %}{{ e.flexibility_notes|default:"Nothing stated" }}</dd>
     <dt class="col-sm-3">Meeting / deadline</dt><dd class="col-sm-9">{{ e.meeting|default:"none assigned" }} · auto-declines {{ e.reply_deadline|date:"j M Y"|default:"n/a" }}</dd>
+    <dt class="col-sm-3">Personal data</dt><dd class="col-sm-9">{% if e.is_purged %}Deleted on {{ e.personal_data_purged_at|date:"j M Y" }}.{% elif purge_on %}Will be deleted on about {{ purge_on|date:"j M Y" }}{% if e.keeps_financial_record %} (the agreed terms and fee are kept as a financial record){% endif %}.{% else %}Deletion is scheduled once this enquiry is closed.{% endif %}</dd>
     <dt class="col-sm-3">Event</dt><dd class="col-sm-9">{% if e.event %}<a href="{% url 'edit-event-details-view' event_id=e.event.pk %}">Event #{{ e.event.pk }}</a>: {{ e.event.get_programming_status_display }}{% else %}not created yet{% endif %}</dd>
   </dl>
   <h2 class="h5">Dates</h2>

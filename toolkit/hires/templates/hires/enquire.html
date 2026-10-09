@@ -28,6 +28,7 @@
 .hire-hp { position: absolute; left: -9999px; }
 .hire-submit { background: #0d6efd; color: #fff; border: 0; border-radius: 4px; padding: .7rem 1.6rem; font: inherit; font-weight: 700; cursor: pointer; }
 .hire-submit:hover, .hire-submit:focus { background: #0a58ca; }
+.hire-retention { background: #f1f3f5; border-left: 4px solid #495057; padding: .6rem 1rem; margin: 1.5rem 0 1rem; }
 .hire-privacy summary { cursor: pointer; color: #0a58ca; text-decoration: underline; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
@@ -72,8 +73,10 @@
 
     <div class="hire-check">{% with f=form.acknowledgements %}{% include "hires/_form_field.html" %}{% endwith %}</div>
 
-    <details class="hire-privacy hire-field"><summary>How we use your information (privacy notice)</summary><div style="white-space: pre-line">{{ privacy_notice }}</div></details>
+    <p class="hire-retention" id="retention-notice"><strong>How long we keep your details.</strong> {{ retention_notice }} Read the <a href="#privacy-notice" id="privacy-link">full privacy notice</a>.</p>
+    <details class="hire-privacy hire-field" id="privacy-notice"><summary>How we use your information (privacy notice)</summary><div style="white-space: pre-line">{{ privacy_notice }}</div></details>
     <button type="submit" class="hire-submit">Send enquiry</button>
   </form>
 </main>
+<script>document.getElementById('privacy-link').addEventListener('click',function(){document.getElementById('privacy-notice').open=true;});</script>
 {% endblock %}

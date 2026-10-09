@@ -465,6 +465,44 @@ class HireEnquiry(models.Model):
     def dates(self):
         return list(self.hire_dates.all())
 
+    @property
+    def is_purged(self):
+        return self.personal_data_purged_at is not None
+
+    @property
+    def keeps_financial_record(self):
+        return self.status in (self.BOOKED, self.COMPLETED)
+
+    def retention_reference_date(self):
+        """The date the retention clock counts from, or None while open.
+
+        Declined or withdrawn: when it was closed. Booked or completed:
+        the later of the agreement and the end of the last booked date, so
+        a hire is never purged before it has happened.
+        """
+        if self.status in self.CLOSED_NEGATIVE:
+            return timezone.localtime(self.status_changed_at).date()
+        if self.keeps_financial_record:
+            ref = timezone.localtime(self.status_changed_at).date()
+            for d in self.hire_dates.all():
+                ref = max(ref, timezone.localtime(d.end).date())
+            return ref
+        return None
+
+    def purge_due_on(self, cfg=None):
+        """When personal details will be deleted (approximate), or None."""
+        cfg = cfg or get_hire_settings()
+        ref = self.retention_reference_date()
+        if ref is None:
+            return None
+        if self.keeps_financial_record:
+            return ref + datetime.timedelta(
+                days=int(cfg.hirer_purge_years * 365.25)
+            )
+        return ref + datetime.timedelta(
+            days=int(cfg.declined_purge_months * 30.4375)
+        )
+
     def estimate_gbp(self, n_dates=None):
         """Pre-VAT income estimate for the agreed (else requested) tier.
 

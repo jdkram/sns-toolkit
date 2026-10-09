@@ -147,6 +147,11 @@ def send_to_hirer(enquiry, key, source, **extra):
     }
     vars.update(extra)
     subject, body = render_email(key, **vars)
+    body += (
+        "\n\n--\nHow we use your information: "
+        + abs_url(reverse("hires:privacy"))
+        + "\n"
+    )
     _send([enquiry.contact_email], subject, body, source)
 
 
@@ -511,7 +516,7 @@ def fee_text(enquiry):
 def agreement_snapshot(enquiry):
     return (
         f"Hire: {enquiry.title} for "
-        f"{enquiry.contact_organisation or enquiry.contact_name}\n"
+        f"{enquiry.contact_organisation or 'an individual hirer'}\n"
         f"Fee: {fee_text(enquiry)}\n"
         f"Dates:\n{describe_dates(enquiry, accepted_only=True)}\n\n"
         f"Terms:\n{terms_text(enquiry)}\n\n"

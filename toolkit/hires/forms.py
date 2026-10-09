@@ -317,8 +317,8 @@ SETTINGS_HELP = {
     "warning_days": "How many days before an auto-decline the 'last call' email goes out.",
     "callout_days": "How long a 'Maybe' stays open looking for a volunteer coordinator before the hirer is told no.",
     "fallback_reply_days": "If no meeting is entered, hirers are promised an answer within this many days.",
-    "declined_purge_months": "Personal details on declined or withdrawn enquiries are deleted this many months after closing. (Purge job not built yet.)",
-    "hirer_purge_years": "Hirer records are deleted this many years after last contact. (Purge job not built yet.)",
+    "declined_purge_months": "Personal details on declined or withdrawn enquiries are deleted this many months after closing. A daily job does this, and it is the figure shown to hirers on the form.",
+    "hirer_purge_years": "Contact details of hirers who hired, and their Hirer record, are deleted this many years after the hire or last contact. The agreed terms and fee are kept as a financial record.",
     "booking_window_start": "Start of the dates we are actively booking. Optional.",
     "privacy_contact": "Where privacy questions go. Use a role address, not a person.",
 }

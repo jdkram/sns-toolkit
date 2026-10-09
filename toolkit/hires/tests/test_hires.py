@@ -649,3 +649,185 @@ class MessageHistoryTests(HireBase):
         )
         self.assertIn(r.status_code, (302, 403))
         self.assertEqual(len(mail.outbox), 0)
+
+
+class PurgeTests(HireBase):
+    def closed(self, status, days_ago, **kw):
+        e = self.make_enquiry(**kw)
+        e.status = status
+        e.status_changed_at = timezone.now() - datetime.timedelta(
+            days=days_ago
+        )
+        e.contact_phone = "07000 111111"
+        e.internal_notes = "Rang twice"
+        e.save()
+        return e
+
+    def test_declined_enquiry_purged_after_retention_period(self):
+        from toolkit.hires import purge
+
+        old = self.closed(E.DECLINED, 200)  # default 6 months
+        fresh = self.closed(E.DECLINED, 60)
+        out = purge.purge_expired()
+        self.assertEqual(out["enquiries"], 1)
+        old.refresh_from_db()
+        fresh.refresh_from_db()
+        self.assertEqual(old.contact_email, "")
+        self.assertEqual(old.contact_name, "[deleted]")
+        self.assertEqual(old.contact_phone, "")
+        self.assertEqual(old.internal_notes, "")
+        self.assertEqual(old.title, "Deleted enquiry")
+        self.assertIsNotNone(old.personal_data_purged_at)
+        self.assertEqual(fresh.contact_email, "ada@example.org")
+        # the shape is kept
+        self.assertEqual(old.hire_type, self.htype)
+        self.assertEqual(old.hire_dates.count(), 1)
+        self.assertEqual(old.status, E.DECLINED)
+
+    def test_open_enquiries_are_never_purged(self):
+        from toolkit.hires import purge
+
+        for status in (
+            E.TO_DISCUSS,
+            E.MAYBE,
+            E.ACCEPTED,
+            E.AWAITING_AGREEMENT,
+        ):
+            self.closed(status, 5000)
+        self.assertEqual(purge.purge_expired()["enquiries"], 0)
+
+    def test_dry_run_changes_nothing(self):
+        from toolkit.hires import purge
+
+        e = self.closed(E.WITHDRAWN, 400)
+        out = purge.purge_expired(dry_run=True)
+        self.assertEqual(out["enquiries"], 1)
+        e.refresh_from_db()
+        self.assertEqual(e.contact_email, "ada@example.org")
+
+    def test_purge_is_idempotent(self):
+        from toolkit.hires import purge
+
+        self.closed(E.DECLINED, 400)
+        purge.purge_expired()
+        self.assertEqual(purge.purge_expired()["enquiries"], 0)
+
+    def test_booked_hire_keeps_financial_record_but_loses_contact(self):
+        from toolkit.hires import purge
+
+        e = self.make_enquiry()
+        event = services.accept(e, self.programmer)
+        event.terms = "Hirer pays."
+        event.save()
+        services.send_confirmation(e)
+        services.record_agreement(e, ip="203.0.113.9")
+        e.refresh_from_db()
+        self.assertEqual(e.terms_agreed_ip, "203.0.113.9")
+        # age it past hirer_purge_years (3) after the hire itself
+        far = timezone.localdate() + datetime.timedelta(days=30 + 1200)
+        out = purge.purge_expired(today=far)
+        self.assertEqual(out["enquiries"], 1)
+        e.refresh_from_db()
+        self.assertEqual(e.contact_email, "")
+        self.assertIsNone(e.terms_agreed_ip)
+        self.assertEqual(e.title, "Film night")
+        self.assertIn("Hirer pays.", e.terms_agreed_snapshot)
+        self.assertEqual(e.agreed_fee_gbp, Decimal("100"))
+        self.assertEqual(e.event, event)
+
+    def test_booked_hire_not_purged_before_it_has_happened(self):
+        from toolkit.hires import purge
+
+        e = self.make_enquiry()
+        e.status = E.BOOKED
+        e.status_changed_at = timezone.now() - datetime.timedelta(days=2000)
+        e.save()
+        # hire date is 30 days in the future, so it is not due
+        self.assertEqual(purge.purge_expired()["enquiries"], 0)
+
+    def test_agreed_terms_record_has_no_personal_name(self):
+        e = self.make_enquiry(contact_organisation="")
+        services.accept(e, self.programmer)
+        self.assertNotIn("Ada", services.agreement_snapshot(e))
+        e.contact_organisation = "Zine Club"
+        self.assertIn("Zine Club", services.agreement_snapshot(e))
+
+    def test_hirer_record_deleted_after_inactivity_unless_open(self):
+        from toolkit.hires import purge
+        from toolkit.hires.models import Hirer
+
+        h = Hirer.objects.create(name="A", email="a@example.org")
+        Hirer.objects.filter(pk=h.pk).update(
+            last_activity_at=timezone.now() - datetime.timedelta(days=2000)
+        )
+        open_enq = self.make_enquiry()
+        open_enq.hirer = h
+        open_enq.save()
+        self.assertEqual(purge.purge_expired()["hirers"], 0)
+        self.assertTrue(Hirer.objects.filter(pk=h.pk).exists())
+        open_enq.hirer = None
+        open_enq.save()
+        self.assertEqual(purge.purge_expired()["hirers"], 1)
+        self.assertFalse(Hirer.objects.filter(pk=h.pk).exists())
+
+    def test_purge_writes_deletion_log_without_personal_data(self):
+        from toolkit.audit.models import DeletionLog
+        from toolkit.hires import purge
+
+        self.closed(E.DECLINED, 400)
+        purge.purge_expired()
+        row = DeletionLog.objects.get(model="HireEnquiry")
+        self.assertNotIn("Ada", row.description)
+        self.assertNotIn("example.org", row.description)
+
+    def test_purge_runs_even_when_flag_off(self):
+        from django.core.management import call_command
+
+        from toolkit.hires import purge  # noqa: F401
+
+        e = self.closed(E.DECLINED, 400)
+        set_flag(False)
+        call_command("purge_hire_data", stdout=__import__("io").StringIO())
+        e.refresh_from_db()
+        self.assertEqual(e.contact_email, "")
+
+
+class PrivacySurfaceTests(HireBase):
+    def test_form_shows_retention_before_submit_with_configured_figures(self):
+        self.cfg.declined_purge_months = 4
+        self.cfg.hirer_purge_years = 2
+        self.cfg.save()
+        r = self.client.get(reverse("hires:enquire"))
+        self.assertContains(r, "up to 4 months")
+        self.assertContains(r, "2 years")
+        html = r.content.decode()
+        self.assertLess(
+            html.index("retention-notice"), html.index("Send enquiry")
+        )
+
+    def test_public_privacy_page_renders_with_figures(self):
+        r = self.client.get(reverse("hires:privacy"))
+        self.assertContains(r, "6 months")
+
+    def test_every_hirer_email_links_the_privacy_notice(self):
+        e = self.make_enquiry()
+        services.decline(e, self.programmer)
+        services.send_acknowledgement(e)
+        for m in mail.outbox:
+            self.assertIn("/hires/privacy/", m.body)
+
+    def test_detail_shows_deletion_date(self):
+        e = self.make_enquiry()
+        self.client.force_login(self.programmer)
+        url = reverse("hires:detail", kwargs={"pk": e.pk})
+        self.assertContains(
+            self.client.get(url), "once this enquiry is closed"
+        )
+        services.decline(e, self.programmer)
+        self.assertContains(self.client.get(url), "Will be deleted on about")
+
+    def test_privacy_page_404_when_flag_off(self):
+        set_flag(False)
+        self.assertEqual(
+            self.client.get(reverse("hires:privacy")).status_code, 404
+        )
