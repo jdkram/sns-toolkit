@@ -658,6 +658,23 @@ addresses: `{privacy_contact}` and `{venue}` come from venue settings.
   line (`HireEnquiry.door_staff_fee_gbp`, default from settings, overridable when accepting) and
   count as a pass-through, not income.
 
+**Two-stage intake (changed 2026-10-09).** The first form was asking for too much of a stranger's
+time for an enquiry we may not answer. First contact now asks only what the meeting needs to say
+yes, no or maybe: who, type and community/corporate, a name and description, roughly how many,
+one preferred date with *building open* and *everything out by* times (an optional alternative
+date and a flexibility note), and the late-night tickbox if it applies. The event's own start and
+end are provisional: building-open plus `default_setup_minutes` to everything-out minus
+`default_teardown_minutes`. The minimum building time and the late-night note are kept because
+they are the "think it through" part. After a yes in principle, the accepted email carries a
+signed link (`/hires/details/<token>/`) to a short second form: rooms, attendance, link, sound
+tech, what they offer volunteers, and exact event times (which must sit inside the access
+window). That page notifies the list, updates the event's showings and room bookings, and
+unlocks "Send booking confirmation"; a coordinator can bypass it with "Details received another
+way". The details link locks once terms are out, so what was quoted can't be edited from under
+the hirer. The "bar staff are not guaranteed" acknowledgements moved from the enquiry form to
+the terms page, where the hirer must tick every one before agreeing, and the ticks are frozen
+with the agreed terms.
+
 **Related:** 9.4 (inductions custom questions, to be extracted and shared), 9.30 (`hire_name`),
 9.73 (outside-hire badge on rota), 9.113/9.162 (programming queue), 9.49 (runtime perms),
 9.157 (scheduler), 9.164 (internal decision emails, same mailer plumbing), 9.171 (settlement

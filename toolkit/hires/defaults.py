@@ -120,8 +120,11 @@ EMAIL_DEFAULTS = {
         "Your enquiry to {venue}: good news about {title}",
         "Hi {name},\n\n"
         "We'd like to host {title}. {coordinator_line}\n\n"
-        "Next we need to agree terms. You'll get a confirmation email with "
-        "the terms and a button to agree to them.\n\n"
+        "Next we need a few more details from you (rooms, sound, exact "
+        "times and so on). It takes a few minutes:\n"
+        "{details_url}\n\n"
+        "Once we have those we'll send you the terms and fee to agree to. "
+        "Nothing is booked until you agree.\n\n"
         "{techs}"
         "{venue}\n",
     ),
@@ -205,6 +208,13 @@ EMAIL_DEFAULTS = {
 }
 
 INTERNAL_DEFAULTS = {
+    "details_received": (
+        "Hire details received: {title}",
+        "{name} has sent the further details for {title}.\n\n"
+        "Open it here: {enquiry_url}\n"
+        "Next: check the details, add the terms on the event, then send the "
+        "booking confirmation.\n",
+    ),
     "digest": (
         "Hire enquiries for the {meeting_date} meeting ({count})",
         "Hire enquiries to discuss at the meeting on {meeting_date}:\n\n"
@@ -267,6 +277,10 @@ EMAIL_LABELS = {
         "To the hirer when you press Send booking confirmation. Contains the agreement link.",
     ),
     "booked": ("Booked", "To the hirer after they agree to the terms."),
+    "details_received": (
+        "Details received (internal)",
+        "To the notification list when a hirer sends the further details after we have said yes.",
+    ),
     "digest": (
         "Pre-meeting digest (internal)",
         "To the notification list a few days before each programming meeting.",

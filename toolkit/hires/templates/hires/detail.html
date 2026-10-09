@@ -15,7 +15,7 @@
   </div>
   {% endfor %}
   {% if e.beyond_booking_window %}<div class="alert alert-secondary">Dates are beyond the current booking window: for season planning.</div>{% endif %}
-  {% if late_dates %}<div class="alert alert-warning" role="status"><strong>Late night.</strong> The hirer was told late finishes are limited, cost extra, and may not be available, and ticked to confirm. For us it means a late licence, extra security, volunteers to get home safely, and taxis.{% if licence %} <strong>Licences:</strong> {{ licence.used }} late-night hire{{ licence.used|pluralize }} already accepted for {{ licence.year }}, of {{ licence.limit }} licences (hires only: add our own late events yourself).{% endif %}</div>{% endif %}
+  {% if late_dates %}<div class="alert alert-warning" role="status"><strong>Late night.</strong> The hirer was told late finishes are limited, cost extra, and may not be available, and ticked to confirm. For us it means a late licence, extra security, volunteers to get home safely, and taxis.{% if licence %} <br><strong>Licences:</strong> {{ licence.used }} late-night hire{{ licence.used|pluralize }} already accepted for {{ licence.year }}, of {{ licence.limit }} licences (hires only: add our own late events yourself).{% endif %}</div>{% endif %}
   {% if tech_unlisted %}<div class="alert alert-warning">Bringing their own sound tech: <strong>{{ e.sound_tech_name }}</strong>. Check they are on the approved list.</div>{% endif %}
 
   <dl class="row">
@@ -44,13 +44,13 @@
     <input type="hidden" name="action" value="accept">
     <strong>Accept</strong>
     <div class="row g-2 mt-1">
-      <div class="col-md-4"><label class="form-label small">Who will coordinate this hire?</label><select name="coordinator" class="form-select form-select-sm">{% for pk, name in staff %}<option value="{{ pk }}" {% if pk == request.user.pk %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></div>
-      <div class="col-md-3"><label class="form-label small">Community or corporate rate</label><select name="tier_agreed" class="form-select form-select-sm"><option value="">as the hirer requested ({{ e.get_tier_requested_display }})</option><option value="community">Community</option><option value="corporate">Corporate</option></select></div>
+      <div class="col-md-6"><label class="form-label small">Who will coordinate this hire?</label><select name="coordinator" class="form-select form-select-sm">{% for pk, name in staff %}<option value="{{ pk }}" {% if pk == request.user.pk %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></div>
+      <div class="col-md-6"><label class="form-label small">Community or corporate rate</label><select name="tier_agreed" class="form-select form-select-sm"><option value="">as the hirer requested ({{ e.get_tier_requested_display }})</option><option value="community">Community</option><option value="corporate">Corporate</option></select></div>
       {% if door_required %}<div class="col-md-3"><label class="form-label small">Door staff charge £ (blank = {% if door_default is not None %}£{{ door_default }}{% else %}to be confirmed{% endif %})</label><input name="door_fee" class="form-control form-control-sm" inputmode="decimal"></div>{% endif %}
       <div class="col-md-3"><label class="form-label small">Fee £ (leave blank to charge the price list: £{{ charge|floatformat:0 }})</label><input name="fee" class="form-control form-control-sm" inputmode="decimal"></div>
     </div>
     <div class="mt-2 small">Which dates are you accepting? (Untick any you are not taking. Each ticked date becomes a showing on the new event.) {% for d in dates %}<label class="me-3"><input type="checkbox" name="dates" value="{{ d.pk }}" {% if forloop.first %}checked{% endif %}> {{ d.start|date:"D j M" }}</label>{% endfor %}</div>
-    <button class="btn btn-success btn-sm mt-2">Accept and create proposed event</button>
+    <button class="btn btn-success mt-3">Accept and create proposed event</button>
   </form>
   <form method="post" action="{% url 'hires:act' e.pk %}" class="border rounded p-3 mb-3">{% csrf_token %}
     <input type="hidden" name="action" value="maybe">
@@ -67,10 +67,14 @@
 
   {% if e.status == "accepted" %}<div class="alert alert-success mt-3" role="status"><strong>Accepted.</strong> A proposed event was created. Next: open the event, add the terms and fee (cost type "Venue hire"), then come back and send the booking confirmation.{% if e.event %} <a href="{% url 'edit-event-details-view' event_id=e.event.pk %}">Open the event</a>.{% endif %}</div>{% endif %}
   {% if e.status == "accepted" or e.status == "awaiting_agreement" %}
+  <h2 class="h5 mt-4">Further details from the hirer</h2>
+  {% if e.details_completed_at %}<p class="text-success">&#10003; Received {{ e.details_completed_at|date:"j M, H:i" }}. Rooms, sound and exact times are filled in above.</p>
+  {% else %}<p>Not received yet. The hirer was emailed this link when you accepted; you can also send it yourself: <input class="form-control form-control-sm d-inline-block w-auto" style="min-width:22rem" readonly value="{{ details_link }}" onclick="this.select()"></p>
+  <form method="post" action="{% url 'hires:act' e.pk %}" class="d-flex gap-1 mb-3">{% csrf_token %}<input type="hidden" name="action" value="details_received"><input name="note" class="form-control form-control-sm" placeholder="Details came another way: say how (e.g. by email)" required><button class="btn btn-outline-dark btn-sm text-nowrap">Details received another way</button></form>{% endif %}
   <h2 class="h5 mt-4">Terms and booking</h2>
   <p>{% if event_terms_ok %}The event's terms are in place.{% else %}<span class="text-danger">Terms are not yet satisfied on the event.</span> <a href="{% url 'edit-event-details-view' event_id=e.event.pk %}">Edit the event</a> and add them (cost type must be "Venue hire").{% endif %}
   {% if e.status == "awaiting_agreement" %}Waiting for the hirer to agree since {{ e.confirmation_sent_at|timesince }} ago.{% endif %}</p>
-  <form method="post" action="{% url 'hires:act' e.pk %}">{% csrf_token %}<input type="hidden" name="action" value="send_confirmation"><button class="btn btn-primary btn-sm" {% if not event_terms_ok %}disabled{% endif %}>{% if e.status == "awaiting_agreement" %}Re-send{% else %}Send{% endif %} booking confirmation</button></form>
+  <form method="post" action="{% url 'hires:act' e.pk %}">{% csrf_token %}<input type="hidden" name="action" value="send_confirmation"><button class="btn btn-primary btn-sm" {% if not event_terms_ok or not e.details_completed_at %}disabled{% endif %}>{% if e.status == "awaiting_agreement" %}Re-send{% else %}Send{% endif %} booking confirmation</button></form>
   {% endif %}
   {% if e.status == "booked" %}<div class="alert alert-success mt-3">Hirer agreed {{ e.terms_agreed_at|date:"j M Y H:i" }}.<details><summary>Frozen terms</summary><pre style="white-space:pre-wrap">{{ e.terms_agreed_snapshot }}</pre></details></div>{% endif %}
 

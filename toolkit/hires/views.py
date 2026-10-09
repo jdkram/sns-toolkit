@@ -24,6 +24,7 @@ from . import defaults, services
 from .forms import (
     ApprovedTechForm,
     EmailTemplateForm,
+    HireDetailsForm,
     HireEnquiryForm,
     HireSettingsForm,
     HireTypeForm,
@@ -114,16 +115,10 @@ def enquire(request):
                 title=d["title"],
                 description=d["description"],
                 expected_attendance=d["expected_attendance"],
-                media_url=d["media_url"],
-                sound_tech=d["sound_tech"],
-                sound_tech_name=d["sound_tech_name"],
-                offers_to_volunteers=d["offers_to_volunteers"],
-                date_flexible=d["date_flexible"],
                 flexibility_notes=d["flexibility_notes"],
-                acknowledgements=list(d["acknowledgements"]),
+                date_flexible=bool(d["flexibility_notes"].strip()),
             )
-            enquiry.save()  # need a pk for the M2M before assigning meeting
-            enquiry.rooms_requested.set(d["rooms_requested"])
+            enquiry.save()
             services.submit_enquiry(enquiry, form.hire_dates)
             request.session["hires_last_reply_by"] = (
                 f"{enquiry.reply_deadline:%-d %B %Y}"
@@ -192,13 +187,60 @@ def thanks(request):
 
 
 @hires_gate
+def details(request, token):
+    enquiry = get_object_or_404(
+        E,
+        details_token=token,
+        status__in=[E.ACCEPTED, E.AWAITING_AGREEMENT, E.BOOKED],
+    )
+    if enquiry.is_purged:
+        raise Http404
+    form = HireDetailsForm(
+        enquiry,
+        request.POST or None,
+        initial={
+            "rooms_requested": list(enquiry.rooms_requested.all()),
+            "expected_attendance": enquiry.expected_attendance,
+            "media_url": enquiry.media_url,
+            "sound_tech": enquiry.sound_tech,
+            "sound_tech_name": enquiry.sound_tech_name,
+            "offers_to_volunteers": enquiry.offers_to_volunteers,
+        },
+    )
+    # Once terms are out the details are what was quoted: changes go through
+    # the coordinator, who re-sends the confirmation.
+    locked = enquiry.status in (E.AWAITING_AGREEMENT, E.BOOKED)
+    if request.method == "POST" and not locked and form.is_valid():
+        services.complete_details(enquiry, form.cleaned_data, form.new_times)
+        return render(request, "hires/details_thanks.html", {"e": enquiry})
+    return render(
+        request,
+        "hires/details.html",
+        {
+            "e": enquiry,
+            "form": form,
+            "locked": locked,
+            "already_sent": bool(enquiry.details_completed_at),
+        },
+    )
+
+
+@hires_gate
 def agree(request, token):
     enquiry = get_object_or_404(
         E, agreement_token=token, status__in=[E.AWAITING_AGREEMENT, E.BOOKED]
     )
+    cfg = get_hire_settings()
+    statements = cfg.acknowledgement_list()
+    error = ""
     if request.method == "POST" and enquiry.status == E.AWAITING_AGREEMENT:
-        services.record_agreement(enquiry, ip=_client_ip(request))
-        return redirect("hires:agree", token=token)
+        ticked = request.POST.getlist("ack")
+        if all(s in ticked for s in statements):
+            services.record_agreement(
+                enquiry, ip=_client_ip(request), acknowledged=statements
+            )
+            return redirect("hires:agree", token=token)
+        error = "Please tick every box before agreeing."
     return render(
         request,
         "hires/agree.html",
@@ -208,6 +250,8 @@ def agree(request, token):
             "fee": services.fee_text(enquiry),
             "dates": services.describe_dates(enquiry, accepted_only=True),
             "guarantee": services.guarantee_text(enquiry),
+            "statements": statements,
+            "error": error,
         },
     )
 
@@ -338,6 +382,7 @@ def detail(request, pk):
                 )
             ],
             "purge_on": enquiry.purge_due_on(),
+            "details_link": services.details_url(enquiry),
             "can_decide": enquiry.status
             in (E.ACKNOWLEDGED, E.TO_DISCUSS, E.MAYBE),
             "tech_unlisted": enquiry.sound_tech == "own"
@@ -404,6 +449,9 @@ def act(request, pk):
             messages.success(
                 request, "Noted. The clock moved on to the next meeting."
             )
+        elif action == "details_received":
+            services.mark_details_received(enquiry, note)
+            messages.success(request, "Marked as received.")
         elif action == "resend":
             services.resend(enquiry, request.POST.get("key", ""))
             messages.success(
@@ -422,8 +470,12 @@ def act(request, pk):
             m = get_object_or_404(
                 ProgrammingMeeting, pk=request.POST.get("meeting") or 0
             )
+            if enquiry.status not in E.CLOCK_STATES:
+                raise ValueError(
+                    "Only enquiries still waiting for a decision can be "
+                    "moved to another meeting"
+                )
             services.assign_meeting(enquiry, m)
-            enquiry.digest_sent_at = None
             enquiry.status = E.TO_DISCUSS
             enquiry.save()
             messages.success(request, "Moved; the deadline was recomputed.")

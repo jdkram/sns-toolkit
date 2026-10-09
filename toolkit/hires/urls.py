@@ -9,6 +9,7 @@ urlpatterns = [
     path("enquire/", views.enquire, name="enquire"),
     path("privacy/", views.privacy, name="privacy"),
     path("enquire/thanks/", views.thanks, name="thanks"),
+    path("details/<str:token>/", views.details, name="details"),
     path("agree/<str:token>/", views.agree, name="agree"),
     path("manage/", views.queue, name="queue"),
     path("manage/settings/", views.settings_edit, name="settings"),

@@ -47,6 +47,7 @@ def anonymise_enquiry(enquiry, now=None):
     enquiry.custom_answers = []
     enquiry.callout_what_we_need = ""
     enquiry.agreement_token = ""
+    enquiry.details_token = ""
     enquiry.terms_agreed_ip = None
     enquiry.hirer = None
     if not keep_title:

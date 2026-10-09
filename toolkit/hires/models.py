@@ -461,6 +461,11 @@ class HireEnquiry(models.Model):
     replied_outside_toolkit_at = models.DateTimeField(null=True, blank=True)
     internal_notes = models.TextField(blank=True)
 
+    # Second stage: asked only once we have said yes in principle.
+    details_token = models.CharField(max_length=64, blank=True, db_index=True)
+    details_requested_at = models.DateTimeField(null=True, blank=True)
+    details_completed_at = models.DateTimeField(null=True, blank=True)
+
     agreement_token = models.CharField(
         max_length=64, blank=True, db_index=True
     )
@@ -516,7 +521,7 @@ class HireEnquiry(models.Model):
         return bool(
             self.hire_type
             and self.hire_type.provides_door_staff
-            and any(d.is_late_night() for d in self.dates())
+            and bool(self.late_dates())
         )
 
     @property
@@ -538,6 +543,8 @@ class HireEnquiry(models.Model):
             return timezone.localtime(self.status_changed_at).date()
         if self.keeps_financial_record:
             ref = timezone.localtime(self.status_changed_at).date()
+            if self.terms_agreed_at:
+                ref = max(ref, timezone.localtime(self.terms_agreed_at).date())
             for d in self.hire_dates.all():
                 ref = max(ref, timezone.localtime(d.end).date())
             return ref
@@ -612,8 +619,17 @@ class HireEnquiry(models.Model):
         )
         return self.charge_gbp(n_dates) - security
 
+    def _relevant_dates(self):
+        """The accepted dates once any are accepted, else all requested.
+
+        Keeps what the hirer is quoted (charge, late fee, door staff) and
+        what we plan for computed over the same dates.
+        """
+        ds = self.dates()
+        return [d for d in ds if d.accepted] or ds
+
     def late_dates(self):
-        return [d for d in self.dates() if d.is_late_night()]
+        return [d for d in self._relevant_dates() if d.is_late_night()]
 
 
 class HireDate(models.Model):

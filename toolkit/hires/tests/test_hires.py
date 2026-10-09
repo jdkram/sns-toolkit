@@ -55,16 +55,18 @@ class HireBase(TestCase):
             "tier_requested": "community",
             "title": "Film night",
             "description": "A film",
-            "sound_tech": "none",
-            "acknowledgements": self.cfg.acknowledgement_list(),
             "date_1": day.isoformat(),
             "get_in_1": "17:00",
-            "start_1": "18:00",
-            "end_1": "21:00",
             "get_out_1": "22:00",
         }
         data.update(over)
         return data
+
+    def send_conf(self, e):
+        """Send the booking confirmation as if the hirer had sent details."""
+        e.details_completed_at = timezone.now()
+        e.save()
+        services.send_confirmation(e)
 
     def make_enquiry(self, **kw):
         e = E.objects.create(
@@ -162,8 +164,6 @@ class PublicFormTests(HireBase):
             self.post_data(
                 get_in_1="18:00",
                 get_out_1="20:00",
-                start_1="18:30",
-                end_1="19:30",
             ),
         )
         self.assertEqual(r.status_code, 200)
@@ -176,12 +176,6 @@ class PublicFormTests(HireBase):
         )
         self.assertFalse(E.objects.exists())
 
-    def test_must_tick_all_acknowledgements(self):
-        data = self.post_data()
-        data["acknowledgements"] = data["acknowledgements"][:1]
-        self.client.post(reverse("hires:enquire"), data)
-        self.assertFalse(E.objects.exists())
-
     def test_closed_switch_shows_message(self):
         self.cfg.enquiries_open = False
         self.cfg.save()
@@ -189,11 +183,24 @@ class PublicFormTests(HireBase):
         self.assertContains(r, "taking new hire enquiries")
         self.assertNotContains(r, "<form")
 
-    def test_sound_tech_none_rejected_when_type_needs_one(self):
-        self.htype.needs_sound_tech = True
-        self.htype.save()
+    def test_first_contact_asks_for_little(self):
+        r = self.client.get(reverse("hires:enquire"))
+        html = r.content.decode()
+        for later in (
+            "sound tech",
+            "Rooms you",
+            "Event starts",
+            "offer the volunteers",
+            "Please confirm you understand",
+        ):
+            self.assertNotIn(later, html)
+
+    def test_event_times_default_inside_the_window(self):
         self.client.post(reverse("hires:enquire"), self.post_data())
-        self.assertFalse(E.objects.exists())
+        d = E.objects.get().hire_dates.get()
+        self.assertEqual(timezone.localtime(d.get_in).hour, 17)
+        self.assertEqual(timezone.localtime(d.start).hour, 18)  # +60 setup
+        self.assertEqual(timezone.localtime(d.end).hour, 21)  # -60 teardown
 
     def test_rate_limit_per_address(self):
         for _ in range(3):
@@ -204,9 +211,7 @@ class PublicFormTests(HireBase):
     def test_late_night_flagged(self):
         self.client.post(
             reverse("hires:enquire"),
-            self.post_data(
-                late_night_ack="on", end_1="23:30", get_out_1="23:59"
-            ),
+            self.post_data(late_night_ack="on", get_out_1="23:59"),
         )
         e = E.objects.get()
         self.assertTrue(e.hire_dates.get().is_late_night())
@@ -326,15 +331,19 @@ class DecisionTests(HireBase):
         event = services.accept(e, self.programmer)
         event.terms = "Hirer pays £100 and clears up."
         event.save()
-        services.send_confirmation(e)
+        self.send_conf(e)
         e.refresh_from_db()
         self.assertEqual(e.status, E.AWAITING_AGREEMENT)
         self.assertIn(e.agreement_token, mail.outbox[-1].body)
         url = reverse("hires:agree", kwargs={"token": e.agreement_token})
         self.assertEqual(self.client.get(url).status_code, 200)
-        self.client.post(url)
+        self.client.post(url)  # no ticks: refused
+        e.refresh_from_db()
+        self.assertEqual(e.status, E.AWAITING_AGREEMENT)
+        self.client.post(url, {"ack": self.cfg.acknowledgement_list()})
         e.refresh_from_db()
         self.assertEqual(e.status, E.BOOKED)
+        self.assertEqual(e.acknowledgements, self.cfg.acknowledgement_list())
         self.assertIn("£100", e.terms_agreed_snapshot)
         event.refresh_from_db()
         self.assertEqual(event.programming_status, "active")
@@ -346,7 +355,7 @@ class DecisionTests(HireBase):
         event.cost_type = "tbc"
         event.save()
         with self.assertRaises(ValueError):
-            services.send_confirmation(e)
+            self.send_conf(e)
 
     def test_estimate_subtracts_late_night_security(self):
         self.cfg.late_night_fee_gbp = Decimal("50")
@@ -422,10 +431,11 @@ class ScreenRenderTests(HireBase):
         self.assertContains(r, "Open the event")
         e.event.terms = "Hirer pays and clears up."
         e.event.save()
-        services.send_confirmation(e)
+        self.send_conf(e)
         self.assertEqual(self.client.get(url).status_code, 200)
         self.client.post(
-            reverse("hires:agree", kwargs={"token": e.agreement_token})
+            reverse("hires:agree", kwargs={"token": e.agreement_token}),
+            {"ack": self.cfg.acknowledgement_list()},
         )
         self.assertContains(self.client.get(url), "Frozen terms")
 
@@ -487,7 +497,7 @@ class EmailLinkTests(HireBase):
             event = services.accept(e, self.programmer)
             event.terms = "Terms."
             event.save()
-            services.send_confirmation(e)
+            self.send_conf(e)
             self.assertIn(
                 "https://example.test/hires/agree/", mail.outbox[-1].body
             )
@@ -543,7 +553,7 @@ class ReviewFixTests(HireBase):
         event.save()
         with mock.patch.object(services, "_send", side_effect=OSError("x")):
             with self.assertRaises(ValueError):
-                services.send_confirmation(e)
+                self.send_conf(e)
         e.refresh_from_db()
         self.assertEqual(e.status, E.ACCEPTED)
         self.assertEqual(e.agreement_token, "")
@@ -672,6 +682,17 @@ class PurgeTests(HireBase):
         e.save()
         return e
 
+    def test_purge_clears_access_tokens(self):
+        from toolkit.hires import purge
+
+        e = self.closed(E.DECLINED, 400)
+        e.details_token = "tok-d"
+        e.agreement_token = "tok-a"
+        e.save()
+        purge.purge_expired()
+        e.refresh_from_db()
+        self.assertEqual((e.details_token, e.agreement_token), ("", ""))
+
     def test_declined_enquiry_purged_after_retention_period(self):
         from toolkit.hires import purge
 
@@ -728,7 +749,7 @@ class PurgeTests(HireBase):
         event = services.accept(e, self.programmer)
         event.terms = "Hirer pays."
         event.save()
-        services.send_confirmation(e)
+        self.send_conf(e)
         services.record_agreement(e, ip="203.0.113.9")
         e.refresh_from_db()
         self.assertEqual(e.terms_agreed_ip, "203.0.113.9")
@@ -917,7 +938,7 @@ class DoorStaffTests(HireBase):
         event = services.accept(e, self.programmer)
         event.terms = "Terms."
         event.save()
-        services.send_confirmation(e)
+        self.send_conf(e)
         body = mail.outbox[-1].body
         self.assertIn("Plus door staff, charged to you in addition", body)
         self.assertIn("£80.00", body)
@@ -930,7 +951,7 @@ class DoorStaffTests(HireBase):
 
 
 class LateNightTests(HireBase):
-    LATE = {"end_1": "23:30", "get_out_1": "23:59"}
+    LATE = {"get_out_1": "23:59"}
 
     def setUp(self):
         super().setUp()
@@ -985,7 +1006,7 @@ class LateNightTests(HireBase):
         event = services.accept(e, self.programmer)
         event.terms = "Terms."
         event.save()
-        services.send_confirmation(e)
+        self.send_conf(e)
         pages += [m.body for m in mail.outbox]
         pages.append(
             self.client.get(
@@ -1043,3 +1064,229 @@ class LateNightTests(HireBase):
         )
         d.save()
         self.assertIsNone(services.late_licence_usage(e))
+
+
+class DetailsStageTests(HireBase):
+    def accepted(self):
+        e = self.make_enquiry()
+        e.rooms_requested.clear()
+        services.accept(e, self.programmer)
+        e.refresh_from_db()
+        return e
+
+    def details_post(self, e, **over):
+        d = e.hire_dates.get()
+        data = {
+            "expected_attendance": "80",
+            "sound_tech": "none",
+            f"start_{d.pk}": "18:00",
+            f"end_{d.pk}": "21:00",
+        }
+        data.update(over)
+        return data
+
+    def test_accepted_email_carries_the_details_link(self):
+        e = self.accepted()
+        self.assertIn(
+            f"/hires/details/{e.details_token}/", mail.outbox[-1].body
+        )
+
+    def test_details_form_updates_enquiry_event_and_notifies(self):
+        e = self.accepted()
+        mail.outbox.clear()
+        url = reverse("hires:details", kwargs={"token": e.details_token})
+        self.assertEqual(self.client.get(url).status_code, 200)
+        data = self.details_post(
+            e, rooms_requested=[self.room.pk], media_url="https://x.example"
+        )
+        r = self.client.post(url, data)
+        self.assertContains(r, "Thank you")
+        e.refresh_from_db()
+        self.assertIsNotNone(e.details_completed_at)
+        self.assertEqual(e.expected_attendance, 80)
+        self.assertEqual(list(e.rooms_requested.all()), [self.room])
+        booking = e.event.showings.get().room_bookings.get()
+        self.assertEqual(booking.room, self.room)
+        self.assertEqual(mail.outbox[-1].to, ["programming@example.org"])
+
+    def test_event_must_sit_inside_the_access_window(self):
+        e = self.accepted()
+        d = e.hire_dates.get()
+        url = reverse("hires:details", kwargs={"token": e.details_token})
+        r = self.client.post(
+            url, self.details_post(e, **{f"end_{d.pk}": "23:30"})
+        )
+        self.assertEqual(r.status_code, 200)
+        e.refresh_from_db()
+        self.assertIsNone(e.details_completed_at)
+
+    def test_sound_tech_none_rejected_when_type_needs_one(self):
+        self.htype.needs_sound_tech = True
+        self.htype.save()
+        e = self.accepted()
+        url = reverse("hires:details", kwargs={"token": e.details_token})
+        self.client.post(url, self.details_post(e))
+        e.refresh_from_db()
+        self.assertIsNone(e.details_completed_at)
+
+    def test_own_tech_needs_a_name(self):
+        e = self.accepted()
+        url = reverse("hires:details", kwargs={"token": e.details_token})
+        self.client.post(url, self.details_post(e, sound_tech="own"))
+        e.refresh_from_db()
+        self.assertIsNone(e.details_completed_at)
+
+    def test_confirmation_blocked_until_details_arrive(self):
+        e = self.accepted()
+        e.event.terms = "Terms."
+        e.event.save()
+        with self.assertRaises(ValueError):
+            services.send_confirmation(e)
+        services.mark_details_received(e, "sent by email")
+        services.send_confirmation(e)
+        e.refresh_from_db()
+        self.assertEqual(e.status, E.AWAITING_AGREEMENT)
+
+    def test_marking_details_received_needs_a_note(self):
+        e = self.accepted()
+        with self.assertRaises(ValueError):
+            services.mark_details_received(e, "")
+
+    def test_details_link_dead_for_unknown_token_and_purged(self):
+        self.assertEqual(
+            self.client.get(
+                reverse("hires:details", kwargs={"token": "nope"})
+            ).status_code,
+            404,
+        )
+
+    def test_details_page_404_when_flag_off(self):
+        e = self.accepted()
+        set_flag(False)
+        self.assertEqual(
+            self.client.get(
+                reverse("hires:details", kwargs={"token": e.details_token})
+            ).status_code,
+            404,
+        )
+
+    def test_agreement_refused_without_every_tickbox(self):
+        e = self.accepted()
+        e.event.terms = "Terms."
+        e.event.save()
+        self.send_conf(e)
+        url = reverse("hires:agree", kwargs={"token": e.agreement_token})
+        statements = self.cfg.acknowledgement_list()
+        self.client.post(url, {"ack": statements[:1]})
+        e.refresh_from_db()
+        self.assertEqual(e.status, E.AWAITING_AGREEMENT)
+        r = self.client.get(url)
+        self.assertContains(r, "Before you agree")
+
+
+class ReviewTwoFixTests(HireBase):
+    """Regressions from the second external (DeepSeek) review."""
+
+    def booked(self):
+        e = self.make_enquiry()
+        event = services.accept(e, self.programmer)
+        event.terms = "Terms."
+        event.save()
+        self.send_conf(e)
+        services.record_agreement(e, acknowledged=["x"])
+        e.refresh_from_db()
+        return e
+
+    def test_a_booked_hire_cannot_be_reopened_by_resending(self):
+        e = self.booked()
+        with self.assertRaises(ValueError):
+            services.send_confirmation(e)
+        e.refresh_from_db()
+        self.assertEqual(e.status, E.BOOKED)
+        self.assertIsNotNone(e.terms_agreed_at)
+
+    def test_agreement_requires_awaiting_status(self):
+        e = self.make_enquiry()
+        with self.assertRaises(ValueError):
+            services.record_agreement(e)
+
+    def test_cannot_accept_twice(self):
+        e = self.make_enquiry()
+        services.accept(e, self.programmer)
+        e.status = E.TO_DISCUSS
+        e.save()
+        with self.assertRaises(ValueError):
+            services.accept(e, self.programmer)
+
+    def test_moving_meeting_does_not_revert_an_accepted_enquiry(self):
+        e = self.make_enquiry()
+        services.accept(e, self.programmer)
+        self.client.force_login(self.programmer)
+        self.client.post(
+            reverse("hires:act", kwargs={"pk": e.pk}),
+            {"action": "assign_meeting", "meeting": self.meeting.pk},
+        )
+        e.refresh_from_db()
+        self.assertEqual(e.status, E.ACCEPTED)
+
+    def test_details_locked_once_terms_are_out(self):
+        e = self.make_enquiry()
+        event = services.accept(e, self.programmer)
+        event.terms = "Terms."
+        event.save()
+        self.send_conf(e)
+        url = reverse("hires:details", kwargs={"token": e.details_token})
+        d = e.hire_dates.get()
+        r = self.client.post(
+            url,
+            {
+                "expected_attendance": "999",
+                "sound_tech": "none",
+                f"start_{d.pk}": "18:00",
+                f"end_{d.pk}": "20:00",
+            },
+        )
+        self.assertContains(r, "can no longer be changed")
+        e.refresh_from_db()
+        self.assertNotEqual(e.expected_attendance, 999)
+
+    def test_retention_clock_counts_from_agreement(self):
+        e = self.booked()
+        e.status_changed_at = timezone.now() - datetime.timedelta(days=4000)
+        e.save()
+        ref = e.retention_reference_date()
+        self.assertGreaterEqual(ref, timezone.localdate())
+
+    def test_same_open_and_out_time_is_rejected(self):
+        self.client.post(
+            reverse("hires:enquire"),
+            self.post_data(get_in_1="18:00", get_out_1="18:00"),
+        )
+        self.assertFalse(E.objects.exists())
+
+    def test_partly_accepted_dates_drive_late_night_and_door_staff(self):
+        from toolkit.hires.models import HireDate
+
+        self.htype.provides_door_staff = True
+        self.htype.save()
+        e = self.make_enquiry()
+        early = e.hire_dates.get()
+        late_start = early.get_in + datetime.timedelta(days=1)
+        late = HireDate.objects.create(
+            enquiry=e,
+            get_in=late_start.replace(hour=18),
+            start=late_start.replace(hour=19),
+            end=late_start.replace(hour=23),
+            get_out=late_start.replace(hour=23, minute=59),
+        )
+        self.assertTrue(e.door_staff_required())  # nothing accepted yet
+        early.accepted = True
+        early.save()
+        e.refresh_from_db()
+        self.assertFalse(e.door_staff_required())  # only the early one
+        late.accepted = True
+        late.save()
+        early.accepted = False
+        early.save()
+        e.refresh_from_db()
+        self.assertTrue(e.door_staff_required())

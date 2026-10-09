@@ -179,6 +179,7 @@ def send_to_hirer(enquiry, key, source, **extra):
             else "soon"
         ),
         "coordinator_line": "",
+        "details_url": "",
         "techs": "",
         "terms": "",
         "fee": "",
@@ -349,6 +350,8 @@ def accept(
 
     if enquiry.status not in (E.TO_DISCUSS, E.ACKNOWLEDGED, E.MAYBE):
         raise ValueError(f"Cannot accept an enquiry that is {enquiry.status}")
+    if enquiry.event_id:
+        raise ValueError("This enquiry already has an event")
     with transaction.atomic():
         dates = enquiry.dates()
         chosen = [
@@ -366,6 +369,9 @@ def accept(
             # What the hirer is charged, never the internal net estimate.
             fee = enquiry.charge_gbp()
         enquiry.agreed_fee_gbp = fee
+        if not enquiry.details_token:
+            enquiry.details_token = secrets.token_urlsafe(32)
+            enquiry.details_requested_at = timezone.now()
         if enquiry.door_staff_required():
             enquiry.door_staff_fee_gbp = (
                 door_fee
@@ -407,9 +413,73 @@ def accept(
         "accepted",
         HIRER_EMAIL_SOURCES["accepted"],
         coordinator_line=_coordinator_line(enquiry),
+        details_url=details_url(enquiry),
         techs=_approved_tech_text(),
     )
     return event
+
+
+def details_url(enquiry):
+    if not enquiry.details_token:
+        return ""
+    return abs_url(
+        reverse("hires:details", kwargs={"token": enquiry.details_token})
+    )
+
+
+def complete_details(enquiry, cleaned, new_times):
+    """Apply the second-stage answers to the enquiry, its dates and event."""
+    from toolkit.diary.models import RoomBooking
+
+    with transaction.atomic():
+        enquiry.rooms_requested.set(cleaned["rooms_requested"])
+        enquiry.expected_attendance = cleaned["expected_attendance"]
+        enquiry.media_url = cleaned["media_url"]
+        enquiry.sound_tech = cleaned["sound_tech"]
+        enquiry.sound_tech_name = cleaned["sound_tech_name"]
+        enquiry.offers_to_volunteers = cleaned["offers_to_volunteers"]
+        enquiry.details_completed_at = timezone.now()
+        enquiry.save()
+        rooms = list(enquiry.rooms_requested.all())
+        for d in enquiry.dates():
+            if d.pk in new_times:
+                d.start, d.end = new_times[d.pk]
+                d.save(update_fields=["start", "end"])
+        if enquiry.event:
+            showings = list(enquiry.event.showings.order_by("start"))
+            chosen = [d for d in enquiry.dates() if d.accepted]
+            for showing, d in zip(showings, chosen):
+                showing.start = d.start
+                showing.save()
+                showing.room_bookings.all().delete()
+                for room in rooms:
+                    RoomBooking.objects.create(
+                        showing=showing,
+                        room=room,
+                        start=d.get_in,
+                        end=d.get_out,
+                    )
+    notify_internal(
+        "details_received",
+        "Hire enquiry: details received",
+        title=enquiry.title,
+        name=enquiry.contact_organisation or enquiry.contact_name,
+        enquiry_url=abs_url(
+            reverse("hires:detail", kwargs={"pk": enquiry.pk})
+        ),
+    )
+
+
+def mark_details_received(enquiry, note):
+    """The hirer gave the details another way (e.g. by email)."""
+    if not note.strip():
+        raise ValueError("Add a one-line note of how you got them")
+    enquiry.details_completed_at = timezone.now()
+    enquiry.internal_notes = (
+        f"{enquiry.internal_notes}\n[{timezone.localdate()}] Details taken "
+        f"outside the form: {note.strip()}"
+    ).strip()
+    enquiry.save()
 
 
 def _coordinator_line(enquiry):
@@ -505,6 +575,16 @@ def send_confirmation(enquiry):
     if not enquiry.event:
         raise ValueError("No event to confirm")
     event = enquiry.event
+    if enquiry.status not in (E.ACCEPTED, E.AWAITING_AGREEMENT):
+        raise ValueError(
+            "Confirmations can only be sent for accepted hires that are not "
+            "yet booked"
+        )
+    if not enquiry.details_completed_at:
+        raise ValueError(
+            "The hirer hasn't sent the further details yet. Wait for them, "
+            "or use 'Details received another way'."
+        )
     if not event.terms_satisfied():
         raise ValueError("The event's terms are not yet satisfied")
     if event.cost_type != event.COST_TYPE_VENUE_HIRE:
@@ -582,8 +662,12 @@ def agreement_snapshot(enquiry):
     )
 
 
-def record_agreement(enquiry, ip=None):
+def record_agreement(enquiry, ip=None, acknowledged=None):
+    if enquiry.status != E.AWAITING_AGREEMENT:
+        raise ValueError("This enquiry is not awaiting agreement")
     enquiry.terms_agreed_at = timezone.now()
+    if acknowledged is not None:
+        enquiry.acknowledgements = list(acknowledged)
     enquiry.terms_agreed_snapshot = agreement_snapshot(enquiry)
     enquiry.terms_agreed_ip = ip or None
     _set_status(enquiry, E.BOOKED)
@@ -854,6 +938,7 @@ def resend(enquiry, key):
             key,
             source,
             coordinator_line=_coordinator_line(enquiry),
+            details_url=details_url(enquiry),
             techs=_approved_tech_text(),
         )
     else:
