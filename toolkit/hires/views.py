@@ -140,6 +140,20 @@ def enquire(request):
         {
             "form": form,
             "min_hours": cfg.min_duration_hours,
+            "late_notice": services.late_notice_text(cfg),
+            "door_notice": services.door_notice_text(cfg),
+            "late_from": f"{cfg.late_night_from:%H:%M}",
+            "door_types": {
+                str(t.pk): t.provides_door_staff
+                for t in HireType.objects.filter(active=True)
+            },
+            "door_now": bool(
+                form.late_requested
+                and HireType.objects.filter(
+                    pk=form.data.get("hire_type") or 0,
+                    provides_door_staff=True,
+                ).exists()
+            ),
             "how_we_work": cfg.how_we_work_text,
             "tier_guidance": cfg.tier_guidance_text,
             "privacy_notice": _template_text(cfg.privacy_notice_text),
@@ -298,6 +312,11 @@ def detail(request, pk):
             ],
             "dates": enquiry.dates(),
             "estimate": enquiry.estimate_gbp(),
+            "charge": enquiry.charge_gbp(),
+            "late_dates": enquiry.late_dates(),
+            "licence": services.late_licence_usage(enquiry),
+            "door_required": enquiry.door_staff_required(),
+            "door_default": get_hire_settings().door_staff_fee_gbp,
             "suggested_hirers": suggested if not enquiry.hirer else [],
             "past": E.objects.filter(
                 contact_email__iexact=enquiry.contact_email
@@ -354,6 +373,11 @@ def act(request, pk):
                 fee = Decimal(fee) if fee else None
             except InvalidOperation:
                 raise ValueError("The fee is not a number")
+            door_raw = request.POST.get("door_fee") or None
+            try:
+                door_fee = Decimal(door_raw) if door_raw else None
+            except InvalidOperation:
+                raise ValueError("The door staff charge is not a number")
             services.accept(
                 enquiry,
                 request.user,
@@ -361,6 +385,7 @@ def act(request, pk):
                 accepted_date_ids=ids or None,
                 tier_agreed=request.POST.get("tier_agreed", ""),
                 fee=fee,
+                door_fee=door_fee,
             )
             messages.success(
                 request,

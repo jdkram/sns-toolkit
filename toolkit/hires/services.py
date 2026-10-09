@@ -100,23 +100,51 @@ def describe_dates(enquiry, accepted_only=False):
     )
 
 
+def money(amount):
+    return f"£{amount:.2f}".replace(".00", "")
+
+
+def late_notice_text(cfg=None):
+    """The hirer-facing nudge about late finishes (admin-editable)."""
+    cfg = cfg or get_hire_settings()
+    fee = cfg.late_night_fee_gbp
+    return _format(
+        cfg.late_night_notice_text or defaults.LATE_NIGHT_NOTICE,
+        late_from=f"{cfg.late_night_from:%H:%M}",
+        late_fee=money(fee) if fee else "an additional fee we'll confirm",
+    )
+
+
+def door_notice_text(cfg=None, door_fee=None):
+    """Expectation-setting about door staff and their cost (editable)."""
+    cfg = cfg or get_hire_settings()
+    fee = door_fee if door_fee is not None else cfg.door_staff_fee_gbp
+    return _format(
+        cfg.door_staff_notice_text or defaults.DOOR_STAFF_NOTICE,
+        door_fee=(
+            money(fee)
+            if fee is not None
+            else "an additional charge we'll confirm"
+        ),
+    )
+
+
 def guarantee_text(enquiry):
-    """Plain statement of what is promised, for this enquiry."""
-    if enquiry.door_staff_guaranteed():
-        guaranteed = (
-            "the space, your agreed times, a keyholder, and door staff "
-            "for your late night"
+    """Plain statement of what is promised, what costs extra, what is not."""
+    extras = ""
+    best_effort = "bar staff, projection and any other volunteer help"
+    if enquiry.door_staff_required():
+        extras = (
+            "Door staff: "
+            + door_notice_text(door_fee=enquiry.door_staff_fee_gbp)
+            + "\n"
         )
-        best_effort = "bar staff, projection and any other volunteer help"
     else:
-        guaranteed = "the space, your agreed times, and a keyholder"
         best_effort = (
             "bar staff, door staff, projection and any other volunteer help"
         )
     return _format(
-        defaults.GUARANTEE_BLOCK,
-        guaranteed=guaranteed,
-        best_effort=best_effort,
+        defaults.GUARANTEE_BLOCK, extras=extras, best_effort=best_effort
     )
 
 
@@ -310,6 +338,7 @@ def accept(
     accepted_date_ids=None,
     tier_agreed="",
     fee=None,
+    door_fee=None,
 ):
     """Accept: create a proposed Event linked back, email the hirer."""
     from toolkit.diary.models import (
@@ -334,8 +363,17 @@ def accept(
             enquiry.tier_agreed = tier_agreed
         enquiry.coordinator = coordinator or user
         if fee is None:
-            fee = enquiry.estimate_gbp()
+            # What the hirer is charged, never the internal net estimate.
+            fee = enquiry.charge_gbp()
         enquiry.agreed_fee_gbp = fee
+        if enquiry.door_staff_required():
+            enquiry.door_staff_fee_gbp = (
+                door_fee
+                if door_fee is not None
+                else get_hire_settings().door_staff_fee_gbp
+            )
+        else:
+            enquiry.door_staff_fee_gbp = None
         enquiry.estimated_income_gbp = enquiry.estimate_gbp()
 
         event = Event.objects.create(
@@ -523,7 +561,13 @@ def fee_text(enquiry):
     fee = enquiry.agreed_fee_gbp
     if fee is None:
         return "to be confirmed"
-    return f"£{fee:.2f} (excluding VAT where it applies)"
+    text = f"£{fee:.2f} (excluding VAT where it applies)"
+    if enquiry.door_staff_required():
+        door = enquiry.door_staff_fee_gbp
+        text += "\nPlus door staff, charged to you in addition: " + (
+            f"£{door:.2f}" if door is not None else "amount to be confirmed"
+        )
+    return text
 
 
 def agreement_snapshot(enquiry):
@@ -814,3 +858,32 @@ def resend(enquiry, key):
         )
     else:
         send_to_hirer(enquiry, key, source)
+
+
+# --- Late-night licences (internal only, never shown to hirers) -------------
+
+
+def late_licence_usage(enquiry, cfg=None):
+    """How many late-night hires are already accepted in the same year.
+
+    None when no yearly limit is configured or this enquiry has no late
+    date. Counts hires only: the venue's own late events are not known to
+    this feature, so the figure is a floor, and the meeting must add them.
+    """
+    cfg = cfg or get_hire_settings()
+    limit = cfg.late_night_licences_per_year
+    late = enquiry.late_dates()
+    if not limit or not late:
+        return None
+    year = timezone.localtime(late[0].start).year
+    used = 0
+    for other in E.objects.filter(
+        status__in=(E.ACCEPTED, E.AWAITING_AGREEMENT, E.BOOKED, E.COMPLETED)
+    ).exclude(pk=enquiry.pk):
+        if any(
+            timezone.localtime(d.start).year == year
+            for d in other.late_dates()
+            if d.accepted
+        ):
+            used += 1
+    return {"year": year, "used": used, "limit": limit}

@@ -81,7 +81,37 @@ class HireSettings(models.Model):
         max_digits=7, decimal_places=2, default=Decimal("0")
     )
     late_night_security_cost_gbp = models.DecimalField(
-        max_digits=7, decimal_places=2, default=Decimal("0")
+        max_digits=7,
+        decimal_places=2,
+        default=Decimal("0"),
+        help_text="INTERNAL: never shown to hirers.",
+    )
+    door_staff_fee_gbp = models.DecimalField(
+        max_digits=7,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=(
+            "What hirers are charged for the door staff we arrange for late "
+            "club nights. Blank means 'an additional charge we'll confirm'."
+        ),
+    )
+    late_night_licences_per_year = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text=(
+            "INTERNAL: how many late-night licences you have a year. Blank "
+            "hides the counter shown to the meeting. Never shown to hirers."
+        ),
+    )
+    late_night_notice_text = models.TextField(
+        blank=True, default=defaults.LATE_NIGHT_NOTICE
+    )
+    door_staff_notice_text = models.TextField(
+        blank=True, default=defaults.DOOR_STAFF_NOTICE
+    )
+    late_night_ack_statement = models.CharField(
+        max_length=300, blank=True, default=defaults.LATE_NIGHT_ACK
     )
 
     min_notice_days_before_meeting = models.PositiveIntegerField(default=2)
@@ -232,8 +262,8 @@ class HireType(models.Model):
     provides_door_staff = models.BooleanField(
         default=False,
         help_text=(
-            "We guarantee door staff for this kind of hire when it runs "
-            "late (club nights). Otherwise door staff are best-effort."
+            "Door staff are required (and charged to the hirer) when this "
+            "kind of hire runs late, e.g. club nights."
         ),
     )
     includes_late_night = models.BooleanField(
@@ -449,6 +479,9 @@ class HireEnquiry(models.Model):
     agreed_fee_gbp = models.DecimalField(
         max_digits=8, decimal_places=2, null=True, blank=True
     )
+    door_staff_fee_gbp = models.DecimalField(
+        max_digits=8, decimal_places=2, null=True, blank=True
+    )
     estimated_income_gbp = models.DecimalField(
         max_digits=8, decimal_places=2, null=True, blank=True
     )
@@ -472,12 +505,13 @@ class HireEnquiry(models.Model):
     def dates(self):
         return list(self.hire_dates.all())
 
-    def door_staff_guaranteed(self):
-        """Door staff are guaranteed for late club nights only.
+    def door_staff_required(self):
+        """Door staff are required (and charged) for late club nights only.
 
         Both must hold: the hire type is one we staff the door for (club
         nights), and at least one requested date finishes after the
-        late-night time. Everything else about staffing is best-effort.
+        late-night time. Presented to the hirer as an expectation and an
+        additional cost, not as a perk.
         """
         return bool(
             self.hire_type
@@ -523,11 +557,12 @@ class HireEnquiry(models.Model):
             days=int(cfg.declined_purge_months * 30.4375)
         )
 
-    def estimate_gbp(self, n_dates=None):
-        """Pre-VAT income estimate for the agreed (else requested) tier.
+    def charge_gbp(self, n_dates=None):
+        """What the hirer is charged (pre-VAT), before door staff.
 
-        Late-night security cost is subtracted so a late finish shows what it
-        actually nets (spec: Income).
+        Price-list fee for the agreed (else requested) tier, plus the
+        late-night fee where it applies. This is the number a hirer is ever
+        quoted: it never has our internal costs taken off.
         """
         if not self.hire_type:
             return Decimal("0")
@@ -553,11 +588,32 @@ class HireEnquiry(models.Model):
                 total += fee * blocks
             else:
                 total += fee
-            if d.is_late_night():
-                if not self.hire_type.includes_late_night:
-                    total += cfg.late_night_fee_gbp
-                total -= cfg.late_night_security_cost_gbp
+            if d.is_late_night() and not self.hire_type.includes_late_night:
+                total += cfg.late_night_fee_gbp
         return total
+
+    def estimate_gbp(self, n_dates=None):
+        """INTERNAL net income estimate: the charge minus late-night security.
+
+        So a late finish shows what it actually nets (spec: Income). Never
+        quoted to a hirer; see charge_gbp for that.
+        """
+        cfg = get_hire_settings()
+        late = self.dates() if n_dates is None else self.dates()[:n_dates]
+        accepted = [d for d in late if d.accepted]
+        use = accepted or late[:1]
+        security = sum(
+            (
+                cfg.late_night_security_cost_gbp
+                for d in use
+                if d.is_late_night()
+            ),
+            Decimal("0"),
+        )
+        return self.charge_gbp(n_dates) - security
+
+    def late_dates(self):
+        return [d for d in self.dates() if d.is_late_night()]
 
 
 class HireDate(models.Model):

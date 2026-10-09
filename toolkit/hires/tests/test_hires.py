@@ -204,7 +204,9 @@ class PublicFormTests(HireBase):
     def test_late_night_flagged(self):
         self.client.post(
             reverse("hires:enquire"),
-            self.post_data(end_1="23:30", get_out_1="23:59"),
+            self.post_data(
+                late_night_ack="on", end_1="23:30", get_out_1="23:59"
+            ),
         )
         e = E.objects.get()
         self.assertTrue(e.hire_dates.get().is_late_night())
@@ -841,6 +843,8 @@ class PrivacySurfaceTests(HireBase):
 
 
 class DoorStaffTests(HireBase):
+    """Door staff: required and charged for late club nights only."""
+
     def make_late(self, enquiry):
         d = enquiry.hire_dates.get()
         d.get_out = d.get_in.replace(hour=23, minute=50) + datetime.timedelta(
@@ -848,56 +852,194 @@ class DoorStaffTests(HireBase):
         )
         d.save()
 
-    def test_door_staff_guaranteed_only_for_late_club_nights(self):
+    def club_night(self):
+        self.htype.provides_door_staff = True
+        self.htype.save()
         e = self.make_enquiry()
-        # not a club-night type, not late
-        self.assertFalse(e.door_staff_guaranteed())
         self.make_late(e)
-        # late, but the type doesn't get door staff
-        self.assertFalse(e.door_staff_guaranteed())
+        e.refresh_from_db()
+        return e
+
+    def test_required_only_for_late_club_nights(self):
+        e = self.make_enquiry()
+        self.assertFalse(e.door_staff_required())
+        self.make_late(e)
+        self.assertFalse(e.door_staff_required())  # late, wrong type
         self.htype.provides_door_staff = True
         self.htype.save()
         e.refresh_from_db()
-        self.assertTrue(e.door_staff_guaranteed())
+        self.assertTrue(e.door_staff_required())
 
-    def test_club_night_type_not_late_is_best_effort(self):
+    def test_club_night_type_not_late_does_not_need_door_staff(self):
         self.htype.provides_door_staff = True
         self.htype.save()
-        e = self.make_enquiry()
-        self.assertFalse(e.door_staff_guaranteed())
+        self.assertFalse(self.make_enquiry().door_staff_required())
 
-    def test_guarantee_text_follows_the_rule(self):
-        e = self.make_enquiry()
-        self.assertIn(
-            "door staff", services.guarantee_text(e).split("best-effort:")[1]
-        )
-        self.htype.provides_door_staff = True
-        self.htype.save()
-        self.make_late(e)
-        e.refresh_from_db()
+    def test_text_presents_door_staff_as_an_extra_cost_not_a_perk(self):
+        self.cfg.door_staff_fee_gbp = Decimal("80")
+        self.cfg.save()
+        e = self.club_night()
+        e.door_staff_fee_gbp = Decimal("80")
         text = services.guarantee_text(e)
-        guaranteed, best_effort = text.split("best-effort:")
-        self.assertIn("door staff", guaranteed)
-        self.assertNotIn("door staff", best_effort)
+        guaranteed = text.split("What is guaranteed:")[1].split("\n")[0]
+        self.assertNotIn("door", guaranteed.lower())
+        self.assertIn("Door staff:", text)
+        self.assertIn("£80", text)
+        self.assertIn("additional charge", text)
 
-    def test_default_statements_do_not_promise_door_staff_blanket(self):
-        from toolkit.hires import defaults
+    def test_no_door_line_for_ordinary_hires(self):
+        text = services.guarantee_text(self.make_enquiry())
+        self.assertNotIn("Door staff:", text)
+        self.assertIn("door staff", text.split("best-effort:")[1])
 
-        self.assertNotIn(
-            "bar and door staff are not guaranteed",
-            defaults.ACKNOWLEDGEMENTS,
-        )
-        self.assertIn("late club nights", defaults.ACKNOWLEDGEMENTS)
-
-    def test_confirmation_email_states_door_staff_for_late_club_night(self):
-        self.htype.provides_door_staff = True
-        self.htype.save()
-        e = self.make_enquiry()
-        self.make_late(e)
+    def test_accept_records_door_fee_from_settings_or_override(self):
+        self.cfg.door_staff_fee_gbp = Decimal("80")
+        self.cfg.save()
+        e = self.club_night()
+        services.accept(e, self.programmer)
         e.refresh_from_db()
+        self.assertEqual(e.door_staff_fee_gbp, Decimal("80"))
+        e2 = self.club_night()
+        services.accept(e2, self.programmer, door_fee=Decimal("95"))
+        e2.refresh_from_db()
+        self.assertEqual(e2.door_staff_fee_gbp, Decimal("95"))
+
+    def test_ordinary_hire_gets_no_door_fee(self):
+        e = self.make_enquiry()
+        services.accept(e, self.programmer)
+        e.refresh_from_db()
+        self.assertIsNone(e.door_staff_fee_gbp)
+
+    def test_confirmation_quotes_door_staff_as_extra(self):
+        self.cfg.door_staff_fee_gbp = Decimal("80")
+        self.cfg.save()
+        e = self.club_night()
         event = services.accept(e, self.programmer)
         event.terms = "Terms."
         event.save()
         services.send_confirmation(e)
         body = mail.outbox[-1].body
-        self.assertIn("door staff for your late night", body)
+        self.assertIn("Plus door staff, charged to you in addition", body)
+        self.assertIn("£80.00", body)
+
+    def test_default_statements_make_no_door_promise(self):
+        from toolkit.hires import defaults
+
+        self.assertNotIn("door", defaults.ACKNOWLEDGEMENTS.lower())
+        self.assertNotIn("door", defaults.HOW_WE_WORK.lower())
+
+
+class LateNightTests(HireBase):
+    LATE = {"end_1": "23:30", "get_out_1": "23:59"}
+
+    def setUp(self):
+        super().setUp()
+        self.cfg.late_night_fee_gbp = Decimal("50")
+        self.cfg.late_night_security_cost_gbp = Decimal("75")
+        self.cfg.door_staff_fee_gbp = Decimal("80")
+        self.cfg.late_night_licences_per_year = 12
+        self.cfg.save()
+
+    def test_late_request_needs_the_acknowledgement(self):
+        r = self.client.post(
+            reverse("hires:enquire"), self.post_data(**self.LATE)
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(E.objects.exists())
+        self.assertContains(r, "note about late finishes")
+        self.client.post(
+            reverse("hires:enquire"),
+            self.post_data(late_night_ack="on", **self.LATE),
+        )
+        self.assertEqual(E.objects.count(), 1)
+
+    def test_normal_hours_do_not_need_it(self):
+        self.client.post(reverse("hires:enquire"), self.post_data())
+        self.assertEqual(E.objects.count(), 1)
+
+    def test_form_page_carries_the_configured_notice_and_fee(self):
+        r = self.client.get(reverse("hires:enquire"))
+        self.assertContains(r, "Finishing late?")
+        self.assertContains(r, "limited number of late nights")
+        self.assertContains(r, "£50")
+
+    def test_notice_text_is_configurable(self):
+        self.cfg.late_night_notice_text = "Custom nudge after {late_from}."
+        self.cfg.save()
+        r = self.client.get(reverse("hires:enquire"))
+        self.assertContains(r, "Custom nudge after 23:00.")
+
+    def test_internal_figures_never_reach_the_hirer(self):
+        self.cfg.late_night_security_cost_gbp = Decimal("7531")
+        self.cfg.late_night_licences_per_year = 4242
+        self.cfg.save()
+        self.htype.provides_door_staff = True
+        self.htype.save()
+        pages = [self.client.get(reverse("hires:enquire")).content.decode()]
+        e = self.make_enquiry()
+        d = e.hire_dates.get()
+        d.get_out = d.get_in.replace(hour=23, minute=50) + datetime.timedelta(
+            days=1
+        )
+        d.save()
+        event = services.accept(e, self.programmer)
+        event.terms = "Terms."
+        event.save()
+        services.send_confirmation(e)
+        pages += [m.body for m in mail.outbox]
+        pages.append(
+            self.client.get(
+                reverse("hires:agree", kwargs={"token": e.agreement_token})
+            ).content.decode()
+        )
+        for text in pages:
+            self.assertNotIn("7531", text)
+            self.assertNotIn("4242", text)
+            self.assertNotIn("taxi", text.lower())
+
+    def test_quoted_fee_is_not_net_of_security_cost(self):
+        e = self.make_enquiry()
+        self.htype.provides_door_staff = False
+        d = e.hire_dates.get()
+        d.get_out = d.get_in.replace(hour=23, minute=50) + datetime.timedelta(
+            days=1
+        )
+        d.save()
+        self.assertEqual(e.charge_gbp(), Decimal("150"))  # 100 + 50 late fee
+        self.assertEqual(e.estimate_gbp(), Decimal("75"))  # minus security
+        services.accept(e, self.programmer)
+        e.refresh_from_db()
+        self.assertEqual(e.agreed_fee_gbp, Decimal("150"))
+        self.assertEqual(e.estimated_income_gbp, Decimal("75"))
+
+    def test_detail_shows_licence_count_to_the_meeting_only(self):
+        first = self.make_enquiry()
+        d = first.hire_dates.get()
+        d.get_out = d.get_in.replace(hour=23, minute=50) + datetime.timedelta(
+            days=1
+        )
+        d.save()
+        services.accept(first, self.programmer)
+        second = self.make_enquiry()
+        d = second.hire_dates.get()
+        d.get_out = d.get_in.replace(hour=23, minute=50) + datetime.timedelta(
+            days=1
+        )
+        d.save()
+        usage = services.late_licence_usage(second)
+        self.assertEqual(usage["used"], 1)
+        self.assertEqual(usage["limit"], 12)
+        self.client.force_login(self.programmer)
+        r = self.client.get(reverse("hires:detail", kwargs={"pk": second.pk}))
+        self.assertContains(r, "1 late-night hire already accepted")
+
+    def test_no_licence_counter_when_limit_blank(self):
+        self.cfg.late_night_licences_per_year = None
+        self.cfg.save()
+        e = self.make_enquiry()
+        d = e.hire_dates.get()
+        d.get_out = d.get_in.replace(hour=23, minute=50) + datetime.timedelta(
+            days=1
+        )
+        d.save()
+        self.assertIsNone(services.late_licence_usage(e))

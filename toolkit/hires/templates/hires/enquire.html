@@ -25,6 +25,8 @@
 .hire-check input[type=checkbox], .hire-wrap input[type=checkbox] { width: 1.25rem; height: 1.25rem; margin-top: .2rem; flex: none; }
 .hire-check label, .hire-field ul label { font-weight: 400; display: flex; gap: .6rem; }
 .hire-field ul { list-style: none; padding-left: 0; margin: 0; }
+.hire-late { background: #fff8e1; border-left: 4px solid #b26a00; padding: .75rem 1rem; margin: 0 0 1.5rem; }
+.hire-checkline { display: flex; gap: .6rem; align-items: flex-start; font-weight: 600; }
 .hire-hp { position: absolute; left: -9999px; }
 .hire-submit { background: #0d6efd; color: #fff; border: 0; border-radius: 4px; padding: .7rem 1.6rem; font: inherit; font-weight: 700; cursor: pointer; }
 .hire-submit:hover, .hire-submit:focus { background: #0a58ca; }
@@ -60,6 +62,13 @@
       </div>
     </fieldset>
     {% endfor %}
+    <div id="late-notice" class="hire-late" role="status" aria-live="polite" {% if not form.late_requested %}hidden{% endif %}>
+      <strong>Finishing late?</strong>
+      <p>{{ late_notice }}</p>
+      <p id="door-notice" {% if not door_now %}hidden{% endif %}>{{ door_notice }}</p>
+      {% with f=form.late_night_ack %}<div class="hire-field{% if f.errors %} hire-field--error{% endif %}" id="field-late_night_ack"><label class="hire-checkline" for="{{ f.id_for_label }}">{{ f }} <span>{{ f.label }}</span></label>{% for err in f.errors %}<div class="hire-err" role="alert">&#9888; {{ err }}</div>{% endfor %}</div>{% endwith %}
+    </div>
+    {{ door_types|json_script:"hire-door-types" }}
     {% with f=form.date_flexible %}{% include "hires/_form_field.html" %}{% endwith %}
     {% with f=form.flexibility_notes %}{% include "hires/_form_field.html" %}{% endwith %}
 
@@ -78,5 +87,27 @@
     <button type="submit" class="hire-submit">Send enquiry</button>
   </form>
 </main>
+<script>
+(function () {
+  var cutoff = "{{ late_from }}";
+  var doorTypes = JSON.parse(document.getElementById('hire-door-types').textContent);
+  var notice = document.getElementById('late-notice');
+  var door = document.getElementById('door-notice');
+  function val(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+  function update() {
+    var late = false;
+    for (var i = 1; i <= 3; i++) {
+      var gi = val('id_get_in_' + i), go = val('id_get_out_' + i);
+      if (go && ((gi && go < gi) || go > cutoff)) { late = true; }
+    }
+    notice.hidden = !late;
+    door.hidden = !(late && doorTypes[val('id_hire_type')]);
+  }
+  document.querySelectorAll('input[type=time], #id_hire_type').forEach(function (el) {
+    el.addEventListener('input', update); el.addEventListener('change', update);
+  });
+  update();
+})();
+</script>
 <script>document.getElementById('privacy-link').addEventListener('click',function(){document.getElementById('privacy-notice').open=true;});</script>
 {% endblock %}

@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from toolkit.diary.models import Room
 
+from . import defaults
 from .models import (
     ApprovedTech,
     HireDate,
@@ -95,6 +96,7 @@ class HireEnquiryForm(forms.Form):
             "required": "Please tick every box so we know you've read them."
         },
     )
+    late_night_ack = forms.BooleanField(required=False)
     # Honeypot: real people leave this blank.
     website = forms.CharField(required=False, widget=forms.HiddenInput)
 
@@ -106,6 +108,10 @@ class HireEnquiryForm(forms.Form):
             active=True
         )
         self.fields["rooms_requested"].queryset = Room.objects.all()
+        self.late_requested = False
+        self.fields["late_night_ack"].label = (
+            cfg.late_night_ack_statement or defaults.LATE_NIGHT_ACK
+        )
         self.statements = cfg.acknowledgement_list()
         self.fields["acknowledgements"].choices = [
             (s, s) for s in self.statements
@@ -234,6 +240,13 @@ class HireEnquiryForm(forms.Form):
             self.hire_dates.append(
                 HireDate(get_in=gi, start=st, end=en, get_out=go)
             )
+        self.late_requested = any(d.is_late_night() for d in self.hire_dates)
+        if self.late_requested and not data.get("late_night_ack"):
+            self.add_error(
+                "late_night_ack",
+                "Please tick this to confirm you've read the note about "
+                "late finishes, or choose an earlier finish.",
+            )
         if not self.hire_dates and not self.errors:
             raise forms.ValidationError("Please give at least one date.")
         return data
@@ -268,15 +281,28 @@ SETTINGS_GROUPS = [
         ["notification_addresses"],
     ),
     (
-        "Building time and late nights",
+        "Building time",
         "",
         [
             "min_duration_hours",
             "default_setup_minutes",
             "default_teardown_minutes",
+        ],
+    ),
+    (
+        "Late nights and door staff",
+        "Late finishes are discouraged but possible. What hirers see is the "
+        "wording and fees below. The security cost and licence limit are "
+        "internal and never shown to hirers.",
+        [
             "late_night_from",
             "late_night_fee_gbp",
+            "door_staff_fee_gbp",
+            "late_night_notice_text",
+            "door_staff_notice_text",
+            "late_night_ack_statement",
             "late_night_security_cost_gbp",
+            "late_night_licences_per_year",
         ],
     ),
     (
@@ -308,9 +334,13 @@ SETTINGS_HELP = {
     "min_duration_hours": "Shortest total time in the building, from get-in to get-out, that we'll take a hire for. Hire types can override this.",
     "default_setup_minutes": "Not used by the form yet (reserved for pre-filling get-in).",
     "default_teardown_minutes": "Not used by the form yet (reserved for pre-filling get-out).",
-    "late_night_from": "A hire finishing after this time counts as late night.",
+    "late_night_from": "A hire whose get-out is after this time counts as a late night.",
+    "late_night_notice_text": "Shown to hirers who ask for a late finish. Placeholders: {late_from}, {late_fee}.",
+    "door_staff_notice_text": "Shown to hirers when door staff are required (late club nights). Placeholder: {door_fee}. Say why, and that it is an extra cost to them.",
+    "late_night_ack_statement": "The tickbox a hirer must tick before asking for a late finish.",
     "late_night_fee_gbp": "Extra fee charged for late finishes (unless the hire type already covers them).",
-    "late_night_security_cost_gbp": "What a late night costs us in security. Subtracted from the income estimate so late nights don't look better than they are.",
+    "late_night_security_cost_gbp": "What a late night costs us in security. Internal: subtracted from the income estimate so late nights do not look better than they are, and never quoted to a hirer.",
+    "late_night_licences_per_year": "How many late-night licences you have a year. Shows the meeting how many late hires are already accepted this year (hires only; add your own late events). Blank hides it.",
     "min_notice_days_before_meeting": "An enquiry arriving fewer than this many days before a meeting goes to the next meeting instead.",
     "reply_grace_days": "Days after the meeting by which the hirer is promised an answer. If nobody has decided by then, they get the honest 'no capacity' email.",
     "digest_days_before_meeting": "How many days before each meeting the digest email goes to the notification list.",

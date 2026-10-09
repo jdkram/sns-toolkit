@@ -70,11 +70,12 @@ that let us do it".
    honest "we don't have capacity" by a date the hirer was told in advance.
 2. **Resilient to low volunteer capacity.** The honest outcome happens even if nobody acts. The
    system warns first, then sends.
-3. **Explicit about what is guaranteed.** The space and a keyholder are guaranteed, and so is
-   **door staff for late club nights** (a hire type flagged `provides_door_staff` that runs past
-   the late-night time; corrected by Jonny 2026-10-09). Bar and every other volunteer role, and
-   door staff at any other kind of event, are best-effort, because nobody is paid to be there. Hirers are told this
-   before they enquire, when they enquire, and when they are accepted.
+3. **Explicit about what is guaranteed, and what costs extra.** The space and a keyholder are
+   guaranteed. Bar and every other volunteer role are best-effort, because nobody is paid to be
+   there. **Door staff are an expectation and an additional cost, not a perk:** late club nights
+   (a hire type flagged `provides_door_staff` that runs past the late-night time) need door staff,
+   we arrange them, and the hirer is charged for them on top of the hire fee (corrected by Jonny
+   2026-10-09). Door staff at any other kind of hire are best-effort.
 4. **Make the money legible.** Show what a hire is worth in volunteer events it funds, at the
    moment the meeting is deciding.
 5. **Plan ahead.** Booking windows and recurring holds push conversations towards whole seasons.
@@ -634,6 +635,28 @@ addresses: `{privacy_contact}` and `{venue}` come from venue settings.
 **Message history (added 2026-10-09).** Each enquiry's detail page lists every email sent to the hirer's address since the enquiry arrived, read from the audit `SentEmailLog` (body-free by design). A failed send with no later success of the same kind shows a red banner with a retry button and a "Hirer email failed" badge on the queue, so a failed acknowledgement can't turn into silence. Matches the exact address, so two enquiries from one shared inbox will see each other's later emails (the panel says so). Internal digest, last-call and callout times come from fields on the enquiry itself.
 
 **Retention built (2026-10-09).** `toolkit/hires/purge.py` / `manage.py purge_hire_data [--dry-run]`, run daily at 03:40. Declined, withdrawn and timed-out enquiries are anonymised `declined_purge_months` (6) after closing; booked or completed hires lose contact details, free text and the agreement IP `hirer_purge_years` (3) after the hire itself (never before it has happened), keeping the frozen terms, fee and linked event as the financial record; `Hirer` rows go after the same period without activity unless an enquiry is open; open enquiries are never touched. Each purge writes a `DeletionLog` row with no personal data. Deliberately not gated by the feature flag. Not covered: `Event.hire_name` (diary-owned; holds a personal name if the hirer gave no organisation), `SentEmailLog` (own retention via `email_log_retain_days`), mailing-list copies of the digest, and backups. The terms snapshot now records the organisation, or "an individual hirer", never a personal name.
+
+**Late nights and door staff (built 2026-10-09).** Late finishes are discouraged, not banned.
+- **Shown to the hirer:** that late finishes are the exception; that late nights are limited each
+  year, cost extra, ask a lot of volunteers, and that we must get volunteers home safely; a
+  request to consider finishing earlier; the extra fee; that availability isn't promised; and,
+  for club nights, that door staff are required and charged on top. A live note on the form
+  appears once a get-out passes the late-night time, and a tickbox must be ticked before a late
+  request is accepted (enforced server-side too). The same facts reappear in the confirmation.
+- **Kept internal, deliberately:** what a late licence, security and taxis cost us
+  (`late_night_security_cost_gbp`), and how many licences remain (`late_night_licences_per_year`).
+  The fee is the price; exposing our costs invites bargaining and isn't something the hirer needs
+  to decide. The queue shows the meeting "N late-night hires already accepted this year, of M"
+  (hires only, so the figure is a floor) plus a Late night badge.
+- **Venue-specific, therefore settings:** the late-night time, both fees, the licence limit, the
+  notice wording (`late_night_notice_text`, placeholders `{late_from}` `{late_fee}`), the door
+  staff wording (`door_staff_notice_text`, `{door_fee}`), the tickbox wording, and which hire
+  types need door staff. Defaults name no venue.
+- **Money:** `charge_gbp()` is what a hirer is quoted (price-list fee plus late fee). The internal
+  net estimate subtracts security. The agreed fee previously defaulted to the net figure, which
+  would have under-quoted every late-night hire; fixed 2026-10-09. Door staff are a separate
+  line (`HireEnquiry.door_staff_fee_gbp`, default from settings, overridable when accepting) and
+  count as a pass-through, not income.
 
 **Related:** 9.4 (inductions custom questions, to be extracted and shared), 9.30 (`hire_name`),
 9.73 (outside-hire badge on rota), 9.113/9.162 (programming queue), 9.49 (runtime perms),

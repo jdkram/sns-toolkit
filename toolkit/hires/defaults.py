@@ -13,10 +13,9 @@ CLOSED_MESSAGE = (
 
 HOW_WE_WORK = (
     "We are entirely volunteer run. The space and a keyholder are "
-    "guaranteed for your hire, and so is door staff for late club nights. "
-    "Everything else (bar, projection, stage help, and door staff at any "
-    "other kind of event) depends on volunteers choosing to help, and "
-    "events that fit our ethos tend to get more support."
+    "guaranteed for your hire. Everything else (bar, projection, stage "
+    "help) depends on volunteers choosing to help, and events that fit our "
+    "ethos tend to get more support."
 )
 
 TIER_GUIDANCE = (
@@ -26,14 +25,31 @@ TIER_GUIDANCE = (
 
 ACKNOWLEDGEMENTS = "\n".join(
     [
-        "I understand that bar staff are not guaranteed, and neither is "
-        "door staff except for late club nights, because everyone working "
-        "here is a volunteer.",
-        "I understand that the space and a keyholder are guaranteed (and "
-        "door staff for late club nights), and everything else is "
-        "best-effort.",
+        "I understand that bar staff are not guaranteed, because everyone "
+        "working here is a volunteer.",
+        "I understand that the space and a keyholder are guaranteed, and "
+        "everything else is best-effort.",
         "Volunteers working my event will be offered food and drink.",
     ]
+)
+
+LATE_NIGHT_NOTICE = (
+    "Late finishes (after {late_from}) are the exception here, not the "
+    "rule. We only have a limited number of late nights each year, they "
+    "cost us extra, and they ask a lot of our volunteers, who all need to "
+    "get home safely afterwards. Please consider finishing earlier if you "
+    "can. If you do need a late finish, there is an extra charge of "
+    "{late_fee}, and we can't promise your date will be available."
+)
+
+DOOR_STAFF_NOTICE = (
+    "Late club nights need door staff. We arrange them, and the cost is "
+    "an additional charge to you: {door_fee}."
+)
+
+LATE_NIGHT_ACK = (
+    "I understand late finishes are limited, cost extra, and may not be "
+    "available for my date."
 )
 
 PRIVACY_NOTICE = """\
@@ -82,7 +98,8 @@ _VOLUNTEER_ROUTE = (
 )
 
 GUARANTEE_BLOCK = (
-    "What is guaranteed: {guaranteed}.\n"
+    "What is guaranteed: the space, your agreed times, and a keyholder.\n"
+    "{extras}"
     "What is best-effort: {best_effort}. Nobody is paid to be here, so "
     "these depend on volunteers choosing to help."
 )

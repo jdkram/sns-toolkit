@@ -15,15 +15,17 @@
   </div>
   {% endfor %}
   {% if e.beyond_booking_window %}<div class="alert alert-secondary">Dates are beyond the current booking window: for season planning.</div>{% endif %}
+  {% if late_dates %}<div class="alert alert-warning" role="status"><strong>Late night.</strong> The hirer was told late finishes are limited, cost extra, and may not be available, and ticked to confirm. For us it means a late licence, extra security, volunteers to get home safely, and taxis.{% if licence %} <strong>Licences:</strong> {{ licence.used }} late-night hire{{ licence.used|pluralize }} already accepted for {{ licence.year }}, of {{ licence.limit }} licences (hires only: add our own late events yourself).{% endif %}</div>{% endif %}
   {% if tech_unlisted %}<div class="alert alert-warning">Bringing their own sound tech: <strong>{{ e.sound_tech_name }}</strong>. Check they are on the approved list.</div>{% endif %}
 
   <dl class="row">
     <dt class="col-sm-3">Type / tier</dt><dd class="col-sm-9">{{ e.hire_type }} · requested {{ e.get_tier_requested_display }}{% if e.tier_agreed %}, agreed {{ e.get_tier_agreed_display }}{% endif %}</dd>
-    <dt class="col-sm-3">Income estimate</dt><dd class="col-sm-9">about £{{ estimate|floatformat:0 }}</dd>
+    <dt class="col-sm-3">Charge to hirer</dt><dd class="col-sm-9">£{{ charge|floatformat:0 }} plus VAT where it applies{% if door_required %}, plus door staff{% endif %}</dd>
+    <dt class="col-sm-3">Our net estimate</dt><dd class="col-sm-9">about £{{ estimate|floatformat:0 }} <span class="text-muted small">(internal: after late-night security. Never shown to the hirer.)</span></dd>
     <dt class="col-sm-3">Description</dt><dd class="col-sm-9" style="white-space:pre-line">{{ e.description }}</dd>
     <dt class="col-sm-3">Rooms</dt><dd class="col-sm-9">{% for r in e.rooms_requested.all %}{{ r.name }}{% if not forloop.last %}, {% endif %}{% empty %}none specified{% endfor %}</dd>
     <dt class="col-sm-3">Attendance</dt><dd class="col-sm-9">{{ e.expected_attendance|default:"not given" }}</dd>
-    <dt class="col-sm-3">Door staff</dt><dd class="col-sm-9">{% if e.door_staff_guaranteed %}<strong>Guaranteed</strong>: this is a late club night, so the rota needs door cover. {% else %}Best-effort only (guaranteed for late club nights).{% endif %}</dd>
+    <dt class="col-sm-3">Door staff</dt><dd class="col-sm-9">{% if door_required %}<strong>Required</strong>: a late club night. We arrange door cover and it is charged to the hirer on top of the hire fee ({% if e.door_staff_fee_gbp is not None %}£{{ e.door_staff_fee_gbp }}{% elif door_default is not None %}£{{ door_default }} by default{% else %}amount not set in Hire settings{% endif %}).{% else %}Not required.{% endif %}</dd>
     <dt class="col-sm-3">Sound tech</dt><dd class="col-sm-9">{{ e.get_sound_tech_display }}</dd>
     <dt class="col-sm-3">Offers volunteers</dt><dd class="col-sm-9">{{ e.offers_to_volunteers|default:"nothing stated" }}</dd>
     <dt class="col-sm-3">Link</dt><dd class="col-sm-9">{% if e.media_url %}<a href="{{ e.media_url }}" rel="noopener">{{ e.media_url }}</a>{% else %}none{% endif %}</dd>
@@ -44,7 +46,8 @@
     <div class="row g-2 mt-1">
       <div class="col-md-4"><label class="form-label small">Who will coordinate this hire?</label><select name="coordinator" class="form-select form-select-sm">{% for pk, name in staff %}<option value="{{ pk }}" {% if pk == request.user.pk %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></div>
       <div class="col-md-3"><label class="form-label small">Community or corporate rate</label><select name="tier_agreed" class="form-select form-select-sm"><option value="">as the hirer requested ({{ e.get_tier_requested_display }})</option><option value="community">Community</option><option value="corporate">Corporate</option></select></div>
-      <div class="col-md-3"><label class="form-label small">Fee £ (leave blank to use the estimate, about £{{ estimate|floatformat:0 }})</label><input name="fee" class="form-control form-control-sm" inputmode="decimal"></div>
+      {% if door_required %}<div class="col-md-3"><label class="form-label small">Door staff charge £ (blank = {% if door_default is not None %}£{{ door_default }}{% else %}to be confirmed{% endif %})</label><input name="door_fee" class="form-control form-control-sm" inputmode="decimal"></div>{% endif %}
+      <div class="col-md-3"><label class="form-label small">Fee £ (leave blank to charge the price list: £{{ charge|floatformat:0 }})</label><input name="fee" class="form-control form-control-sm" inputmode="decimal"></div>
     </div>
     <div class="mt-2 small">Which dates are you accepting? (Untick any you are not taking. Each ticked date becomes a showing on the new event.) {% for d in dates %}<label class="me-3"><input type="checkbox" name="dates" value="{{ d.pk }}" {% if forloop.first %}checked{% endif %}> {{ d.start|date:"D j M" }}</label>{% endfor %}</div>
     <button class="btn btn-success btn-sm mt-2">Accept and create proposed event</button>
