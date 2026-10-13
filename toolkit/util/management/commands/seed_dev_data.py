@@ -16,6 +16,7 @@ from collections import defaultdict
 from decimal import Decimal
 
 from django.contrib.auth.models import Group, User
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.core.files.base import ContentFile
 from django.utils import timezone
@@ -109,11 +110,16 @@ WHO_ARE_WE_BODY = (
     "building open and the projectors running.</p>"
     "<p>We believe in collective ownership, consensus decision-making, and the power "
     "of shared cultural experience.</p>"
+    '<p>Want to help? <a href="/get-involved/">Find out how to volunteer</a>, '
+    'or <a href="/hire-and-enquire/about-hiring/">hire the building</a> for your own '
+    "event.</p>"
 )
 
 HOW_TO_VOLUNTEER_BODY = (
     "<p>Anyone can volunteer at Star and Shadow. You don't need any experience, just "
     "enthusiasm and a willingness to learn.</p>"
+    '<p>The first step is an induction. <a href="/inductions/">Pick a '
+    "date and sign up here</a>.</p>"
     "<h3>Getting started</h3>"
     "<ol>"
     "<li>Attend a volunteer induction (monthly, first Sunday)</li>"
@@ -121,6 +127,8 @@ HOW_TO_VOLUNTEER_BODY = (
     "<li>Sign up for showings on the rota</li>"
     "<li>Learn on the job from experienced volunteers</li>"
     "</ol>"
+    '<p><a class="btn btn-primary btn-lg" href="/inductions/">'
+    "See upcoming volunteer inductions and sign up</a></p>"
     "<h3>What you can do</h3>"
     "<p>Projection, bar work, box office, café, cleaning, maintenance, event "
     "programming, marketing, IT, fundraising, and much more.</p>"
@@ -131,6 +139,8 @@ SAFEGUARDING_BODY = (
     "people who use our building, including children, young people, and adults at risk.</p>"
     "<p>We have a designated safeguarding lead and clear procedures for reporting "
     "concerns. All volunteers who work with vulnerable groups undergo appropriate checks.</p>"
+    '<p>See also our <a href="/safer-spaces/">Safer Spaces statement</a> and '
+    '<a href="/important-info/">further resources</a>.</p>'
     "<p>If you have a safeguarding concern, please contact our safeguarding lead "
     "immediately.</p>"
 )
@@ -147,6 +157,31 @@ FURTHER_RESOURCES_BODY = (
     "policy, safeguarding policy, privacy policy, and health and safety policy.</p>"
 )
 
+VISIT_BODY = (
+    "<p>Star and Shadow Cinema is at 118 Warwick Street, Newcastle. "
+    "(Placeholder address for testing.)</p>"
+    "<h3>Getting here</h3>"
+    "<p>Ten minutes' walk from Byker Metro. Several bus routes stop nearby, "
+    "and there is bike parking by the front door.</p>"
+    "<h3>Access</h3>"
+    "<p>The cinema, café and toilets are step-free. Ask a volunteer if you "
+    "need anything else; we would rather you asked.</p>"
+    '<p>New here? <a href="/get-involved/">Volunteer with us</a>, or read '
+    'our <a href="/safer-spaces/">Safer Spaces statement</a>.</p>'
+)
+
+CONTACT_BODY = (
+    "<p>The quickest way to reach us is email. We are all volunteers, so "
+    "please give us a few days to reply.</p>"
+    "<ul>"
+    "<li><strong>General enquiries:</strong> info@example.org, or use "
+    '<a href="/get-in-touch/">the contact form</a></li>'
+    "<li><strong>Programming:</strong> programming@example.org</li>"
+    "<li><strong>Hiring the building:</strong> use the "
+    '<a href="/hires/enquire/">enquiry form</a></li>'
+    "</ul>"
+)
+
 PRIVACY_POLICY_BODY = (
     "<p>Star and Shadow Cinema respects your privacy and is committed to protecting "
     "your personal data.</p>"
@@ -154,8 +189,17 @@ PRIVACY_POLICY_BODY = (
     "with our volunteers and audiences. We never sell or share your data with third "
     "parties for marketing purposes.</p>"
     "<p>For full details of what data we collect, why, and how to request deletion, "
-    "please contact us.</p>"
+    'please <a href="/contact/">contact us</a>.</p>'
+    '<p>If you enquire about hiring the building, see <a href="/hires/privacy/">'
+    "how we handle hire enquiry data</a>.</p>"
 )
+
+IMAGE_COLOURS = {
+    "about": "#8B5FBF",
+    "get-involved": "#2E8B57",
+    "visit": "#D98E04",
+    "safer-spaces": "#0057B8",
+}
 
 _SEED_CACHE_DIR = "/site/.seed_cache/images"
 
@@ -255,7 +299,18 @@ class Command(BaseCommand):
                 for slug in ("about", "get-involved", "important-info"):
                     for page in Page.objects.filter(slug=slug):
                         page.delete()
-                for page in Page.objects.filter(slug="safer-spaces"):
+                for page in Page.objects.filter(
+                    slug__in=(
+                        "safer-spaces",
+                        "visit",
+                        "contact",
+                        "gallery",
+                        "get-in-touch",
+                        "layout-examples",
+                    )
+                ):
+                    page.delete()
+                for page in Page.objects.filter(slug="hire-and-enquire"):
                     page.delete()
             self.stdout.write("Done.")
 
@@ -892,6 +947,9 @@ class Command(BaseCommand):
         # CMS pages
         if WAGTAIL_AVAILABLE:
             counts["cms_pages"] += self._seed_cms_pages()
+            # Hire & Enquire menu, info pages, and the hires feature flag,
+            # so testers meet the 9.175 feature without extra steps.
+            call_command("seed_hire_dev_data", stdout=self.stdout)
 
         # Toolkit index links
         counts["index_links"] = self._seed_index_links()
@@ -2666,12 +2724,45 @@ class Command(BaseCommand):
         end = start + datetime.timedelta(minutes=duration_minutes)
         self._room_bookings[room.pk].append((start, end))
 
+    def _ensure_home_page(self):
+        """Return the Wagtail home page, rebuilding the tree if it is empty.
+
+        A fresh migration creates root + "home", but a dev DB whose Wagtail
+        tree was cleared would otherwise get no CMS pages (or hire pages).
+        """
+        from wagtail.models import Site
+
+        home = Page.objects.filter(slug="home").first()
+        if home is not None:
+            return home
+        from django.conf import settings
+        from wagtail.coreutils import get_supported_content_language_variant
+        from wagtail.models import Locale
+
+        Locale.objects.get_or_create(
+            language_code=get_supported_content_language_variant(
+                settings.LANGUAGE_CODE
+            )
+        )
+        root = Page.get_first_root_node() or Page.add_root(
+            title="Root", slug="root"
+        )
+        home = BasicArticlePage(
+            title="Home", slug="home", live=True, body="<p>Welcome.</p>"
+        )
+        root.add_child(instance=home)
+        if not Site.objects.exists():
+            Site.objects.create(
+                hostname="localhost",
+                port=80,
+                root_page=home,
+                is_default_site=True,
+            )
+        return home
+
     def _seed_cms_pages(self):
         """Seed CMS content pages under the site root."""
-        try:
-            home_page = Page.objects.get(slug="home")
-        except Page.DoesNotExist:
-            return 0
+        home_page = self._ensure_home_page()
 
         pages_data = [
             ("Safer Spaces Statement", "safer-spaces", SAFER_SPACES_BODY),
@@ -2680,11 +2771,33 @@ class Command(BaseCommand):
             ("Safeguarding", "safeguarding", SAFEGUARDING_BODY),
             ("Further Resources", "important-info", FURTHER_RESOURCES_BODY),
             ("Privacy Policy", "privacy", PRIVACY_POLICY_BODY),
+            ("Visit and Access", "visit", VISIT_BODY),
+            ("Contact Us", "contact", CONTACT_BODY),
         ]
+
+        from toolkit.util.seed_cms import (
+            ensure_page_image,
+            seed_gallery_and_form,
+            seed_layout_examples,
+            upgrade_placeholder_images,
+        )
 
         created_count = 0
         for title, slug, body_text in pages_data:
-            if Page.objects.filter(slug=slug).exists():
+            existing = Page.objects.filter(slug=slug).first()
+            if existing is not None:
+                # Refresh seeded copy so re-running picks up new links
+                existing = existing.specific
+                if existing.body != body_text:
+                    existing.body = body_text
+                    existing.save_revision().publish()
+                page = existing
+            else:
+                page = None
+            if page is not None:
+                ensure_page_image(
+                    page, title, IMAGE_COLOURS.get(slug, "#555555"), "L"
+                )
                 continue
             page = BasicArticlePage(
                 title=title,
@@ -2694,8 +2807,14 @@ class Command(BaseCommand):
                 body=body_text,
             )
             home_page.add_child(instance=page)
+            ensure_page_image(
+                page, title, IMAGE_COLOURS.get(slug, "#555555"), "L"
+            )
             created_count += 1
 
+        seed_gallery_and_form(home_page)
+        seed_layout_examples(home_page)
+        upgrade_placeholder_images()
         return created_count
 
     def _seed_index_links(self):
