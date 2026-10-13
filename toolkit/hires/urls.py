@@ -6,6 +6,7 @@ from . import views
 app_name = "hires"
 
 urlpatterns = [
+    path("quote/", views.quote, name="quote"),
     path("enquire/", views.enquire, name="enquire"),
     path("privacy/", views.privacy, name="privacy"),
     path("enquire/thanks/", views.thanks, name="thanks"),

@@ -18,9 +18,33 @@ HOW_WE_WORK = (
     "ethos tend to get more support."
 )
 
+FULL_MESSAGE = (
+    "We've got more hire enquiries than our meetings can get through at "
+    "the moment, so we're not taking new ones until {full_until}. Please "
+    "try again nearer the time, or come along to one of our open "
+    "programming meetings in person."
+)
+
 TIER_GUIDANCE = (
     "Community: grassroots, DIY, unfunded or charitable events. "
     "Corporate: businesses, funded organisations, and events run for profit."
+)
+
+COMMUNITY_RATE_TEXT = (
+    "We have two rates. The full rate is for businesses, funded "
+    "organisations and events run for profit. The community rate is lower, "
+    "and exists for causes we want to support. It is, in effect, a subsidy: "
+    "we make less money from your hire, and the volunteer programme that "
+    "hire income helps to pay for gets less. So we ask you to tell us a "
+    "little about who you are and why the community rate fits. The "
+    "volunteers who discuss your enquiry decide. If we can't offer it we'll "
+    "say so, and tell you the full-rate fee before anything is booked."
+)
+
+COMMUNITY_CASE_PROMPT = (
+    "For example: who the event is for and who benefits, whether it is "
+    "unfunded, DIY, non-profit or charitable, how it is paid for, and how "
+    "it fits with what we do here. A few sentences is plenty."
 )
 
 ACKNOWLEDGEMENTS = "\n".join(
@@ -112,7 +136,10 @@ EMAIL_DEFAULTS = {
         "Thank you for enquiring about {title}. This is an automatic "
         "acknowledgement so you know it has arrived.\n\n"
         "{timing}\n\n"
+        "{rate_note}"
+        "{indicative_fee}"
         "{guarantee}\n\n"
+        "{info_line}"
         "{window_note}"
         "{venue}\n",
     ),
@@ -147,19 +174,16 @@ EMAIL_DEFAULTS = {
     "declined_capacity": (
         "Your enquiry to {venue}: we haven't managed to get back to you",
         "Hi {name},\n\n"
-        "Thank you for getting in touch about {title}. We owe you a "
-        "straight answer, so here it is: we haven't been able to take your "
-        "enquiry on, and we're sorry it has taken until now to tell you.\n\n"
+        "Thank you for getting in touch about {title}, and sorry it has "
+        "taken until now to reply. We haven't been able to take your "
+        "enquiry on.\n\n"
         "{venue} is run entirely by volunteers. Nobody is paid to answer "
         "enquiries or to staff events, and at the moment most of our "
-        "volunteers' time is going on our own programme. Your enquiry was "
-        "due to be discussed at our meeting on {meeting_date}, and nobody "
-        "was able to take it on. That says more about our capacity than "
-        "about your event.\n\n"
-        "We'd rather tell you this honestly than leave you waiting. If your "
-        "plans are flexible, you're welcome to enquire again for a later "
-        "season, or to come along to one of our open meetings, where the "
-        "people who decide these things are in the room.\n\n"
+        "volunteers' time is going on our own programme. {meeting_line} "
+        "It isn't a judgement on your event.\n\n"
+        "If your plans are flexible, you're welcome to enquire again for a "
+        "later date, or to come along to one of our open meetings, where "
+        "hires get talked over in person.\n\n"
         + _VOLUNTEER_ROUTE
         + "\n\nThanks again for thinking of us.\n\n{venue}\n",
     ),
@@ -236,6 +260,14 @@ INTERNAL_DEFAULTS = {
         "What the hirer offers volunteers: {offers}\n\n"
         "Step forward by {callout_deadline}: {enquiry_url}\n",
     ),
+    "champion_nudge": (
+        "Hire enquiry past its reply date: {title}",
+        "{champion} took on {title}, and the date we gave the hirer for an "
+        "answer ({reply_by}) has passed. Nothing automatic has gone to "
+        "them.\n\n"
+        "If it's in hand, ignore this. If not, please get in touch with "
+        "them, or hand it back to the meeting: {enquiry_url}\n",
+    ),
     "no_meetings": (
         "Hire enquiries need a meeting date",
         "There are hire enquiries waiting but no programming meeting dates "
@@ -253,13 +285,16 @@ EMAIL_LABELS = {
     ),
     "accepted": (
         "Accepted",
-        "To the hirer when you press Accept. Lists approved sound techs. The terms themselves follow in the booking confirmation.",
+        "To the hirer when you Accept, as a draft you can edit first (or not send at all). Lists approved sound techs. The terms themselves follow in the booking confirmation.",
     ),
     "maybe": (
         "Maybe: looking for a coordinator",
-        "To the hirer when you mark an enquiry Maybe.",
+        "To the hirer when you mark an enquiry Maybe, as a draft you can edit first (or not send at all).",
     ),
-    "declined": ("Declined", "To the hirer when you press Decline."),
+    "declined": (
+        "Declined",
+        "To the hirer when you Decline, as a draft you can edit first (or not send at all).",
+    ),
     "declined_capacity": (
         "Auto-decline: no capacity",
         "To the hirer automatically if nobody has decided by the reply date.",
@@ -293,8 +328,49 @@ EMAIL_LABELS = {
         "Maybe callout (internal)",
         "To the notification list when you mark an enquiry Maybe: a request for a volunteer coordinator.",
     ),
+    "champion_nudge": (
+        "Champion nudge (internal)",
+        "To the champion and the notification list, once, if an enquiry someone has taken on passes its reply date. Nothing goes to the hirer.",
+    ),
     "no_meetings": (
         "No meeting dates (internal)",
         "Monthly nag to the notification list when enquiries are waiting but no meetings are entered.",
     ),
 }
+
+# The emails grouped by stage of an enquiry, in the order a hirer meets
+# them, so the editing page reads as the process rather than a flat list.
+# (stage, what happens at this stage, keys)
+EMAIL_STAGES = [
+    (
+        "1. Enquiry arrives",
+        "The hirer has sent the short first form.",
+        ["acknowledgement"],
+    ),
+    (
+        "2. Before the meeting",
+        "The enquiry waits for its programming meeting.",
+        ["digest", "meeting_moved", "no_meetings"],
+    ),
+    (
+        "3. The meeting decides",
+        "Yes in principle, maybe (if someone will coordinate), or no.",
+        ["accepted", "maybe", "callout", "declined"],
+    ),
+    (
+        "4. If nobody decides in time",
+        "The reply date is a promise. Unclaimed enquiries are declined "
+        "politely; ones a programmer has taken on only nudge them.",
+        [
+            "last_call",
+            "champion_nudge",
+            "declined_capacity",
+            "declined_no_support",
+        ],
+    ),
+    (
+        "5. Booking",
+        "After a yes: fuller details, the terms, then the booking.",
+        ["details_received", "booking_confirmation", "booked"],
+    ),
+]

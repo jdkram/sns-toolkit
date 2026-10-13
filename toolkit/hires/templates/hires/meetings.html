@@ -1,21 +1,35 @@
 {% extends "base_admin.html" %}
 {% block title %}Programming meetings{% endblock %}
 {% block body %}
-<div class="container py-3" style="max-width:760px">
+<div class="container py-3" style="max-width:960px">
   <p><a href="{% url 'hires:queue' %}">&larr; Hire enquiries</a></p>
   <h1 class="h3">Programming meetings</h1>
-  <p class="text-muted">Enter a season's meeting dates. Hire enquiries are assigned to the next one, and the hirer is promised a reply a few days after it.</p>
+  <p class="text-muted">Enter the meetings that discuss hires: usually the 2nd Monday Open Programming meeting, sometimes Programme Development. Never Caretaking. Each new enquiry goes to the next meeting with a free hire slot, and the hirer is promised a reply a few days after it. Enquiries a programmer has taken on don't use a slot.</p>
   <form method="post" class="row g-2 align-items-end mb-4">{% csrf_token %}
     <div class="col-auto"><label class="form-label small">Date</label>{{ form.date }}</div>
     <div class="col-auto"><label class="form-label small">Type of meeting</label>{{ form.kind }}</div>
+    <div class="col-auto"><label class="form-label small" for="{{ form.hire_slots.id_for_label }}">Hire slots (blank = usual)</label>{{ form.hire_slots }}</div>
     <div class="col-auto"><button class="btn btn-primary btn-sm">Add</button></div>
     {{ form.errors }}
   </form>
-  <table class="table table-sm"><thead><tr><th>Date</th><th>Kind</th><th>Enquiries assigned</th><th></th></tr></thead><tbody>
-  {% for m in meetings %}<tr class="{% if m.cancelled %}text-decoration-line-through text-muted{% endif %}"><td>{{ m.date|date:"D j M Y" }}</td><td>{{ m.get_kind_display }}</td><td>{{ m.enquiries.count }}</td>
+  <h2 class="h5">Upcoming agendas</h2>
+  {% for a in agendas %}
+  <section class="border rounded p-2 mb-3" aria-labelledby="ag-{{ a.m.pk }}">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <h3 class="h6 mb-0" id="ag-{{ a.m.pk }}">{{ a.m.get_kind_display }}, {{ a.m.date|date:"D j M" }} <span class="badge {% if a.over %}text-bg-danger{% elif a.rows|length == a.m.slots %}text-bg-warning{% else %}text-bg-light border{% endif %}">{{ a.rows|length }} of {{ a.m.slots }} hire slot{{ a.m.slots|pluralize }}</span></h3>
+      <form method="post" class="d-flex gap-1 align-items-center">{% csrf_token %}<input type="hidden" name="slots_for" value="{{ a.m.pk }}"><label class="small" for="slots-{{ a.m.pk }}">Slots</label><input id="slots-{{ a.m.pk }}" name="hire_slots" type="number" min="0" class="form-control form-control-sm" style="width:5rem" value="{{ a.m.hire_slots|default_if_none:'' }}" placeholder="{{ a.m.slots }}"><button class="btn btn-outline-dark btn-sm">Save</button></form>
+    </div>
+    {% if a.rows %}<ol class="mb-0 mt-2 small">{% for r in a.rows %}<li class="mb-1"><a href="{% url 'hires:detail' r.e.pk %}">{{ r.e.title }}</a> ({{ r.e.contact_organisation|default:r.e.contact_name }}), {{ r.start|date:"D j M"|default:"no date" }}{% if r.too_late %} <span class="badge text-bg-danger">hire date is before this meeting</span>{% elif r.answer_after %} <span class="badge text-bg-warning">answer due after the hire date</span>{% endif %}
+      {% if upcoming|length > 1 %}<form method="post" action="{% url 'hires:act' r.e.pk %}" class="d-inline-flex gap-1 ms-2">{% csrf_token %}<input type="hidden" name="action" value="assign_meeting"><input type="hidden" name="next" value="meetings"><label class="visually-hidden" for="mv-{{ r.e.pk }}">Move {{ r.e.title }} to</label><select id="mv-{{ r.e.pk }}" name="meeting" class="form-select form-select-sm py-0 w-auto">{% for m in upcoming %}{% if m.pk != a.m.pk %}<option value="{{ m.pk }}">{{ m }}</option>{% endif %}{% endfor %}</select><button class="btn btn-outline-dark btn-sm py-0">Move</button></form>{% endif %}</li>{% endfor %}</ol>
+    {% else %}<p class="small text-muted mb-0 mt-1">No hire enquiries yet.</p>{% endif %}
+  </section>
+  {% empty %}<p class="text-muted">No upcoming meetings entered.</p>{% endfor %}
+  <h2 class="h5 mt-4">All meetings</h2>
+  <table class="table table-sm"><thead><tr><th>Date</th><th>Kind</th><th>Hire slots</th><th></th></tr></thead><tbody>
+  {% for m in meetings %}<tr class="{% if m.cancelled %}text-decoration-line-through text-muted{% endif %}"><td>{{ m.date|date:"D j M Y" }}</td><td>{{ m.get_kind_display }}</td><td>{{ m.agenda.count }} of {{ m.slots }}</td>
     <td>{% if not m.cancelled %}<form method="post" onsubmit="return confirm('Cancel this meeting? Its enquiries move to the next one.')">{% csrf_token %}<input type="hidden" name="cancel" value="{{ m.pk }}"><button class="btn btn-link btn-sm text-danger p-0">Cancel</button></form>{% endif %}</td></tr>
   {% empty %}<tr><td colspan="4" class="text-muted">No meetings yet.</td></tr>{% endfor %}
   </tbody></table>
 </div>
-<script>document.querySelectorAll('form input[type=date],form select').forEach(function(el){el.classList.add(el.tagName==='SELECT'?'form-select':'form-control','form-control-sm');});</script>
+<script>document.querySelectorAll('form input[type=date],form input[type=number]:not(.form-control),form select:not(.form-select)').forEach(function(el){el.classList.add(el.tagName==='SELECT'?'form-select':'form-control','form-control-sm');});</script>
 {% endblock %}

@@ -41,6 +41,19 @@ class HireSettings(models.Model):
     tier_guidance_text = models.TextField(
         blank=True, default=defaults.TIER_GUIDANCE
     )
+    community_rate_text = models.TextField(
+        blank=True,
+        default=defaults.COMMUNITY_RATE_TEXT,
+        help_text=(
+            "Shown on the form above the choice of rate: what the community "
+            "rate is, and that the meeting decides."
+        ),
+    )
+    community_case_prompt = models.TextField(
+        blank=True,
+        default=defaults.COMMUNITY_CASE_PROMPT,
+        help_text="Help text under the box where hirers make their case.",
+    )
     acknowledgement_statements = models.TextField(
         blank=True,
         default=defaults.ACKNOWLEDGEMENTS,
@@ -48,6 +61,16 @@ class HireSettings(models.Model):
     )
     privacy_notice_text = models.TextField(
         blank=True, default=defaults.PRIVACY_NOTICE
+    )
+    info_page_url = models.CharField(
+        max_length=300,
+        blank=True,
+        default="/hire-and-enquire/about-hiring/",
+        help_text=(
+            "Link to your hire information page, shown on the enquiry form "
+            "and in the acknowledgement email. The page itself is edited in "
+            "the Wagtail CMS, so it never needs a developer. Blank hides it."
+        ),
     )
     privacy_contact = models.CharField(
         max_length=200,
@@ -73,10 +96,25 @@ class HireSettings(models.Model):
         ),
     )
 
+    min_duration_enabled = models.BooleanField(
+        default=True, verbose_name="Have a minimum hire length"
+    )
     min_duration_hours = models.PositiveIntegerField(default=3)
+
+    def site_min_hours(self):
+        """The site-wide minimum in hours, or None if there isn't one."""
+        return self.min_duration_hours if self.min_duration_enabled else None
+
     default_setup_minutes = models.PositiveIntegerField(default=60)
     default_teardown_minutes = models.PositiveIntegerField(default=60)
     late_night_from = models.TimeField(default=datetime.time(23, 0))
+    changeover_minutes = models.PositiveIntegerField(
+        default=60, verbose_name="Changeover time between uses (minutes)"
+    )
+    cleanup_until = models.TimeField(
+        default=datetime.time(12, 0),
+        verbose_name="After a late night, clean-up can run until",
+    )
     late_night_fee_gbp = models.DecimalField(
         max_digits=7, decimal_places=2, default=Decimal("0")
     )
@@ -120,6 +158,17 @@ class HireSettings(models.Model):
     warning_days = models.PositiveIntegerField(default=2)
     callout_days = models.PositiveIntegerField(default=14)
     fallback_reply_days = models.PositiveIntegerField(default=35)
+    full_horizon_weeks = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        default=8,
+        verbose_name="Close the form if meetings are full for (weeks)",
+    )
+    full_message = models.TextField(
+        blank=True,
+        default=defaults.FULL_MESSAGE,
+        verbose_name="Message while the form is closed for being full",
+    )
 
     volunteer_event_net_cost_gbp = models.DecimalField(
         max_digits=7,
@@ -287,17 +336,46 @@ class HireType(models.Model):
 
 
 class ProgrammingMeeting(models.Model):
+    """A meeting that discusses hire enquiries (never Caretaking)."""
+
     KIND_CHOICES = [
-        ("programming", "Programming"),
-        ("development", "Programming development"),
-        ("open_monday", "Open Monday"),
+        ("programming", "Open Programming"),
+        ("development", "Programme Development"),
+        ("open_monday", "Open Meeting"),
     ]
+    # Open Programming is the meeting given over to external hires; the
+    # others take few or none unless someone moves one there by hand.
+    DEFAULT_SLOTS = {"programming": 10, "development": 3, "open_monday": 0}
     date = models.DateField()
     kind = models.CharField(
         max_length=12, choices=KIND_CHOICES, default="programming"
     )
+    hire_slots = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text=(
+            "How many hire enquiries this meeting can get through. Blank = "
+            "the usual for its kind (Open Programming 10, Programme "
+            "Development 3, Open Meeting 0)."
+        ),
+    )
     notes = models.TextField(blank=True)
     cancelled = models.BooleanField(default=False)
+
+    def slots(self):
+        if self.hire_slots is not None:
+            return self.hire_slots
+        return self.DEFAULT_SLOTS.get(self.kind, 0)
+
+    def agenda(self):
+        """Enquiries waiting on this meeting that use a slot.
+
+        A championed enquiry (one a programmer has taken on) is handled
+        outside the meeting, so it doesn't count.
+        """
+        return self.enquiries.filter(
+            status__in=HireEnquiry.CLOCK_STATES, coordinator__isnull=True
+        )
 
     class Meta:
         ordering = ["date"]
@@ -415,6 +493,15 @@ class HireEnquiry(models.Model):
     tier_agreed = models.CharField(
         max_length=10, choices=TIER_CHOICES, blank=True
     )
+    community_case = models.TextField(
+        blank=True,
+        help_text="The hirer's case for the community rate, in their words.",
+    )
+    community_evidence = models.CharField(
+        max_length=300,
+        blank=True,
+        help_text="Charity number, website or anything else they gave.",
+    )
     title = models.CharField(max_length=200)
     description = models.TextField()
     date_flexible = models.BooleanField(default=False)
@@ -459,6 +546,7 @@ class HireEnquiry(models.Model):
     callout_deadline = models.DateField(null=True, blank=True)
     callout_warning_sent_at = models.DateTimeField(null=True, blank=True)
     replied_outside_toolkit_at = models.DateTimeField(null=True, blank=True)
+    champion_nudged_at = models.DateTimeField(null=True, blank=True)
     internal_notes = models.TextField(blank=True)
 
     # Second stage: asked only once we have said yes in principle.
@@ -498,6 +586,25 @@ class HireEnquiry(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.contact_name})"
+
+    def answer_after_hire(self):
+        """The promised reply date falls on or after the first hire date.
+
+        The meeting can't help in time, so it needs someone to take it on
+        (or a decision before the meeting).
+        """
+        if not self.reply_deadline or self.status not in self.CLOCK_STATES:
+            return False
+        first = self.hire_dates.order_by("start").first()
+        return bool(
+            first
+            and timezone.localtime(first.start).date() <= self.reply_deadline
+        )
+
+    @property
+    def championed(self):
+        """A programmer has taken this on before any decision."""
+        return bool(self.coordinator_id) and self.status in self.CLOCK_STATES
 
     @property
     def is_open(self):
@@ -564,7 +671,13 @@ class HireEnquiry(models.Model):
             days=int(cfg.declined_purge_months * 30.4375)
         )
 
-    def charge_gbp(self, n_dates=None):
+    def _dates_in_play(self, n_dates=None):
+        ds = self.dates()
+        if n_dates is not None:
+            return ds[:n_dates]
+        return [d for d in ds if d.accepted] or ds[:1]
+
+    def charge_gbp(self, n_dates=None, tier=None):
         """What the hirer is charged (pre-VAT), before door staff.
 
         Price-list fee for the agreed (else requested) tier, plus the
@@ -573,31 +686,21 @@ class HireEnquiry(models.Model):
         """
         if not self.hire_type:
             return Decimal("0")
-        cfg = get_hire_settings()
-        ds = self.dates()
-        accepted = [d for d in ds if d.accepted]
-        use = accepted or ds[:1]
-        if n_dates is not None:
-            use = ds[:n_dates]
-        total = Decimal("0")
-        fee = self.hire_type.fee_for(self.tier)
-        for d in use:
-            hours = Decimal(d.access_hours())
-            if self.hire_type.unit == "hour":
-                total += fee * hours
-            elif self.hire_type.unit == "block4":
-                blocks = max(
-                    1,
-                    int(
-                        (hours / 4).to_integral_value(rounding="ROUND_CEILING")
-                    ),
-                )
-                total += fee * blocks
-            else:
-                total += fee
-            if d.is_late_night() and not self.hire_type.includes_late_night:
-                total += cfg.late_night_fee_gbp
-        return total
+        return quote_gbp(
+            self.hire_type, tier or self.tier, self._dates_in_play(n_dates)
+        )
+
+    def subsidy_gbp(self):
+        """What the community rate costs us against the full rate.
+
+        Zero unless the (agreed, else requested) rate is the community one
+        and the full rate is actually priced. This is the number the meeting
+        weighs when deciding whether to grant the rate.
+        """
+        if not self.hire_type or self.tier != self.TIER_COMMUNITY:
+            return Decimal("0")
+        full = self.charge_gbp(tier=self.TIER_CORPORATE)
+        return max(Decimal("0"), full - self.charge_gbp())
 
     def estimate_gbp(self, n_dates=None):
         """INTERNAL net income estimate: the charge minus late-night security.
@@ -630,6 +733,32 @@ class HireEnquiry(models.Model):
 
     def late_dates(self):
         return [d for d in self._relevant_dates() if d.is_late_night()]
+
+
+def quote_gbp(hire_type, tier, hire_dates):
+    """Pre-VAT charge for these dates. The one place fees are worked out.
+
+    Works on unsaved HireDates too, so the public form can show an
+    indicative fee before anything is stored.
+    """
+    cfg = get_hire_settings()
+    fee = hire_type.fee_for(tier)
+    total = Decimal("0")
+    for d in hire_dates:
+        hours = Decimal(d.access_hours())
+        if hire_type.unit == "hour":
+            total += fee * hours
+        elif hire_type.unit == "block4":
+            blocks = max(
+                1,
+                int((hours / 4).to_integral_value(rounding="ROUND_CEILING")),
+            )
+            total += fee * blocks
+        else:
+            total += fee
+        if d.is_late_night() and not hire_type.includes_late_night:
+            total += cfg.late_night_fee_gbp
+    return total
 
 
 class HireDate(models.Model):

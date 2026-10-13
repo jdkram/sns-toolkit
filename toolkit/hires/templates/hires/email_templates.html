@@ -1,12 +1,25 @@
 {% extends "base_admin.html" %}
 {% block title %}Hire emails{% endblock %}
 {% block body %}
-<div class="container py-3" style="max-width:860px">
+<div class="container py-3" style="max-width:1100px">
   <p><a href="{% url 'hires:queue' %}">&larr; Hire enquiries</a></p>
   <h1 class="h3">Hire emails</h1>
   <p class="text-muted">Wording for every email the hire system sends. Placeholders like {name} and {title} are filled in when sending. Sent emails appear in the email log.</p>
-  <div class="d-flex flex-wrap gap-1 mb-3">{% for k, name in keys %}<a class="btn btn-sm {% if k == key %}btn-dark{% else %}btn-outline-dark{% endif %}" href="?key={{ k }}">{{ name }}</a>{% endfor %}</div>
-  <h2 class="h5">{{ label }}</h2>
+  <div class="row g-4">
+  <nav class="col-md-4 order-2 order-md-1" aria-label="Emails by stage of an enquiry" id="email-list">
+    {% for stage, blurb, items in stages %}
+    <h2 class="h6 mb-0 mt-3">{{ stage }}</h2>
+    <p class="small text-muted mb-1">{{ blurb }}</p>
+    <ul class="list-group list-group-flush mb-2">
+      {% for k, name, is_internal in items %}
+      <li class="list-group-item px-2 py-1{% if k == key %} active{% endif %}"><a class="d-flex justify-content-between align-items-center gap-2 text-decoration-none{% if k == key %} text-white{% else %} text-body{% endif %}" href="?key={{ k }}"{% if k == key %} aria-current="page"{% endif %}><span>{{ name }}</span><span class="badge {% if is_internal %}text-bg-secondary{% else %}text-bg-info{% endif %}">{% if is_internal %}to volunteers{% else %}to hirer{% endif %}</span></a></li>
+      {% endfor %}
+    </ul>
+    {% endfor %}
+  </nav>
+  <div class="col-md-8 order-1 order-md-2">
+  <p class="d-md-none small"><a href="#email-list">Choose another email</a></p>
+  <h2 class="h5">{{ label }} <span class="badge {% if internal %}text-bg-secondary{% else %}text-bg-info{% endif %} align-middle">{% if internal %}to volunteers{% else %}to hirer{% endif %}</span></h2>
   <p class="text-muted">{{ when }}</p>
   <form method="post">{% csrf_token %}{{ form.key }}
     <div class="mb-2"><label class="form-label fw-semibold">Subject</label>{{ form.subject }}</div>
@@ -15,6 +28,8 @@
     <button class="btn btn-primary">Save</button>
     {% if customised %}<button name="reset" value="1" class="btn btn-outline-secondary">Reset to default</button>{% endif %}
   </form>
+  </div>
+  </div>
 </div>
 <script>document.querySelectorAll('form input[type=text],form textarea').forEach(function(el){el.classList.add('form-control');});document.querySelector('textarea').rows=18;</script>
 {% endblock %}

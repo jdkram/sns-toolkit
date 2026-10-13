@@ -12,7 +12,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.forms import modelformset_factory
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -59,13 +59,13 @@ def _client_ip(request):
     return request.META.get("REMOTE_ADDR") or None
 
 
-def _rate_limited(key, limit=5, window=3600):
+def _over_limit(key, limit):
+    return cache.get(f"hires_rl_{key}", 0) >= limit
+
+
+def _record_hit(key, window=3600):
     k = f"hires_rl_{key}"
-    n = cache.get(k, 0)
-    if n >= limit:
-        return True
-    cache.set(k, n + 1, timeout=window)
-    return False
+    cache.set(k, cache.get(k, 0) + 1, timeout=window)
 
 
 def _template_text(text):
@@ -87,16 +87,35 @@ def _template_text(text):
 @hires_gate
 def enquire(request):
     cfg = get_hire_settings()
-    if not cfg.enquiries_open:
+    blockers, _ = services.readiness(cfg)
+    if blockers:
+        logger.warning("Hire form closed, not ready: %s", "; ".join(blockers))
+    if not cfg.enquiries_open or blockers:
         return render(
             request, "hires/closed.html", {"message": cfg.closed_message}
+        )
+    full, reopens = services.full_until(cfg)
+    if full:
+        until = f"{reopens:%-d %B}" if reopens else "we have more dates"
+        return render(
+            request,
+            "hires/closed.html",
+            {
+                "heading": "We're full for now",
+                "message": services._format(
+                    cfg.full_message or defaults.FULL_MESSAGE,
+                    full_until=until,
+                ),
+            },
         )
     if request.method == "POST":
         form = HireEnquiryForm(request.POST)
         ip = _client_ip(request) or "?"
         email = request.POST.get("contact_email", "").lower()
-        if _rate_limited(f"ip_{ip}", 10) or (
-            email and _rate_limited(f"em_{email}", 3)
+        # Only successful submissions count: someone fixing mistakes on the
+        # form (the 3-hour minimum, say) must not be locked out for it.
+        if _over_limit(f"ip_{ip}", 10) or (
+            email and _over_limit(f"em_{email}", 3)
         ):
             messages.error(
                 request,
@@ -112,6 +131,16 @@ def enquire(request):
                 contact_phone=d["contact_phone"],
                 hire_type=d["hire_type"],
                 tier_requested=d["tier_requested"],
+                community_case=(
+                    d["community_case"].strip()
+                    if d["tier_requested"] == "community"
+                    else ""
+                ),
+                community_evidence=(
+                    d["community_evidence"].strip()
+                    if d["tier_requested"] == "community"
+                    else ""
+                ),
                 title=d["title"],
                 description=d["description"],
                 expected_attendance=d["expected_attendance"],
@@ -119,6 +148,8 @@ def enquire(request):
                 date_flexible=bool(d["flexibility_notes"].strip()),
             )
             enquiry.save()
+            _record_hit(f"ip_{ip}")
+            _record_hit(f"em_{email}")
             services.submit_enquiry(enquiry, form.hire_dates)
             request.session["hires_last_reply_by"] = (
                 f"{enquiry.reply_deadline:%-d %B %Y}"
@@ -134,7 +165,7 @@ def enquire(request):
         "hires/enquire.html",
         {
             "form": form,
-            "min_hours": cfg.min_duration_hours,
+            "min_hours": cfg.site_min_hours(),
             "late_notice": services.late_notice_text(cfg),
             "door_notice": services.door_notice_text(cfg),
             "late_from": f"{cfg.late_night_from:%H:%M}",
@@ -150,6 +181,7 @@ def enquire(request):
                 ).exists()
             ),
             "how_we_work": cfg.how_we_work_text,
+            "community_rate_text": cfg.community_rate_text,
             "tier_guidance": cfg.tier_guidance_text,
             "privacy_notice": _template_text(cfg.privacy_notice_text),
             "retention_notice": (
@@ -159,7 +191,43 @@ def enquire(request):
                 "last contact if you hire from us. We then delete them."
             ),
             "types": HireType.objects.filter(active=True),
+            "price_rows": services.price_rows(),
+            "info_url": (cfg.info_page_url or "").strip(),
         },
+    )
+
+
+@hires_gate
+def quote(request):
+    """Indicative fee for the form's live estimate (same maths as the real
+    quote, via services.indicative_fee_text). Stores nothing."""
+    import datetime
+
+    from .models import HireDate
+
+    g = request.GET
+    hire_type = HireType.objects.filter(
+        pk=g.get("hire_type") or 0, active=True
+    ).first()
+    tier = (
+        g.get("tier")
+        if g.get("tier") in dict(E.TIER_CHOICES)
+        else E.TIER_COMMUNITY
+    )
+    dates = []
+    try:
+        day = datetime.date.fromisoformat(g.get("date", ""))
+        t_in = datetime.time.fromisoformat(g.get("get_in", ""))
+        t_out = datetime.time.fromisoformat(g.get("get_out", ""))
+    except ValueError:
+        return JsonResponse({"text": ""})
+    gi = timezone.make_aware(datetime.datetime.combine(day, t_in))
+    go = timezone.make_aware(datetime.datetime.combine(day, t_out))
+    while go <= gi:
+        go += datetime.timedelta(days=1)
+    dates.append(HireDate(get_in=gi, start=gi, end=go, get_out=go))
+    return JsonResponse(
+        {"text": services.indicative_fee_text(hire_type, tier, dates)}
     )
 
 
@@ -310,9 +378,23 @@ def queue(request):
         since=timezone.now() - timezone.timedelta(days=120)
     )
     for e in enquiries:
+        e.no_keyholder = e.status in (
+            E.ACCEPTED,
+            E.AWAITING_AGREEMENT,
+            E.BOOKED,
+        ) and bool(services.unfilled_keyholder_slots(e))
         e.email_problem = bool(
             services.email_problems(services.messages_for(e, rows))
         )
+    deciding = [
+        e
+        for _, rows in groups
+        for e in rows
+        if e.status in (E.ACKNOWLEDGED, E.TO_DISCUSS, E.MAYBE)
+    ]
+    around = services.whats_on(deciding)
+    for e in deciding:
+        e.whats_on = around.get(e.pk, [])
     return render(
         request,
         "hires/queue.html",
@@ -321,6 +403,7 @@ def queue(request):
             "closed": closed,
             "summary": season_summary(),
             "today": timezone.localdate(),
+            "blockers": services.readiness()[0],
             "no_meetings": not ProgrammingMeeting.objects.filter(
                 date__gte=timezone.localdate(), cancelled=False
             ).exists(),
@@ -355,8 +438,11 @@ def detail(request, pk):
                 for r in problems
             ],
             "dates": enquiry.dates(),
+            "whats_on": services.whats_on([enquiry]).get(enquiry.pk, []),
             "estimate": enquiry.estimate_gbp(),
             "charge": enquiry.charge_gbp(),
+            "full_charge": enquiry.charge_gbp(tier=E.TIER_CORPORATE),
+            "subsidy": enquiry.subsidy_gbp(),
             "late_dates": enquiry.late_dates(),
             "licence": services.late_licence_usage(enquiry),
             "door_required": enquiry.door_staff_required(),
@@ -385,6 +471,10 @@ def detail(request, pk):
             "details_link": services.details_url(enquiry),
             "can_decide": enquiry.status
             in (E.ACKNOWLEDGED, E.TO_DISCUSS, E.MAYBE),
+            "drafts": services.draft_decision_emails(enquiry, request.user),
+            "meeting_full": enquiry.meeting
+            and not services.has_space(enquiry.meeting, exclude=enquiry.pk),
+            "keyholder_gap": services.unfilled_keyholder_slots(enquiry),
             "tech_unlisted": enquiry.sound_tech == "own"
             and enquiry.sound_tech_name,
             "event_terms_ok": bool(
@@ -394,111 +484,202 @@ def detail(request, pk):
     )
 
 
+def _email_choice(request):
+    """How the hirer hears about a decision, from the draft on the page."""
+    if request.POST.get("email_mode") == "self":
+        return services.SELF
+    subject = request.POST.get("email_subject", "").strip()
+    body = request.POST.get("email_body", "").strip()
+    if subject and body:
+        return (subject, body.replace("\r\n", "\n") + "\n")
+    return None
+
+
+def _money(raw, what):
+    from decimal import Decimal, InvalidOperation
+
+    try:
+        return Decimal(raw) if raw else None
+    except InvalidOperation:
+        raise ValueError(f"The {what} is not a number")
+
+
+# Each action takes (request, enquiry) and returns the message to show; a
+# ValueError becomes an error message instead.
+
+
+def _note(request):
+    return request.POST.get("note", "").strip()
+
+
+def _act_accept(request, enquiry):
+    coord = None
+    if request.POST.get("coordinator", "").isdigit():
+        coord = User.objects.filter(
+            pk=int(request.POST["coordinator"])
+        ).first()
+    ids = [int(x) for x in request.POST.getlist("dates") if x.isdigit()]
+    email = _email_choice(request)
+    services.accept(
+        enquiry,
+        request.user,
+        coordinator=coord,
+        accepted_date_ids=ids or None,
+        tier_agreed=request.POST.get("tier_agreed", ""),
+        fee=_money(request.POST.get("fee"), "fee"),
+        door_fee=_money(request.POST.get("door_fee"), "door staff charge"),
+        email=email,
+    )
+    return (
+        "Accepted. A proposed event was created; add the terms there, then "
+        "send the booking confirmation from here."
+        + (
+            " The hirer was not emailed: send them the details link below."
+            if email == services.SELF
+            else ""
+        )
+    )
+
+
+def _act_maybe(request, enquiry):
+    email = _email_choice(request)
+    services.mark_maybe(enquiry, request.user, _note(request), email=email)
+    return "Marked as maybe; callout sent." + (
+        " The hirer was not emailed." if email == services.SELF else ""
+    )
+
+
+def _act_decline(request, enquiry):
+    email = _email_choice(request)
+    services.decline(enquiry, request.user, email=email)
+    if email == services.SELF:
+        return "Declined. The hirer was not emailed: remember to tell them."
+    return "Declined; the hirer has been told."
+
+
+def _act_champion(request, enquiry):
+    services.champion(enquiry, request.user)
+    return (
+        "It's yours. It has left the meeting queue and nothing automatic "
+        "will go to the hirer."
+    )
+
+
+def _act_release(request, enquiry):
+    services.release(enquiry, request.user)
+    return "Handed back to the meeting queue."
+
+
+def _act_outside(request, enquiry):
+    services.replied_outside_toolkit(enquiry, _note(request))
+    return "Noted. The clock moved on to the next meeting."
+
+
+def _act_details_received(request, enquiry):
+    services.mark_details_received(enquiry, _note(request))
+    return "Marked as received."
+
+
+def _act_resend(request, enquiry):
+    services.resend(enquiry, request.POST.get("key", ""))
+    return "Email re-sent. See Messages sent below."
+
+
+def _act_withdraw(_request, enquiry):
+    services.withdraw(enquiry)
+    return "Marked as withdrawn."
+
+
+def _act_volunteer(request, enquiry):
+    services.volunteer_to_coordinate(enquiry, request.user)
+    return "You're coordinating this one."
+
+
+def _act_send_confirmation(_request, enquiry):
+    services.send_confirmation(enquiry)
+    return "Terms and agreement link sent."
+
+
+def _act_assign_meeting(request, enquiry):
+    m = get_object_or_404(
+        ProgrammingMeeting, pk=request.POST.get("meeting") or 0
+    )
+    if enquiry.status not in E.CLOCK_STATES:
+        raise ValueError(
+            "Only enquiries still waiting for a decision can be moved to "
+            "another meeting"
+        )
+    full = not services.has_space(m, exclude=enquiry.pk)
+    services.assign_meeting(enquiry, m)
+    enquiry.status = E.TO_DISCUSS
+    enquiry.save()
+    messages.success(request, "Moved; the deadline was recomputed.")
+    if full and not enquiry.coordinator_id:
+        slots = m.slots()
+        messages.warning(
+            request,
+            f"That meeting is now over its {slots} hire "
+            f"slot{'' if slots == 1 else 's'}. Move something else on, or "
+            "raise its slots on the Meetings page.",
+        )
+    return None
+
+
+def _act_link_hirer(request, enquiry):
+    hirer = Hirer.objects.filter(
+        pk=request.POST.get("hirer") or 0
+    ).first() or Hirer.objects.create(
+        name=enquiry.contact_name,
+        organisation=enquiry.contact_organisation,
+        email=enquiry.contact_email,
+        phone=enquiry.contact_phone,
+    )
+    enquiry.hirer = hirer
+    enquiry.save(update_fields=["hirer"])
+    return "Linked to hirer record."
+
+
+def _act_save_notes(request, enquiry):
+    enquiry.internal_notes = request.POST.get("notes", "")
+    enquiry.save(update_fields=["internal_notes"])
+    return "Notes saved."
+
+
+_ACTIONS = {
+    "accept": _act_accept,
+    "maybe": _act_maybe,
+    "decline": _act_decline,
+    "champion": _act_champion,
+    "release": _act_release,
+    "outside": _act_outside,
+    "details_received": _act_details_received,
+    "resend": _act_resend,
+    "withdraw": _act_withdraw,
+    "volunteer": _act_volunteer,
+    "send_confirmation": _act_send_confirmation,
+    "assign_meeting": _act_assign_meeting,
+    "link_hirer": _act_link_hirer,
+    "save_notes": _act_save_notes,
+}
+
+
 @hires_gate
 @feature_required("hire_enquiries")
 @require_POST
 def act(request, pk):
     enquiry = get_object_or_404(E, pk=pk)
-    action = request.POST.get("action", "")
-    note = request.POST.get("note", "").strip()
-    try:
-        if action == "accept":
-            coord = None
-            if request.POST.get("coordinator", "").isdigit():
-                coord = User.objects.filter(
-                    pk=int(request.POST["coordinator"])
-                ).first()
-            ids = [
-                int(x) for x in request.POST.getlist("dates") if x.isdigit()
-            ]
-            fee = request.POST.get("fee") or None
-            from decimal import Decimal, InvalidOperation
-
-            try:
-                fee = Decimal(fee) if fee else None
-            except InvalidOperation:
-                raise ValueError("The fee is not a number")
-            door_raw = request.POST.get("door_fee") or None
-            try:
-                door_fee = Decimal(door_raw) if door_raw else None
-            except InvalidOperation:
-                raise ValueError("The door staff charge is not a number")
-            services.accept(
-                enquiry,
-                request.user,
-                coordinator=coord,
-                accepted_date_ids=ids or None,
-                tier_agreed=request.POST.get("tier_agreed", ""),
-                fee=fee,
-                door_fee=door_fee,
-            )
-            messages.success(
-                request,
-                "Accepted. A proposed event was created; add the terms "
-                "there, then send the booking confirmation from here.",
-            )
-            return redirect("hires:detail", pk=pk)
-        elif action == "maybe":
-            services.mark_maybe(enquiry, request.user, note)
-            messages.success(request, "Marked as maybe; callout sent.")
-        elif action == "decline":
-            services.decline(enquiry, request.user)
-            messages.success(request, "Declined; the hirer has been told.")
-        elif action == "outside":
-            services.replied_outside_toolkit(enquiry, note)
-            messages.success(
-                request, "Noted. The clock moved on to the next meeting."
-            )
-        elif action == "details_received":
-            services.mark_details_received(enquiry, note)
-            messages.success(request, "Marked as received.")
-        elif action == "resend":
-            services.resend(enquiry, request.POST.get("key", ""))
-            messages.success(
-                request, "Email re-sent. See Messages sent below."
-            )
-        elif action == "withdraw":
-            services.withdraw(enquiry)
-            messages.info(request, "Marked as withdrawn.")
-        elif action == "volunteer":
-            services.volunteer_to_coordinate(enquiry, request.user)
-            messages.success(request, "You're coordinating this one.")
-        elif action == "send_confirmation":
-            services.send_confirmation(enquiry)
-            messages.success(request, "Terms and agreement link sent.")
-        elif action == "assign_meeting":
-            m = get_object_or_404(
-                ProgrammingMeeting, pk=request.POST.get("meeting") or 0
-            )
-            if enquiry.status not in E.CLOCK_STATES:
-                raise ValueError(
-                    "Only enquiries still waiting for a decision can be "
-                    "moved to another meeting"
-                )
-            services.assign_meeting(enquiry, m)
-            enquiry.status = E.TO_DISCUSS
-            enquiry.save()
-            messages.success(request, "Moved; the deadline was recomputed.")
-        elif action == "link_hirer":
-            hirer = Hirer.objects.filter(
-                pk=request.POST.get("hirer") or 0
-            ).first() or Hirer.objects.create(
-                name=enquiry.contact_name,
-                organisation=enquiry.contact_organisation,
-                email=enquiry.contact_email,
-                phone=enquiry.contact_phone,
-            )
-            enquiry.hirer = hirer
-            enquiry.save(update_fields=["hirer"])
-            messages.success(request, "Linked to hirer record.")
-        elif action == "save_notes":
-            enquiry.internal_notes = request.POST.get("notes", "")
-            enquiry.save(update_fields=["internal_notes"])
-            messages.success(request, "Notes saved.")
-        else:
-            messages.error(request, "Unknown action.")
-    except ValueError as exc:
-        messages.error(request, str(exc))
+    handler = _ACTIONS.get(request.POST.get("action", ""))
+    if handler is None:
+        messages.error(request, "Unknown action.")
+    else:
+        try:
+            done = handler(request, enquiry)
+            if done:
+                messages.success(request, done)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+    if request.POST.get("next") == "meetings":
+        return redirect("hires:meetings")
     return redirect("hires:detail", pk=pk)
 
 
@@ -517,7 +698,11 @@ def settings_edit(request):
     return render(
         request,
         "hires/settings.html",
-        {"form": form, "groups": form.grouped()},
+        {
+            "form": form,
+            "groups": form.grouped(),
+            "readiness": services.readiness(cfg),
+        },
     )
 
 
@@ -526,6 +711,15 @@ def settings_edit(request):
 def meetings(request):
     form = MeetingForm(request.POST or None)
     if request.method == "POST":
+        if request.POST.get("slots_for"):
+            m = get_object_or_404(
+                ProgrammingMeeting, pk=request.POST["slots_for"]
+            )
+            raw = request.POST.get("hire_slots", "").strip()
+            m.hire_slots = int(raw) if raw.isdigit() else None
+            m.save(update_fields=["hire_slots"])
+            messages.success(request, f"Hire slots for {m} saved.")
+            return redirect("hires:meetings")
         if request.POST.get("cancel"):
             m = get_object_or_404(
                 ProgrammingMeeting, pk=request.POST["cancel"]
@@ -545,8 +739,38 @@ def meetings(request):
             "meetings": ProgrammingMeeting.objects.filter(
                 date__gte=timezone.localdate() - timezone.timedelta(days=60)
             ),
+            "agendas": _agendas(),
+            "upcoming": ProgrammingMeeting.objects.filter(
+                date__gte=timezone.localdate(), cancelled=False
+            ),
         },
     )
+
+
+def _agendas():
+    """Each upcoming meeting's hire enquiries, soonest hire date first."""
+    today = timezone.localdate()
+    grace = timezone.timedelta(days=get_hire_settings().reply_grace_days)
+    out = []
+    for m in ProgrammingMeeting.objects.filter(
+        date__gte=today, cancelled=False
+    ):
+        rows = []
+        for e in m.agenda().select_related("hire_type"):
+            first = e.dates()[:1]
+            start = first[0].start if first else None
+            day = timezone.localtime(start).date() if start else None
+            rows.append(
+                {
+                    "e": e,
+                    "start": start,
+                    "too_late": day and day <= m.date,
+                    "answer_after": day and m.date < day <= m.date + grace,
+                }
+            )
+        rows.sort(key=lambda r: (r["start"] is None, r["start"]))
+        out.append({"m": m, "rows": rows, "over": len(rows) > m.slots()})
+    return out
 
 
 def _formset_view(request, model, form, template, title, intro="", extra=1):
@@ -595,7 +819,7 @@ def techs(request):
 @hires_gate
 @feature_required("hire_settings")
 def email_templates(request):
-    keys = list(defaults.EMAIL_DEFAULTS) + list(defaults.INTERNAL_DEFAULTS)
+    keys = [k for _s, _b, ks in defaults.EMAIL_STAGES for k in ks]
     key = request.GET.get("key") or request.POST.get("key") or keys[0]
     if key not in keys:
         raise Http404
@@ -622,9 +846,26 @@ def email_templates(request):
         request,
         "hires/email_templates.html",
         {
-            "keys": [(k, defaults.EMAIL_LABELS[k][0]) for k in keys],
+            "stages": [
+                (
+                    stage,
+                    blurb,
+                    [
+                        (
+                            k,
+                            defaults.EMAIL_LABELS[k][0].removesuffix(
+                                " (internal)"
+                            ),
+                            k in defaults.INTERNAL_DEFAULTS,
+                        )
+                        for k in stage_keys
+                    ],
+                )
+                for stage, blurb, stage_keys in defaults.EMAIL_STAGES
+            ],
+            "internal": key in defaults.INTERNAL_DEFAULTS,
             "key": key,
-            "label": defaults.EMAIL_LABELS[key][0],
+            "label": defaults.EMAIL_LABELS[key][0].removesuffix(" (internal)"),
             "when": defaults.EMAIL_LABELS[key][1],
             "form": form,
             "customised": bool(row),

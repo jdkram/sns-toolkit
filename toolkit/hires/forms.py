@@ -60,10 +60,33 @@ class HireEnquiryForm(forms.Form):
     hire_type = forms.ModelChoiceField(
         queryset=HireType.objects.none(), label="What kind of hire?"
     )
+    # No default: the hirer must choose, because the community rate is a
+    # subsidy the meeting decides on, not something to get by doing nothing.
     tier_requested = forms.ChoiceField(
-        choices=HireEnquiry.TIER_CHOICES,
-        label="Community or corporate?",
-        initial="community",
+        choices=[
+            ("", "Choose one"),
+            ("community", "Community rate (reduced, for causes we support)"),
+            (
+                "corporate",
+                "Full rate (businesses, funded organisations, events run "
+                "for profit)",
+            ),
+        ],
+        label="Which rate are you asking for?",
+    )
+    community_case = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 4}),
+        label="Why does the community rate fit?",
+    )
+    community_evidence = forms.CharField(
+        required=False,
+        max_length=300,
+        label="Anything that shows who you are (optional)",
+        help_text=(
+            "A website, social media page, or charity or CIC number. It "
+            "helps, but it isn't required."
+        ),
     )
     title = forms.CharField(max_length=200, label="Name of your event")
     description = forms.CharField(
@@ -97,6 +120,7 @@ class HireEnquiryForm(forms.Form):
             active=True
         )
         self.late_requested = False
+        self.fields["community_case"].help_text = cfg.community_case_prompt
         self.fields["late_night_ack"].label = (
             cfg.late_night_ack_statement or defaults.LATE_NIGHT_ACK
         )
@@ -152,11 +176,21 @@ class HireEnquiryForm(forms.Form):
         data = super().clean()
         if data.get("website"):
             raise forms.ValidationError("Spam check failed.")
+        if (
+            data.get("tier_requested") == "community"
+            and not (data.get("community_case") or "").strip()
+        ):
+            self.add_error(
+                "community_case",
+                "Please tell us a little about who you are and why the "
+                "community rate fits, or choose the full rate.",
+            )
         hire_type = data.get("hire_type")
+        # A hire type's own minimum applies even with the site one off
         min_hours = (
             hire_type.min_duration_hours
             if hire_type and hire_type.min_duration_hours
-            else self.cfg.min_duration_hours
+            else self.cfg.site_min_hours()
         )
         self.hire_dates = []
         now = timezone.now()
@@ -188,7 +222,7 @@ class HireEnquiryForm(forms.Form):
                 self.add_error(f"date_{i}", "That date is in the past.")
                 continue
             hours = (go - gi).total_seconds() / 3600
-            if hours < min_hours:
+            if min_hours and hours < min_hours:
                 self.add_error(
                     f"date_{i}",
                     f"We need the building for at least {min_hours} hours "
@@ -333,8 +367,11 @@ SETTINGS_GROUPS = [
         "Wording on the public form",
         "",
         [
+            "info_page_url",
             "how_we_work_text",
             "tier_guidance_text",
+            "community_rate_text",
+            "community_case_prompt",
             "acknowledgement_statements",
             "privacy_notice_text",
             "privacy_contact",
@@ -349,9 +386,12 @@ SETTINGS_GROUPS = [
         "Building time",
         "",
         [
+            "min_duration_enabled",
             "min_duration_hours",
             "default_setup_minutes",
             "default_teardown_minutes",
+            "changeover_minutes",
+            "cleanup_until",
         ],
     ),
     (
@@ -369,6 +409,13 @@ SETTINGS_GROUPS = [
             "late_night_security_cost_gbp",
             "late_night_licences_per_year",
         ],
+    ),
+    (
+        "Meetings and capacity",
+        "How many enquiries each meeting can take is set per meeting on "
+        "the Meetings page. When every meeting in the next few weeks is "
+        "full, the form closes rather than making hirers wait for months.",
+        ["full_horizon_weeks", "full_message"],
     ),
     (
         "The reply clock",
@@ -396,7 +443,12 @@ SETTINGS_GROUPS = [
 ]
 
 SETTINGS_HELP = {
-    "min_duration_hours": "Shortest total time in the building, from get-in to get-out, that we'll take a hire for. Hire types can override this.",
+    "changeover_minutes": "In 'What else is on', two uses of the same space with less time than this between them are flagged as a tight changeover.",
+    "cleanup_until": "Anything finishing after the late-night time is assumed to need its space until this time the next day, for clearing up. 'What else is on' flags anything booked into that window.",
+    "full_horizon_weeks": "Close the form when no meeting within this many weeks has a free hire slot. Blank = never close.",
+    "full_message": "Shown instead of the form while it is full. Placeholder: {full_until} (the date it reopens).",
+    "min_duration_enabled": "Untick to take hires of any length. Hire types with their own minimum still use it.",
+    "min_duration_hours": "Shortest total time in the building, from get-in to get-out, that we'll take a hire for. Ignored when the box above is unticked. Hire types can override this.",
     "default_setup_minutes": "Until the hirer gives exact event times, the event is assumed to start this long after the building opens.",
     "default_teardown_minutes": "...and to end this long before everything must be out.",
     "late_night_from": "A hire whose get-out is after this time counts as a late night.",
@@ -445,8 +497,8 @@ class HireSettingsForm(forms.ModelForm):
 class MeetingForm(forms.ModelForm):
     class Meta:
         model = ProgrammingMeeting
-        fields = ["date", "kind", "notes"]
-        labels = {"kind": "Type of meeting"}
+        fields = ["date", "kind", "hire_slots", "notes"]
+        labels = {"kind": "Type of meeting", "hire_slots": "Hire slots"}
         widgets = {"date": forms.DateInput(attrs={"type": "date"})}
 
 
@@ -469,7 +521,7 @@ class HireTypeForm(forms.ModelForm):
         }
         help_texts = {
             "unit": "Flat = one price per hire. Per hour or per 4-hour block = fee multiplied by the time in the building (get-in to get-out).",
-            "min_duration_hours": "Blank = the site default in Hire settings.",
+            "min_duration_hours": "Blank = the site default in Hire settings (no minimum, if that is switched off).",
         }
 
 

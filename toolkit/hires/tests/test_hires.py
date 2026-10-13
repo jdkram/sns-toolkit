@@ -53,6 +53,7 @@ class HireBase(TestCase):
             "contact_email": "ada@example.org",
             "hire_type": self.htype.pk,
             "tier_requested": "community",
+            "community_case": "A local unfunded film club.",
             "title": "Film night",
             "description": "A film",
             "date_1": day.isoformat(),
@@ -170,6 +171,29 @@ class PublicFormTests(HireBase):
         self.assertFalse(E.objects.exists())
         self.assertContains(r, "at least 3 hours")
 
+    def test_minimum_can_be_switched_off(self):
+        self.cfg.min_duration_enabled = False
+        self.cfg.save()
+        r = self.client.get(reverse("hires:enquire"))
+        self.assertNotContains(r, "at least 3 hours")
+        self.client.post(
+            reverse("hires:enquire"),
+            self.post_data(get_in_1="18:00", get_out_1="19:00"),
+        )
+        self.assertTrue(E.objects.exists())
+
+    def test_hire_type_minimum_applies_with_site_minimum_off(self):
+        self.cfg.min_duration_enabled = False
+        self.cfg.save()
+        self.htype.min_duration_hours = 4
+        self.htype.save()
+        r = self.client.post(
+            reverse("hires:enquire"),
+            self.post_data(get_in_1="18:00", get_out_1="21:00"),
+        )
+        self.assertFalse(E.objects.exists())
+        self.assertContains(r, "at least 4 hours")
+
     def test_honeypot_blocks(self):
         self.client.post(
             reverse("hires:enquire"), self.post_data(website="spam")
@@ -226,7 +250,8 @@ class ClockTests(HireBase):
         e.refresh_from_db()
         self.assertEqual(e.status, E.DECLINED_CAPACITY)
         self.assertIn(
-            "capacity", mail.outbox[-1].subject + mail.outbox[-1].body
+            "haven't been able to take your enquiry on",
+            mail.outbox[-1].body.replace("\n", " "),
         )
         self.assertEqual(mail.outbox[-1].to, ["ada@example.org"])
 
@@ -453,6 +478,18 @@ class ScreenRenderTests(HireBase):
             r = self.client.get(reverse("hires:emails") + f"?key={key}")
             self.assertEqual(r.status_code, 200, key)
 
+    def test_emails_page_groups_every_email_by_stage(self):
+        from toolkit.hires import defaults
+
+        r = self.client.get(reverse("hires:emails"))
+        for stage, _blurb, _keys in defaults.EMAIL_STAGES:
+            self.assertContains(r, stage)
+        staged = [k for _s, _b, ks in defaults.EMAIL_STAGES for k in ks]
+        self.assertCountEqual(
+            staged,
+            list(defaults.EMAIL_DEFAULTS) + list(defaults.INTERNAL_DEFAULTS),
+        )
+
     def test_thanks_page_renders(self):
         self.assertEqual(
             self.client.get(reverse("hires:thanks")).status_code, 200
@@ -502,7 +539,8 @@ class EmailLinkTests(HireBase):
                 "https://example.test/hires/agree/", mail.outbox[-1].body
             )
             mail.outbox.clear()
-            services.mark_maybe(e, self.programmer, "need a keyholder")
+            other = self.make_enquiry()
+            services.mark_maybe(other, self.programmer, "need a keyholder")
             self.assertIn(
                 "https://example.test/hires/manage/", mail.outbox[-1].body
             )
@@ -1290,3 +1328,640 @@ class ReviewTwoFixTests(HireBase):
         early.save()
         e.refresh_from_db()
         self.assertTrue(e.door_staff_required())
+
+
+class BranchReviewFixTests(HireBase):
+    """Regressions from the 2026-10 branch review."""
+
+    def _old_enquiry(self):
+        e = self.make_enquiry()
+        e.submitted_at = timezone.now() - datetime.timedelta(days=40)
+        e.save()
+        return e
+
+    def test_cancelled_meeting_without_replacement_is_not_instant_decline(
+        self,
+    ):
+        e = self._old_enquiry()
+        services.meeting_cancelled(self.meeting)
+        e.refresh_from_db()
+        self.assertGreater(e.reply_deadline, timezone.localdate())
+        self.assertTrue(
+            any("meeting has moved" in m.subject for m in mail.outbox)
+        )
+        services.run_clock()
+        e.refresh_from_db()
+        self.assertEqual(e.status, E.TO_DISCUSS)
+
+    def test_capacity_email_without_meeting_has_no_tbc(self):
+        e = self.make_enquiry()
+        e.meeting = None
+        e.save()
+        mail.outbox.clear()
+        services.send_to_hirer(
+            e,
+            "declined_capacity",
+            services.HIRER_EMAIL_SOURCES["declined_capacity"],
+        )
+        body = mail.outbox[-1].body
+        self.assertNotIn("TBC", body)
+        self.assertIn("Nobody was able to take it on.", body)
+
+    def test_stranded_enquiry_rehomed_later_tells_hirer(self):
+        e = self.make_enquiry()
+        e.meeting = None
+        e.reply_deadline = timezone.localdate() + datetime.timedelta(days=5)
+        e.save()
+        ProgrammingMeeting.objects.all().delete()
+        ProgrammingMeeting.objects.create(
+            date=timezone.localdate() + datetime.timedelta(days=60)
+        )
+        mail.outbox.clear()
+        services.run_clock()
+        self.assertTrue(
+            any("meeting has moved" in m.subject for m in mail.outbox)
+        )
+
+    def test_decisions_refused_once_enquiry_has_moved_on(self):
+        for status in (E.BOOKED, E.DECLINED, E.ACCEPTED):
+            e = self.make_enquiry()
+            e.status = status
+            e.save()
+            mail.outbox.clear()
+            with self.assertRaises(ValueError):
+                services.decline(e, self.programmer)
+            with self.assertRaises(ValueError):
+                services.mark_maybe(e, self.programmer, "x")
+            self.assertEqual(len(mail.outbox), 0)
+            e.refresh_from_db()
+            self.assertEqual(e.status, status)
+        done = self.make_enquiry()
+        done.status = E.DECLINED
+        done.save()
+        with self.assertRaises(ValueError):
+            services.withdraw(done)
+        with self.assertRaises(ValueError):
+            services.replied_outside_toolkit(done, "x")
+
+    def test_invalid_submissions_do_not_use_up_the_rate_limit(self):
+        for _ in range(4):
+            self.client.post(
+                reverse("hires:enquire"), self.post_data(get_out_1="17:30")
+            )
+        self.client.post(reverse("hires:enquire"), self.post_data())
+        self.assertEqual(E.objects.count(), 1)
+
+    def test_form_closed_without_notification_address(self):
+        self.cfg.notification_addresses = ""
+        self.cfg.save()
+        r = self.client.get(reverse("hires:enquire"))
+        self.assertNotContains(r, "Send enquiry")
+        self.client.force_login(self.programmer)
+        r = self.client.get(reverse("hires:queue"))
+        self.assertContains(r, "No valid notification address")
+
+    def test_form_closed_without_hire_types(self):
+        HireType.objects.all().delete()
+        r = self.client.get(reverse("hires:enquire"))
+        self.assertNotContains(r, "Send enquiry")
+
+    def test_accept_creates_keyholder_slot_and_complete_details_adds_offer(
+        self,
+    ):
+        from toolkit.diary.models import Role, RotaEntry
+
+        role = Role.objects.create(name="Keyholder", keyholder_only=True)
+        e = self.make_enquiry()
+        event = services.accept(e, self.programmer)
+        showing = event.showings.get()
+        self.assertEqual(
+            RotaEntry.objects.filter(showing=showing, role=role).count(), 1
+        )
+        self.assertEqual(services.unfilled_keyholder_slots(e), 1)
+        e.offers_to_volunteers = "Free pizza"
+        e.save()
+        services.ensure_rota_for_hire(e)
+        services.ensure_rota_for_hire(e)  # idempotent
+        showing.refresh_from_db()
+        self.assertIn(
+            "Hirer offers volunteers: Free pizza", showing.rota_notes
+        )
+        self.assertEqual(showing.rota_notes.count("Hirer offers"), 1)
+        self.assertEqual(
+            RotaEntry.objects.filter(showing=showing, role=role).count(), 1
+        )
+        self.client.force_login(self.programmer)
+        r = self.client.get(reverse("hires:detail", args=[e.pk]))
+        self.assertContains(r, "No keyholder yet")
+
+    def test_old_wagtail_hire_form_redirects_when_flag_on(self):
+        from django.test import RequestFactory
+
+        from toolkit.content.models import EmailFormPage
+
+        req = RequestFactory().get("/hire-and-enquire/enquire/")
+        hire = EmailFormPage(url_path="/home/hire-and-enquire/enquire/")
+        r = hire.serve(req)
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(r.url, reverse("hires:enquire"))
+
+
+class IndicativeFeeTests(HireBase):
+    def test_price_list_and_info_link_on_form(self):
+        r = self.client.get(reverse("hires:enquire"))
+        self.assertContains(r, "Our price list")
+        self.assertContains(r, "£100 per hire")
+        self.assertContains(r, "/hire-and-enquire/about-hiring/")
+        self.cfg.info_page_url = ""
+        self.cfg.save()
+        r = self.client.get(reverse("hires:enquire"))
+        self.assertNotContains(r, "Read about hiring first")
+
+    def test_quote_endpoint_matches_real_charge(self):
+        day = (timezone.localdate() + datetime.timedelta(days=30)).isoformat()
+        r = self.client.get(
+            reverse("hires:quote"),
+            {
+                "hire_type": self.htype.pk,
+                "tier": "corporate",
+                "date": day,
+                "get_in": "17:00",
+                "get_out": "22:00",
+            },
+        )
+        self.assertIn("About £200", r.json()["text"])
+        self.assertIn("full rate", r.json()["text"])
+        self.assertNotIn("security", r.json()["text"])
+
+    def test_quote_is_blank_for_bad_input(self):
+        r = self.client.get(reverse("hires:quote"), {"date": "nope"})
+        self.assertEqual(r.json()["text"], "")
+
+    def test_zero_fee_says_we_will_confirm(self):
+        self.htype.community_fee_gbp = Decimal("0")
+        self.htype.save()
+        e = self.make_enquiry()
+        text = services.indicative_fee_text(
+            self.htype, "community", e.dates()[:1]
+        )
+        self.assertIn("confirm the fee", text)
+
+    def test_acknowledgement_carries_fee_and_info_link(self):
+        self.client.post(reverse("hires:enquire"), self.post_data())
+        body = mail.outbox[0].body
+        self.assertIn("The fee: About £100", body)
+        self.assertIn("/hire-and-enquire/about-hiring/", body)
+
+
+class WhatsOnTests(HireBase):
+    def _showing(self, event_name, day_offset, hour, hours=2, **ev):
+        from toolkit.diary.models import Event, Showing
+
+        event = Event.objects.create(name=event_name, **ev)
+        start = timezone.make_aware(
+            datetime.datetime.combine(
+                timezone.localdate() + datetime.timedelta(days=day_offset),
+                datetime.time(hour, 0),
+            )
+        )
+        return Showing.objects.create(
+            event=event, start=start, booked_by="t", confirmed=True
+        )
+
+    def test_overlap_without_rooms_is_a_check_and_window_is_seven_days(self):
+        e = self.make_enquiry()  # 17:00-22:00 building, 30 days out
+        self._showing("Overlapping gig", 30, 19)
+        self._showing("Earlier film", 30, 10, programming_status="active")
+        self._showing("Next week", 33, 19)
+        self._showing("Far away", 45, 19)
+        info = services.whats_on([e])[e.pk][0]
+        self.assertEqual(info["same_day"], 2)
+        self.assertEqual(info["clashes"], 0)  # no rooms known: not certain
+        self.assertEqual(info["checks"], 1)
+        titles = [it["title"] for day in info["days"] for it in day["items"]]
+        self.assertIn("Next week", titles)
+        self.assertNotIn("Far away", titles)
+
+    def test_own_event_and_cancelled_are_excluded(self):
+        e = self.make_enquiry()
+        event = services.accept(e, self.programmer)
+        sh = self._showing("Cancelled thing", 30, 19)
+        sh.cancelled = True
+        sh.save()
+        info = services.whats_on([e])[e.pk][0]
+        self.assertEqual(info["week"], 0)
+        self.assertEqual(event.showings.count(), 1)
+
+    def test_other_undecided_hires_appear(self):
+        a = self.make_enquiry()
+        b = self.make_enquiry()
+        b.title = "Rival hire"
+        b.save()
+        info = services.whats_on([a])[a.pk][0]
+        self.assertEqual(info["checks"], 1)
+        self.assertTrue(
+            any(
+                it["kind"] == "enquiry"
+                for day in info["days"]
+                for it in day["items"]
+            )
+        )
+
+    def test_queue_and_detail_show_the_panel(self):
+        e = self.make_enquiry()
+        self._showing("Overlapping gig", 30, 19)
+        self.client.force_login(self.programmer)
+        r = self.client.get(reverse("hires:queue"))
+        self.assertContains(r, "1 to check")
+        r = self.client.get(reverse("hires:detail", args=[e.pk]))
+        self.assertContains(r, "Overlapping gig")
+        self.assertContains(r, "What else is on")
+
+
+class ClashTierTests(WhatsOnTests):
+    """Red only when certain; amber for what a person should look at."""
+
+    def at(self, days, hour, minute=0):
+        return timezone.make_aware(
+            datetime.datetime.combine(
+                timezone.localdate() + datetime.timedelta(days=days),
+                datetime.time(hour, minute),
+            )
+        )
+
+    def booked(self, name, room, start, end):
+        from toolkit.diary.models import Event, RoomBooking, Showing
+
+        sh = Showing.objects.create(
+            event=Event.objects.create(name=name),
+            start=start,
+            booked_by="t",
+            confirmed=True,
+        )
+        RoomBooking.objects.create(showing=sh, room=room, start=start, end=end)
+        return sh
+
+    def hire_at(self, start, end, room=None):
+        e = self.make_enquiry()
+        hd = e.hire_dates.get()
+        hd.get_in = hd.start = start
+        hd.end = hd.get_out = end
+        hd.save()
+        if room:
+            e.rooms_requested.add(room)
+        return e
+
+    def rows(self, e):
+        info = services.whats_on([e])[e.pk][0]
+        return info, {
+            it["title"]: (it["tier"], it["reason"])
+            for day in info["days"]
+            for it in day["items"]
+        }
+
+    def test_same_time_same_space_is_a_clash(self):
+        e = self.hire_at(self.at(30, 17), self.at(30, 22), self.room)
+        self.booked("Gig", self.room, self.at(30, 19), self.at(30, 21))
+        info, rows = self.rows(e)
+        self.assertEqual(rows["Gig"], ("clash", "Same time, same space"))
+        self.assertEqual(info["clashes"], 1)
+
+    def test_same_time_different_space_is_a_check(self):
+        cafe = Room.objects.create(name="Cafe")
+        e = self.hire_at(self.at(30, 17), self.at(30, 22), self.room)
+        self.booked("Talk", cafe, self.at(30, 19), self.at(30, 21))
+        _, rows = self.rows(e)
+        self.assertEqual(rows["Talk"], ("check", "Same time, different space"))
+
+    def test_time_in_between_is_clear(self):
+        e = self.hire_at(self.at(30, 17), self.at(30, 22), self.room)
+        self.booked("Matinee", self.room, self.at(30, 11), self.at(30, 14))
+        info, rows = self.rows(e)
+        self.assertEqual(rows["Matinee"], ("", ""))
+        self.assertEqual((info["clashes"], info["checks"]), (0, 0))
+        self.client.force_login(self.programmer)
+        r = self.client.get(reverse("hires:detail", args=[e.pk]))
+        self.assertNotContains(r, "Clash:")
+        self.assertContains(r, "Clear schedule")
+
+    def test_tight_changeover_in_the_same_space(self):
+        e = self.hire_at(self.at(30, 17), self.at(30, 22), self.room)
+        self.booked("Film", self.room, self.at(30, 14), self.at(30, 16, 30))
+        _, rows = self.rows(e)
+        self.assertEqual(rows["Film"], ("check", "Tight changeover (30 min)"))
+
+    def test_tight_changeover_elsewhere_is_fine(self):
+        cafe = Room.objects.create(name="Cafe")
+        e = self.hire_at(self.at(30, 17), self.at(30, 22), self.room)
+        self.booked("Brunch", cafe, self.at(30, 14), self.at(30, 16, 30))
+        _, rows = self.rows(e)
+        self.assertEqual(rows["Brunch"], ("", ""))
+
+    def test_late_night_before_flags_a_morning_hire(self):
+        e = self.hire_at(self.at(30, 9), self.at(30, 13), self.room)
+        self.booked("Club night", self.room, self.at(29, 22), self.at(30, 3))
+        _, rows = self.rows(e)
+        self.assertEqual(rows["Club night"][0], "check")
+        self.assertIn("clearing up", rows["Club night"][1])
+
+    def test_late_hire_flags_the_next_morning(self):
+        e = self.hire_at(self.at(30, 20), self.at(31, 1), self.room)
+        self.booked(
+            "Coffee morning", self.room, self.at(31, 10), self.at(31, 12)
+        )
+        _, rows = self.rows(e)
+        self.assertEqual(rows["Coffee morning"][0], "check")
+        self.assertIn("clean-up", rows["Coffee morning"][1])
+
+
+class HireMenuSeedTests(HireBase):
+    def test_seeded_menu_shows_info_page_and_enquiry_link(self):
+        from django.core.management import call_command
+
+        call_command("seed_hire_dev_data", verbosity=0)
+        call_command("seed_hire_dev_data", verbosity=0)  # idempotent
+        html = self.client.get("/").content.decode()
+        self.assertIn("Hire &amp; Enquire", html)
+        self.assertIn("About hiring", html)
+        self.assertLess(
+            html.index("About hiring"), html.index('href="/hires/enquire/"')
+        )
+        self.assertIn('href="/hires/enquire/"', html)
+        self.assertEqual(html.count("Hire &amp; Enquire"), 1)
+
+    def test_seeded_meetings_are_second_and_fourth_mondays(self):
+        from django.core.management import call_command
+
+        stray = ProgrammingMeeting.objects.create(
+            date=timezone.localdate() + datetime.timedelta(days=9)
+        )
+        e = self.make_enquiry(meeting=stray)
+        call_command("seed_hire_dev_data", verbosity=0)
+        meetings = ProgrammingMeeting.objects.filter(
+            date__gt=timezone.localdate()
+        )
+        self.assertTrue(meetings.exists())
+        for m in meetings:
+            self.assertEqual(m.date.weekday(), 0, m)
+            self.assertIn((m.date.day - 1) // 7 + 1, (2, 4), m)
+        e.refresh_from_db()
+        self.assertIn(e.meeting, meetings)
+
+
+class CommunityRateTests(HireBase):
+    def test_rate_must_be_chosen_and_community_needs_a_case(self):
+        r = self.client.post(
+            reverse("hires:enquire"), self.post_data(tier_requested="")
+        )
+        self.assertEqual(E.objects.count(), 0)
+        r = self.client.post(
+            reverse("hires:enquire"), self.post_data(community_case="  ")
+        )
+        self.assertEqual(E.objects.count(), 0)
+        self.assertContains(r, "why the community rate fits")
+
+    def test_full_rate_needs_no_case_and_stores_none(self):
+        self.client.post(
+            reverse("hires:enquire"),
+            self.post_data(
+                tier_requested="corporate",
+                community_case="ignored",
+                community_evidence="ignored",
+            ),
+        )
+        e = E.objects.get()
+        self.assertEqual(e.community_case, "")
+        self.assertEqual(e.community_evidence, "")
+
+    def test_case_is_stored_and_shown_to_the_meeting_with_the_subsidy(self):
+        self.client.post(
+            reverse("hires:enquire"),
+            self.post_data(community_evidence="charity 123"),
+        )
+        e = E.objects.get()
+        self.assertEqual(e.community_case, "A local unfunded film club.")
+        self.assertEqual(e.subsidy_gbp(), Decimal("100"))  # 200 full - 100
+        self.client.force_login(self.programmer)
+        r = self.client.get(reverse("hires:queue"))
+        self.assertContains(r, "Asks for community rate")
+        self.assertContains(r, "A local unfunded film club.")
+        r = self.client.get(reverse("hires:detail", args=[e.pk]))
+        self.assertContains(r, "subsidy of about")
+        self.assertContains(r, "charity 123")
+
+    def test_form_explains_rate_and_quote_gives_the_full_rate_too(self):
+        r = self.client.get(reverse("hires:enquire"))
+        self.assertContains(r, "in effect, a subsidy")
+        e = self.make_enquiry()
+        text = services.indicative_fee_text(
+            self.htype, "community", e.dates()[:1]
+        )
+        self.assertIn("if the volunteers agree it", text)
+        self.assertIn("full rate it would be about £200", text)
+
+    def test_acknowledgement_and_digest_mention_the_request(self):
+        self.client.post(reverse("hires:enquire"), self.post_data())
+        self.assertIn("asked for the community rate", mail.outbox[0].body)
+        e = E.objects.get()
+        self.assertIn(
+            "community rate: subsidy about £100", services._digest_lines([e])
+        )
+
+    def test_declined_community_rate_is_stated_in_the_terms(self):
+        e = self.make_enquiry(tier_requested="community")
+        services.accept(e, self.programmer, tier_agreed="corporate")
+        self.assertIn(
+            "We weren't able to offer the community rate",
+            services.fee_text(e),
+        )
+        self.assertEqual(e.agreed_fee_gbp, Decimal("200"))
+
+    def test_case_is_purged_with_the_rest(self):
+        from toolkit.hires.purge import anonymise_enquiry
+
+        e = self.make_enquiry(
+            community_case="private story", community_evidence="x"
+        )
+        anonymise_enquiry(e)
+        e.refresh_from_db()
+        self.assertEqual(e.community_case, "")
+        self.assertEqual(e.community_evidence, "")
+
+
+class MeetingSlotTests(HireBase):
+    def later_meeting(self, days=24, **kw):
+        return ProgrammingMeeting.objects.create(
+            date=timezone.localdate() + datetime.timedelta(days=days), **kw
+        )
+
+    def test_full_meeting_is_skipped(self):
+        self.meeting.hire_slots = 1
+        self.meeting.save()
+        later = self.later_meeting()
+        self.make_enquiry()
+        self.client.post(reverse("hires:enquire"), self.post_data())
+        self.assertEqual(E.objects.latest("pk").meeting, later)
+
+    def test_championed_enquiry_does_not_use_a_slot(self):
+        self.meeting.hire_slots = 1
+        self.meeting.save()
+        e = self.make_enquiry()
+        services.champion(e, self.programmer)
+        self.assertTrue(services.has_space(self.meeting))
+
+    def test_open_meeting_takes_no_hires_by_default(self):
+        self.meeting.kind = "open_monday"
+        self.meeting.save()
+        dev = self.later_meeting(kind="development")
+        self.client.post(reverse("hires:enquire"), self.post_data())
+        self.assertEqual(E.objects.get().meeting, dev)
+
+    def test_form_closes_when_full_within_horizon(self):
+        self.cfg.full_horizon_weeks = 2
+        self.cfg.save()
+        self.meeting.hire_slots = 0
+        self.meeting.save()
+        self.later_meeting(days=60)
+        r = self.client.get(reverse("hires:enquire"))
+        self.assertContains(r, "full for now")
+        self.client.post(reverse("hires:enquire"), self.post_data())
+        self.assertFalse(E.objects.exists())
+
+    def test_form_stays_open_with_no_meetings_or_no_horizon(self):
+        self.meeting.hire_slots = 0
+        self.meeting.save()
+        self.cfg.full_horizon_weeks = None
+        self.cfg.save()
+        self.assertNotContains(
+            self.client.get(reverse("hires:enquire")), "full for now"
+        )
+        self.cfg.full_horizon_weeks = 8
+        self.cfg.save()
+        ProgrammingMeeting.objects.all().delete()
+        self.assertNotContains(
+            self.client.get(reverse("hires:enquire")), "full for now"
+        )
+
+    def test_meetings_page_shows_agenda_and_saves_slots(self):
+        self.make_enquiry()
+        self.client.force_login(self.programmer)
+        r = self.client.get(reverse("hires:meetings"))
+        self.assertContains(r, "1 of 10 hire slots")
+        self.client.post(
+            reverse("hires:meetings"),
+            {"slots_for": self.meeting.pk, "hire_slots": "4"},
+        )
+        self.meeting.refresh_from_db()
+        self.assertEqual(self.meeting.slots(), 4)
+
+    def test_moving_into_a_full_meeting_warns(self):
+        later = self.later_meeting(hire_slots=0)
+        e = self.make_enquiry()
+        self.client.force_login(self.programmer)
+        r = self.client.post(
+            reverse("hires:act", kwargs={"pk": e.pk}),
+            {"action": "assign_meeting", "meeting": later.pk},
+            follow=True,
+        )
+        self.assertContains(r, "over its 0 hire slots")
+        e.refresh_from_db()
+        self.assertEqual(e.meeting, later)
+
+    def test_hire_before_its_answer_is_flagged(self):
+        # Hire is in 30 days; a meeting in 28 promises an answer in 35.
+        late = self.later_meeting(days=28)
+        e = self.make_enquiry()
+        self.assertFalse(e.answer_after_hire())
+        services.assign_meeting(e, late)
+        e.save()
+        self.assertTrue(e.answer_after_hire())
+        self.client.force_login(self.programmer)
+        self.assertContains(
+            self.client.get(reverse("hires:queue")), "Hire before its answer"
+        )
+        self.assertContains(
+            self.client.get(reverse("hires:meetings")),
+            "answer due after the hire date",
+        )
+
+
+class ChampionTests(HireBase):
+    def test_championed_enquiry_is_never_auto_declined(self):
+        e = self.make_enquiry()
+        services.champion(e, self.programmer)
+        e.reply_deadline = timezone.localdate()
+        e.save()
+        mail.outbox.clear()
+        out = services.run_clock()
+        e.refresh_from_db()
+        self.assertEqual(e.status, E.TO_DISCUSS)
+        self.assertEqual(out["champion_nudges"], 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertNotIn("ada@example.org", mail.outbox[0].to)
+        self.assertIn(self.programmer.email, mail.outbox[0].to)
+        services.run_clock()
+        self.assertEqual(len(mail.outbox), 1)  # once only
+
+    def test_champion_and_release_through_the_page(self):
+        e = self.make_enquiry()
+        self.client.force_login(self.programmer)
+        url = reverse("hires:act", kwargs={"pk": e.pk})
+        self.client.post(url, {"action": "champion"})
+        e.refresh_from_db()
+        self.assertTrue(e.championed)
+        r = self.client.get(reverse("hires:queue"))
+        self.assertContains(r, "Taken on by")
+        self.client.post(url, {"action": "release"})
+        e.refresh_from_db()
+        self.assertFalse(e.championed)
+        self.assertEqual(e.meeting, self.meeting)
+
+    def test_someone_else_cannot_take_over_a_champion(self):
+        from django.contrib.auth.models import User
+
+        e = self.make_enquiry()
+        services.champion(e, self.programmer)
+        other = User.objects.create_user("other", password="x")
+        with self.assertRaises(ValueError):
+            services.champion(e, other)
+
+
+class DecisionDraftTests(HireBase):
+    def setUp(self):
+        super().setUp()
+        self.e = self.make_enquiry()
+        self.client.force_login(self.programmer)
+        self.url = reverse("hires:act", kwargs={"pk": self.e.pk})
+
+    def test_detail_page_shows_editable_drafts(self):
+        r = self.client.get(reverse("hires:detail", args=[self.e.pk]))
+        self.assertContains(r, 'name="email_body"', count=3)
+        self.assertContains(r, "Hi Ada")
+        self.e.refresh_from_db()
+        self.assertContains(r, self.e.details_token)
+
+    def test_edited_decline_is_sent_as_written(self):
+        mail.outbox.clear()
+        self.client.post(
+            self.url,
+            {
+                "action": "decline",
+                "email_mode": "send",
+                "email_subject": "About your night",
+                "email_body": "Hi Ada,\r\n\r\nSorry, not this time.",
+            },
+        )
+        self.assertEqual(mail.outbox[-1].subject, "About your night")
+        self.assertIn("Sorry, not this time.", mail.outbox[-1].body)
+        self.assertIn("privacy", mail.outbox[-1].body)
+
+    def test_ill_be_in_touch_myself_sends_nothing(self):
+        mail.outbox.clear()
+        self.client.post(
+            self.url,
+            {"action": "decline", "email_mode": "self", "email_body": "x"},
+        )
+        self.e.refresh_from_db()
+        self.assertEqual(self.e.status, E.DECLINED)
+        self.assertEqual(mail.outbox, [])
+        self.assertIn("Not emailed by the system", self.e.internal_notes)

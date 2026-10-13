@@ -115,15 +115,57 @@ duration = 180
 image_url = "https://images.pexels.com/photos/3171837/pexels-photo-3171837.jpeg?auto=compress&cs=tinysrgb&w=800"
 
 [[monthly_events]]
-name = "Programme Development Meeting"
+name = "Open Meeting"
 weekday = 0
-occurrence = "second"
-copy_summary = "Monthly open pitch session. Bring your event idea."
-copy = "Five minutes per proposal. Feedback from the room. No idea too small or too strange."
+occurrence = "first"
+copy_summary = "The main community meeting. Open to all."
+copy = "General business, keyholder nominations and event proposals. In person and online."
 pricing = "Free"
 tags = ["meeting"]
-roles = ["Programmer", "Facilitator", "Minute taker"]
+roles = ["Facilitator", "Minute taker"]
 room = "Meeting"
-hour = 19
+hour = 18
+duration = 120
+image_url = "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800"
+
+[[monthly_events]]
+name = "Open Programming meeting"
+weekday = 0
+occurrence = "second"
+copy_summary = "Bring a programming idea. Open to the public."
+copy = "Open to anyone, volunteer or not, with something they want to put on. A good place to find out how we work."
+pricing = "Free"
+tags = ["meeting"]
+roles = ["Facilitator", "Minute taker"]
+room = "Meeting"
+hour = 18
+duration = 120
+image_url = "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800"
+
+[[monthly_events]]
+name = "Caretaking meeting"
+weekday = 0
+occurrence = "third"
+copy_summary = "The building: maintenance, repairs, operational policy."
+copy = "Anything physical about the building, and the policies that keep it running."
+pricing = "Free"
+tags = ["meeting"]
+roles = ["Facilitator", "Minute taker"]
+room = "Meeting"
+hour = 18
+duration = 120
+image_url = "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800"
+
+[[monthly_events]]
+name = "Programme Development Meeting"
+weekday = 0
+occurrence = "fourth"
+copy_summary = "Budgets, sound tech, external hires, the programme as a whole."
+copy = "The working meeting for meta-programming: budget approvals, returning proposals, external hires and the sustainability of the programme."
+pricing = "Free"
+tags = ["meeting"]
+roles = ["Facilitator", "Minute taker"]
+room = "Meeting"
+hour = 18
 duration = 120
 image_url = "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800"

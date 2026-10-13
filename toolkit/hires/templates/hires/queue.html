@@ -5,6 +5,8 @@
 .hq-card { border:1px solid #dee2e6; border-left:4px solid #0d6efd; border-radius:6px; padding:1rem; margin-bottom:1rem; background:#fff; }
 .hq-card.maybe { border-left-color:#fd7e14; } .hq-card.booked { border-left-color:#198754; }
 .hq-meta { font-size:.9em; color:#495057; }
+.hq-around { margin-top:.5rem; } .hq-around summary { cursor:pointer; }
+.hq-around-table { font-size:.9rem; background:#fff; }
 .hq-summary { background:#f8f9fa; border:1px solid #adb5bd; border-radius:6px; padding:.75rem 1rem; margin-bottom:1.25rem; color:#212529; font-size:1rem; }
 .hq-summary .hq-meta { color:#495057; }
 </style>{% endblock %}
@@ -23,6 +25,7 @@
       {% endif %}
     </div>
   </div>
+  {% if blockers %}<div class="alert alert-danger mt-3" role="alert"><strong>The public form is closed:</strong><ul class="mb-0">{% for b in blockers %}<li>{{ b }}</li>{% endfor %}</ul></div>{% endif %}
   {% if no_meetings %}<div class="alert alert-warning mt-3" role="alert">No future programming meeting is entered, so enquiries run on the fallback clock. {% if feature_perms.hire_settings %}<a href="{% url 'hires:meetings' %}">Add meeting dates.</a>{% endif %}</div>{% endif %}
   <div class="hq-summary mt-3">
     <strong>Hires and the programme they fund.</strong>
@@ -36,10 +39,16 @@
   <div class="hq-card {% if e.status == 'maybe' %}maybe{% elif e.status == 'booked' %}booked{% endif %}">
     <a class="fw-bold" href="{% url 'hires:detail' e.pk %}">{{ e.title }}</a>
     <span class="hq-meta">{{ e.contact_organisation|default:e.contact_name }} · {{ e.hire_type|default:"no type" }} · {{ e.get_status_display }}</span>
+    {% if e.answer_after_hire %}<span class="badge text-bg-danger" title="The hire date comes before the promised reply date.">Hire before its answer</span>{% endif %}
+    {% if e.championed %}<span class="badge text-bg-primary" title="A programmer has taken this on; it's out of the meeting queue.">Taken on by {{ e.coordinator.get_full_name|default:e.coordinator.username }}</span>{% endif %}
     {% if e.late_dates %}<span class="badge text-bg-warning">Late night</span>{% endif %}
+    {% if e.tier == "community" %}<span class="badge text-bg-info">Asks for community rate</span>{% endif %}
+    {% if e.no_keyholder %}<span class="badge text-bg-warning" title="The hirer was promised a keyholder and nobody has signed up yet.">No keyholder yet</span>{% endif %}
     {% if e.email_problem %}<span class="badge text-bg-danger" title="An email to this hirer failed to send. Open the enquiry to retry.">Hirer email failed</span>{% endif %}
     <div>{% for d in e.hire_dates.all %}<span class="badge text-bg-light border">{{ d.start|date:"D j M Y H:i" }}</span> {% endfor %}</div>
-    <div class="hq-meta">About £{{ e.estimate_gbp|floatformat:0 }}{% if e.meeting %} · meeting {{ e.meeting.date|date:"j M" }}{% endif %}{% if e.reply_deadline and e.status == "acknowledged" or e.reply_deadline and e.status == "to_discuss" %} · auto-declines {{ e.reply_deadline|date:"j M" }} ({{ e.reply_deadline|timeuntil }}){% endif %}{% if e.callout_deadline and e.status == "maybe" %} · callout ends {{ e.callout_deadline|date:"j M" }}{% endif %}</div>
+    <div class="hq-meta">About £{{ e.estimate_gbp|floatformat:0 }}{% if e.meeting %} · meeting {{ e.meeting.date|date:"j M" }}{% endif %}{% if e.championed %} · reply promised by {{ e.reply_deadline|date:"j M" }}{% elif e.reply_deadline and e.status == "acknowledged" or e.reply_deadline and e.status == "to_discuss" %} · auto-declines {{ e.reply_deadline|date:"j M" }} ({{ e.reply_deadline|timeuntil }}){% endif %}{% if e.callout_deadline and e.status == "maybe" %} · callout ends {{ e.callout_deadline|date:"j M" }}{% endif %}</div>
+    {% if e.tier == "community" and e.community_case %}<details class="hq-around"><summary>Community rate: their case{% with sub=e.subsidy_gbp %}{% if sub %} <span class="hq-meta">(a subsidy of about £{{ sub|floatformat:0 }})</span>{% endif %}{% endwith %}</summary><p class="mb-1" style="white-space:pre-line">{{ e.community_case }}</p>{% if e.community_evidence %}<p class="hq-meta mb-0">Evidence given: {{ e.community_evidence }}</p>{% endif %}</details>{% endif %}
+    {% if e.whats_on %}{% include "hires/_whats_on.html" with wo=e.whats_on %}{% endif %}
   </div>
   {% empty %}<p class="text-muted">Nothing here.</p>{% endfor %}
   {% endfor %}

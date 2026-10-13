@@ -129,19 +129,6 @@ auto_crop = "left"
 room = "Venue Space"
 
 [[events]]
-name = "Programme Development Meeting"
-copy_summary = "Meeting to discuss upcoming programme proposals. Open to all."
-copy = "Monthly meeting open to all volunteers and members of public interested in programming. Bring proposals, costings, and ideas."
-tags = ["meeting"]
-private = false
-rota_notes = "Agenda circulated Friday. Please review proposals beforehand."
-roles = ["Programmer", "Facilitator", "Minute taker"]
-day_offset = 25
-hour = 18
-image_url = "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=600&h=900&fit=crop"
-room = "Meeting"
-
-[[events]]
 name = "Cafe Induction"
 copy_summary = "Training on how to use coffee machine and run cafe."
 copy = "Essential training for anyone wanting to volunteer in cafe. Covers food hygiene, coffee machine operation, and till use."
