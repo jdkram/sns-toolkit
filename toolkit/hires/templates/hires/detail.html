@@ -1,0 +1,144 @@
+{% extends "base_admin.html" %}
+{% block title %}{{ e.title }}{% endblock %}
+{% block body %}
+<div class="container py-3" style="max-width:900px">
+  <p><a href="{% url 'hires:queue' %}">&larr; All hire enquiries</a></p>
+  <h1 class="h3">{{ e.title }} <span class="badge text-bg-secondary fs-6">{{ e.get_status_display }}</span></h1>
+  <p class="text-muted">{{ e.contact_name }}{% if e.contact_organisation %}, {{ e.contact_organisation }}{% endif %} · <a href="mailto:{{ e.contact_email }}">{{ e.contact_email }}</a>{% if e.contact_phone %} · {{ e.contact_phone }}{% endif %}</p>
+  {% if past %}<div class="alert alert-info" role="status">Repeat contact: {{ past|length }} earlier enquir{{ past|length|pluralize:"y,ies" }} from this email.
+    {% for p in past %}<a href="{% url 'hires:detail' p.pk %}">{{ p.title }}</a> ({{ p.get_status_display }}){% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+  {% for row, label, key in email_problems %}
+  <div class="alert alert-danger d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
+    <span><strong>The "{{ label }}" email to {{ e.contact_email }} did not send</strong> ({{ row.sent_at|date:"j M, H:i" }}). The hirer may not have received it.</span>
+    {% if key and key != "booking_confirmation" and feature_perms.hire_enquiries %}<form method="post" action="{% url 'hires:act' e.pk %}">{% csrf_token %}<input type="hidden" name="action" value="resend"><input type="hidden" name="key" value="{{ key }}"><button class="btn btn-danger btn-sm">Try sending again</button></form>
+    {% elif key == "booking_confirmation" %}<span class="small">Use "Send booking confirmation" below.</span>{% endif %}
+  </div>
+  {% endfor %}
+  {% if e.beyond_booking_window %}<div class="alert alert-secondary">Dates are beyond the current booking window: for season planning.</div>{% endif %}
+  {% if late_dates %}<div class="alert alert-warning" role="status"><strong>Late night.</strong> The hirer was told late finishes are limited, cost extra, and may not be available, and ticked to confirm. For us it means a late licence, extra security, volunteers to get home safely, and taxis.{% if licence %} <br><strong>Licences:</strong> {{ licence.used }} late-night hire{{ licence.used|pluralize }} already accepted for {{ licence.year }}, of {{ licence.limit }} licences (hires only: add our own late events yourself).{% endif %}</div>{% endif %}
+  {% if keyholder_gap %}<div class="alert alert-warning" role="status"><strong>No keyholder yet.</strong> The hirer was promised one. {{ keyholder_gap }} keyholder slot{{ keyholder_gap|pluralize }} on this event {{ keyholder_gap|pluralize:"is,are" }} unfilled on the rota{% if e.event %}: <a href="{% url 'edit-event-details-view' event_id=e.event.pk %}">open the event</a>{% endif %}.</div>{% endif %}
+  {% if e.tier_requested == "community" %}<div class="alert alert-info" role="region" aria-label="Community rate request"><strong>{% if e.tier_agreed == "corporate" %}Asked for the community rate; the full rate was agreed.{% elif e.tier_agreed == "community" %}Asked for the community rate; granted.{% else %}Asking for the community rate. The meeting decides.{% endif %}</strong>
+    {% if subsidy %}<div>Granting it is a subsidy of about <strong>£{{ subsidy|floatformat:0 }}</strong> from the volunteer programme (full rate £{{ full_charge|floatformat:0 }}, community rate £{{ charge|floatformat:0 }}, before VAT).</div>{% endif %}
+    <div class="mt-1" style="white-space:pre-line">{{ e.community_case|default:"No reason given." }}</div>
+    {% if e.community_evidence %}<div class="small mt-1">Evidence given: {{ e.community_evidence }}</div>{% endif %}</div>{% endif %}
+  {% if tech_unlisted %}<div class="alert alert-warning">Bringing their own sound tech: <strong>{{ e.sound_tech_name }}</strong>. Check they are on the approved list.</div>{% endif %}
+
+  <dl class="row">
+    <dt class="col-sm-3">Type / tier</dt><dd class="col-sm-9">{{ e.hire_type }} · requested {{ e.get_tier_requested_display }}{% if e.tier_agreed %}, agreed {{ e.get_tier_agreed_display }}{% endif %}</dd>
+    <dt class="col-sm-3">Charge to hirer</dt><dd class="col-sm-9">£{{ charge|floatformat:0 }} plus VAT where it applies{% if door_required %}, plus door staff{% endif %}</dd>
+    <dt class="col-sm-3">Our net estimate</dt><dd class="col-sm-9">about £{{ estimate|floatformat:0 }} <span class="text-muted small">(internal: after late-night security. Never shown to the hirer.)</span></dd>
+    <dt class="col-sm-3">Description</dt><dd class="col-sm-9" style="white-space:pre-line">{{ e.description }}</dd>
+    <dt class="col-sm-3">Rooms</dt><dd class="col-sm-9">{% for r in e.rooms_requested.all %}{{ r.name }}{% if not forloop.last %}, {% endif %}{% empty %}none specified{% endfor %}</dd>
+    <dt class="col-sm-3">Attendance</dt><dd class="col-sm-9">{{ e.expected_attendance|default:"not given" }}</dd>
+    <dt class="col-sm-3">Door staff</dt><dd class="col-sm-9">{% if door_required %}<strong>Required</strong>: a late club night. We arrange door cover and it is charged to the hirer on top of the hire fee ({% if e.door_staff_fee_gbp is not None %}£{{ e.door_staff_fee_gbp }}{% elif door_default is not None %}£{{ door_default }} by default{% else %}amount not set in Hire settings{% endif %}).{% else %}Not required.{% endif %}</dd>
+    <dt class="col-sm-3">Sound tech</dt><dd class="col-sm-9">{{ e.get_sound_tech_display }}</dd>
+    <dt class="col-sm-3">Offers volunteers</dt><dd class="col-sm-9">{{ e.offers_to_volunteers|default:"nothing stated" }}</dd>
+    <dt class="col-sm-3">Link</dt><dd class="col-sm-9">{% if e.media_url %}<a href="{{ e.media_url }}" rel="noopener">{{ e.media_url }}</a>{% else %}none{% endif %}</dd>
+    <dt class="col-sm-3">Flexibility</dt><dd class="col-sm-9">{% if e.date_flexible %}Flexible. {% endif %}{{ e.flexibility_notes|default:"Nothing stated" }}</dd>
+    <dt class="col-sm-3">Meeting / deadline</dt><dd class="col-sm-9">{% if e.championed %}Taken on by {{ e.coordinator.get_full_name|default:e.coordinator.username }} (out of the meeting queue) · reply promised by {{ e.reply_deadline|date:"j M Y"|default:"n/a" }}{% else %}{{ e.meeting|default:"none assigned" }} · auto-declines {{ e.reply_deadline|date:"j M Y"|default:"n/a" }}{% endif %}</dd>
+    <dt class="col-sm-3">Personal data</dt><dd class="col-sm-9">{% if e.is_purged %}Deleted on {{ e.personal_data_purged_at|date:"j M Y" }}.{% elif purge_on %}Will be deleted on about {{ purge_on|date:"j M Y" }}{% if e.keeps_financial_record %} (the agreed terms and fee are kept as a financial record){% endif %}.{% else %}Deletion is scheduled once this enquiry is closed.{% endif %}</dd>
+    <dt class="col-sm-3">Event</dt><dd class="col-sm-9">{% if e.event %}<a href="{% url 'edit-event-details-view' event_id=e.event.pk %}">Event #{{ e.event.pk }}</a>: {{ e.event.get_programming_status_display }}{% else %}not created yet{% endif %}</dd>
+  </dl>
+  <h2 class="h5">Dates</h2>
+  <ul>{% for d in dates %}<li>{{ d.start|date:"D j M Y, H:i" }} to {{ d.end|date:"H:i" }}; building {{ d.get_in|date:"H:i" }} to {{ d.get_out|date:"H:i" }} ({{ d.access_hours|floatformat:1 }} h){% if d.is_late_night %} <span class="badge text-bg-warning">late night: security needed</span>{% endif %}{% if d.accepted %} <span class="badge text-bg-success">accepted</span>{% endif %}</li>{% endfor %}</ul>
+
+  <h2 class="h5 mt-4">What else is on</h2>
+  <p class="small text-muted">Everything in the diary within a week either side of each requested date, plus other hire enquiries still undecided. Rooms are only known once the hirer sends their details.</p>
+  {% include "hires/_whats_on.html" with wo=whats_on full=True %}
+
+  {% if feature_perms.hire_enquiries %}
+  {% if e.status == "acknowledged" or e.status == "to_discuss" %}
+  <h2 class="h5 mt-4">Who's handling this</h2>
+  {% if e.answer_after_hire %}<div class="alert alert-warning" role="alert"><strong>The hire is before we've promised an answer.</strong> The first date is {{ dates.0.start|date:"j M" }} and the reply is due {{ e.reply_deadline|date:"j M" }}{% if not e.championed %}, so the meeting can't help in time. It needs someone to take it on, or a decision sooner{% endif %}.</div>{% endif %}
+  {% if e.coordinator %}<div class="alert alert-info" role="status"><strong>{{ e.coordinator.get_full_name|default:e.coordinator.username }} has taken this on.</strong> It's out of the meeting queue and nothing automatic goes to the hirer. If {{ e.reply_deadline|date:"j M"|default:"the reply date" }} passes without a decision, they and the notification list get one reminder.
+    <form method="post" action="{% url 'hires:act' e.pk %}" class="mt-2">{% csrf_token %}<input type="hidden" name="action" value="release"><button class="btn btn-outline-dark btn-sm">Hand back to the meeting</button></form></div>
+  {% else %}<p class="small">Waiting for the {% if e.meeting %}{{ e.meeting.get_kind_display }} meeting on {{ e.meeting.date|date:"j M" }}{% else %}next meeting{% endif %}{% if meeting_full %} <span class="badge text-bg-warning">that meeting is over its hire slots</span>{% endif %}. If you'd like to champion it and do the arranging yourself, take it on: it leaves the meeting queue and the automatic emails stop.</p>
+  <form method="post" action="{% url 'hires:act' e.pk %}" class="mb-3">{% csrf_token %}<input type="hidden" name="action" value="champion"><button class="btn btn-primary btn-sm">I'll take this one on</button></form>{% endif %}
+  {% endif %}
+  {% if can_decide %}
+  <h2 class="h5 mt-4">Decide</h2>
+  <form method="post" action="{% url 'hires:act' e.pk %}" class="border rounded p-3 mb-3">{% csrf_token %}
+    <input type="hidden" name="action" value="accept">
+    <strong>Accept</strong>
+    <div class="row g-2 mt-1">
+      <div class="col-md-6"><label class="form-label small">Who will coordinate this hire?</label><select name="coordinator" class="form-select form-select-sm">{% for pk, name in staff %}<option value="{{ pk }}" {% if e.coordinator_id %}{% if pk == e.coordinator_id %}selected{% endif %}{% elif pk == request.user.pk %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></div>
+      <div class="col-md-6"><label class="form-label small">Which rate are we offering?</label><select name="tier_agreed" class="form-select form-select-sm"><option value="">as they asked ({{ e.get_tier_requested_display }})</option><option value="community">Community rate (a subsidy)</option><option value="corporate">Full rate</option></select></div>
+      {% if door_required %}<div class="col-md-3"><label class="form-label small">Door staff charge £ (blank = {% if door_default is not None %}£{{ door_default }}{% else %}to be confirmed{% endif %})</label><input name="door_fee" class="form-control form-control-sm" inputmode="decimal"></div>{% endif %}
+      <div class="col-md-3"><label class="form-label small">Fee £ (leave blank to charge the price list: £{{ charge|floatformat:0 }})</label><input name="fee" class="form-control form-control-sm" inputmode="decimal"></div>
+    </div>
+    <div class="mt-2 small">Which dates are you accepting? (Untick any you are not taking. Each ticked date becomes a showing on the new event.) {% for d in dates %}<label class="me-3"><input type="checkbox" name="dates" value="{{ d.pk }}" {% if forloop.first %}checked{% endif %}> {{ d.start|date:"D j M" }}</label>{% endfor %}</div>
+    {% with d=drafts.accepted %}{% if d %}<fieldset class="border rounded p-2 mt-2"><legend class="small fw-semibold float-none w-auto px-1 mb-0">Email to the hirer</legend>
+      <div class="form-check"><input class="form-check-input" type="radio" name="email_mode" value="send" id="send-accepted" checked><label class="form-check-label small" for="send-accepted">Send this email (edit it first if you like)</label></div>
+      <div class="form-check"><input class="form-check-input" type="radio" name="email_mode" value="self" id="self-accepted"><label class="form-check-label small" for="self-accepted">Don't email them: I'll be in touch myself</label></div>
+      <label class="form-label small mt-1" for="subj-accepted">Subject</label><input id="subj-accepted" name="email_subject" class="form-control form-control-sm" value="{{ d.0 }}">
+      <label class="form-label small mt-1" for="body-accepted">Message</label><textarea id="body-accepted" name="email_body" class="form-control form-control-sm" rows="10">{{ d.1 }}</textarea>
+      <div class="form-text">A link to the privacy notice is added at the bottom.</div>
+    </fieldset>{% endif %}{% endwith %}
+    <button class="btn btn-success mt-3">Accept and create proposed event</button>
+  </form>
+  <form method="post" action="{% url 'hires:act' e.pk %}" class="border rounded p-3 mb-3">{% csrf_token %}
+    <input type="hidden" name="action" value="maybe">
+    <strong>Maybe</strong> <span class="text-muted small">(calls out to the list for a coordinator)</span>
+    <textarea name="note" class="form-control form-control-sm mt-1" rows="2" placeholder="What we need: e.g. a keyholder and someone to coordinate the night" required aria-label="What support is needed"></textarea>
+    {% with d=drafts.maybe %}{% if d %}<fieldset class="border rounded p-2 mt-2"><legend class="small fw-semibold float-none w-auto px-1 mb-0">Email to the hirer</legend>
+      <div class="form-check"><input class="form-check-input" type="radio" name="email_mode" value="send" id="send-maybe" checked><label class="form-check-label small" for="send-maybe">Send this email (edit it first if you like)</label></div>
+      <div class="form-check"><input class="form-check-input" type="radio" name="email_mode" value="self" id="self-maybe"><label class="form-check-label small" for="self-maybe">Don't email them: I'll be in touch myself</label></div>
+      <label class="form-label small mt-1" for="subj-maybe">Subject</label><input id="subj-maybe" name="email_subject" class="form-control form-control-sm" value="{{ d.0 }}">
+      <label class="form-label small mt-1" for="body-maybe">Message</label><textarea id="body-maybe" name="email_body" class="form-control form-control-sm" rows="10">{{ d.1 }}</textarea>
+      <div class="form-text">A link to the privacy notice is added at the bottom.</div>
+    </fieldset>{% endif %}{% endwith %}
+    <button class="btn btn-warning btn-sm mt-2">Mark maybe and send callout</button>
+  </form>
+  <form method="post" action="{% url 'hires:act' e.pk %}" class="border rounded p-3 mb-3">{% csrf_token %}<input type="hidden" name="action" value="decline">
+    <strong>Decline</strong>
+    {% with d=drafts.declined %}{% if d %}<fieldset class="border rounded p-2 mt-2"><legend class="small fw-semibold float-none w-auto px-1 mb-0">Email to the hirer</legend>
+      <div class="form-check"><input class="form-check-input" type="radio" name="email_mode" value="send" id="send-declined" checked><label class="form-check-label small" for="send-declined">Send this email (edit it first if you like)</label></div>
+      <div class="form-check"><input class="form-check-input" type="radio" name="email_mode" value="self" id="self-declined"><label class="form-check-label small" for="self-declined">Don't email them: I'll be in touch myself</label></div>
+      <label class="form-label small mt-1" for="subj-declined">Subject</label><input id="subj-declined" name="email_subject" class="form-control form-control-sm" value="{{ d.0 }}">
+      <label class="form-label small mt-1" for="body-declined">Message</label><textarea id="body-declined" name="email_body" class="form-control form-control-sm" rows="10">{{ d.1 }}</textarea>
+      <div class="form-text">A link to the privacy notice is added at the bottom.</div>
+    </fieldset>{% endif %}{% endwith %}
+    <button class="btn btn-outline-danger btn-sm mt-2">Decline</button>
+  </form>
+  <form method="post" action="{% url 'hires:act' e.pk %}" class="border rounded p-3 mb-3">{% csrf_token %}<input type="hidden" name="action" value="outside">
+    <label class="form-label mb-1" for="outside-note"><strong>Already replied to them yourself?</strong></label>
+    <div class="form-text mt-0 mb-1" id="outside-help">Say in a line what you told the hirer. It goes in the notes, and the enquiry moves to the next meeting instead of being declined automatically.</div>
+    <div class="d-flex flex-wrap gap-2"><input id="outside-note" name="note" class="form-control form-control-sm flex-grow-1" style="min-width:14rem;width:auto" aria-describedby="outside-help" placeholder="e.g. Said we're keen, asked for a quieter date" required><button class="btn btn-outline-dark btn-sm text-nowrap">Record my reply</button></div>
+  </form>
+  {% if e.status == "maybe" %}<form method="post" action="{% url 'hires:act' e.pk %}">{% csrf_token %}<input type="hidden" name="action" value="volunteer"><button class="btn btn-primary btn-sm mb-3">I'll coordinate this</button></form>{% endif %}
+  {% endif %}
+
+  {% if e.status == "accepted" %}<div class="alert alert-success mt-3" role="status"><strong>Accepted.</strong> A proposed event was created. Next: open the event, add the terms and fee (cost type "Venue hire"), then come back and send the booking confirmation.{% if e.event %} <a href="{% url 'edit-event-details-view' event_id=e.event.pk %}">Open the event</a>.{% endif %}</div>{% endif %}
+  {% if e.status == "accepted" or e.status == "awaiting_agreement" %}
+  <h2 class="h5 mt-4">Further details from the hirer</h2>
+  {% if e.details_completed_at %}<p class="text-success">&#10003; Received {{ e.details_completed_at|date:"j M, H:i" }}. Rooms, sound and exact times are filled in above.</p>
+  {% else %}<p>Not received yet. The hirer was emailed this link when you accepted; you can also send it yourself: <input class="form-control form-control-sm d-inline-block w-auto" style="min-width:22rem" readonly value="{{ details_link }}" onclick="this.select()"></p>
+  <form method="post" action="{% url 'hires:act' e.pk %}" class="d-flex gap-1 mb-3">{% csrf_token %}<input type="hidden" name="action" value="details_received"><input name="note" class="form-control form-control-sm" placeholder="Details came another way: say how (e.g. by email)" required><button class="btn btn-outline-dark btn-sm text-nowrap">Details received another way</button></form>{% endif %}
+  <h2 class="h5 mt-4">Terms and booking</h2>
+  <p>{% if event_terms_ok %}The event's terms are in place.{% else %}<span class="text-danger">Terms are not yet satisfied on the event.</span> <a href="{% url 'edit-event-details-view' event_id=e.event.pk %}">Edit the event</a> and add them (cost type must be "Venue hire").{% endif %}
+  {% if e.status == "awaiting_agreement" %}Waiting for the hirer to agree since {{ e.confirmation_sent_at|timesince }} ago.{% endif %}</p>
+  <form method="post" action="{% url 'hires:act' e.pk %}">{% csrf_token %}<input type="hidden" name="action" value="send_confirmation"><button class="btn btn-primary btn-sm" {% if not event_terms_ok or not e.details_completed_at %}disabled{% endif %}>{% if e.status == "awaiting_agreement" %}Re-send{% else %}Send{% endif %} booking confirmation</button></form>
+  {% endif %}
+  {% if e.status == "booked" %}<div class="alert alert-success mt-3">Hirer agreed {{ e.terms_agreed_at|date:"j M Y H:i" }}.<details><summary>Frozen terms</summary><pre style="white-space:pre-wrap">{{ e.terms_agreed_snapshot }}</pre></details></div>{% endif %}
+
+  <h2 class="h5 mt-4">Messages sent</h2>
+  <p class="small text-muted">Every email the system has sent to {{ e.contact_email }} since this enquiry arrived (subjects and outcomes only, never the text). If two enquiries share an inbox, each will list the other's later emails.</p>
+  {% if sent %}<table class="table table-sm small"><thead><tr><th>When</th><th>What</th><th>Subject</th><th>Result</th></tr></thead><tbody>
+  {% for row, label in sent %}<tr><td class="text-nowrap">{{ row.sent_at|date:"j M, H:i" }}</td><td>{{ label }}</td><td>{{ row.subject }}</td><td>{% if row.success %}<span class="text-success">&#10003; Sent</span>{% else %}<span class="text-danger fw-bold">&#10007; Failed</span> <span class="text-muted">{{ row.error|truncatechars:60 }}</span>{% endif %}</td></tr>{% endfor %}
+  </tbody></table>{% else %}<p class="text-muted">Nothing recorded yet.</p>{% endif %}
+  <ul class="small text-muted">
+    {% if e.digest_sent_at %}<li>Listed in the pre-meeting digest to the notification list on {{ e.digest_sent_at|date:"j M, H:i" }}.</li>{% endif %}
+    {% if e.warning_sent_at %}<li>Included in a "last call" to the notification list on {{ e.warning_sent_at|date:"j M, H:i" }}.</li>{% endif %}
+    {% if e.callout_warning_sent_at %}<li>Callout last call sent on {{ e.callout_warning_sent_at|date:"j M, H:i" }}.</li>{% endif %}
+  </ul>
+
+  <h2 class="h5 mt-4">Housekeeping</h2>
+  <p class="small text-muted">Tidying that doesn't email the hirer. A hirer record lets us remember repeat hirers; it is only ever linked by a person, never automatically.</p>
+  <form method="post" action="{% url 'hires:act' e.pk %}" class="mb-2">{% csrf_token %}<input type="hidden" name="action" value="save_notes">
+    <textarea name="notes" class="form-control form-control-sm" rows="3" placeholder="Internal notes (never shown to the hirer)">{{ e.internal_notes }}</textarea><button class="btn btn-outline-dark btn-sm mt-1">Save notes</button></form>
+  {% if meetings %}<form method="post" action="{% url 'hires:act' e.pk %}" class="d-flex gap-1 mb-2">{% csrf_token %}<input type="hidden" name="action" value="assign_meeting"><select name="meeting" class="form-select form-select-sm w-auto">{% for m in meetings %}<option value="{{ m.pk }}">{{ m }}</option>{% endfor %}</select><button class="btn btn-outline-dark btn-sm">Move to meeting</button></form>{% endif %}
+  {% if not e.hirer %}<form method="post" action="{% url 'hires:act' e.pk %}" class="d-flex gap-1 mb-2">{% csrf_token %}<input type="hidden" name="action" value="link_hirer">{% if suggested_hirers %}<select name="hirer" class="form-select form-select-sm w-auto">{% for h in suggested_hirers %}<option value="{{ h.pk }}">Existing: {{ h }} ({{ h.email }})</option>{% endfor %}<option value="">Create a new hirer record</option></select>{% endif %}<button class="btn btn-outline-dark btn-sm">{% if suggested_hirers %}Link hirer{% else %}Remember this hirer for next time{% endif %}</button></form>{% else %}<p class="small text-muted">Hirer record: {{ e.hirer }}</p>{% endif %}
+  {% if e.is_open %}<form method="post" action="{% url 'hires:act' e.pk %}" onsubmit="return confirm('Mark as withdrawn by the hirer?')">{% csrf_token %}<input type="hidden" name="action" value="withdraw"><button class="btn btn-link btn-sm text-muted">Hirer withdrew</button></form>{% endif %}
+  {% endif %}
+</div>
+{% endblock %}

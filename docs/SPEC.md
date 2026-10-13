@@ -1334,6 +1334,10 @@ A single completion of a `MaintenanceTask`.
 ---
 
 
+### Hire enquiries data model (9.175)
+
+`hires` app. `HireEnquiry` (contact as typed, `hire_type` FK, tiers, status machine, `meeting` FK, `reply_deadline` derived from the meeting, `coordinator` (set early when a programmer champions an enquiry, which takes it out of the automatic clock), callout fields, terms-agreement snapshot, optional OneToOne `event` created on acceptance) with child `HireDate` rows (get-in / start / end / get-out). `Hirer` (optional, linked only by a person), `HireType` (price list), `ProgrammingMeeting` (only meetings that discuss hires; `hire_slots` caps each meeting's agenda, blank = the default for its kind), `ApprovedTech` (personal data, consent flag), `HireEmailTemplate` (admin overrides of default wording), and the singleton `HireSettings`. The feature flag and the two access levels (`perm_hire_enquiries`, `perm_hire_settings`) are on `SiteConfiguration`. Full design: `docs/tasks/hires.md`.
+
 ## 9. URL / endpoint map
 
 ### Public (no login required)
@@ -1412,6 +1416,17 @@ A single completion of a `MaintenanceTask`.
 | `/operations/schedule/<task_id>/uncommit/` | POST — withdraw a commitment |
 
 ---
+
+### Hire enquiries (9.175; all 404 unless `SiteConfiguration.hire_enquiries_enabled`)
+
+| URL | Purpose |
+|---|---|
+| `/hires/enquire/` | Public hire enquiry form (or the editable "closed" message, or the "full" message when no meeting within `full_horizon_weeks` has a free slot) |
+| `/hires/enquire/thanks/` | Confirmation page |
+| `/hires/agree/<token>/` | Hirer's one-click agreement to terms (signed token, no login) |
+| `/hires/manage/` | Queue of enquiries and the hires income summary (`perm_hire_enquiries`) |
+| `/hires/manage/<id>/` | Enquiry detail and decisions (take on / hand back, accept, maybe, decline with an editable email draft or none, replied outside, send confirmation) |
+| `/hires/manage/{settings,meetings,types,techs,emails}/` | Hire settings screens (`perm_hire_settings`) |
 
 ## 10–12. Rewrite strategy, technology notes, and data migration
 

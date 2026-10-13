@@ -116,6 +116,29 @@ body {
 
 a:focus:not(:focus-visible) { outline: none; }
 
+/* Keyboard focus on controls, matching the link rule above. Forms with their
+ * own, stronger ring (.site-form) override this. */
+button:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, summary:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+/* Wayfinding: the sidebar link for the page you are on (set by site-common.js) */
+#site-nav a[aria-current="page"] {
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
 h1 { font-size: 2em; margin: 0.67em 0; }
 h2 { font-size: 1.5em; margin: 0.83em 0; }
 h3 { font-size: 1.17em; margin: 1em 0; }
@@ -752,6 +775,10 @@ a {
     /* Push page content past the fixed sidebar. */
     .grid {
         margin-left: var(--sidebar-width);
+        /* width:100% plus the margin pushed pages that set no fixed grid
+         * width (e.g. /inductions/) a sidebar-width past the viewport,
+         * giving a horizontal scrollbar. */
+        width: auto;
     }
     #site-nav {
         width: 100%;

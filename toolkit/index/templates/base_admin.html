@@ -198,6 +198,9 @@ body {
       {% if inductions_settings.inductions_enabled %}
       {label:"Inductions",         category:"People",                           href:"{% url 'inductions:manage_session_list' %}", keywords:"new volunteers onboarding labs"},
       {% endif %}
+      {% if site_config.hire_enquiries_enabled and feature_perms.hire_enquiries %}
+      {label:"Hire enquiries",     category:"Programming",                      href:"{% url 'hires:queue' %}", keywords:"hires outside hire enquiry room hire labs"},
+      {% endif %}
       {% endif %}
       {% if feature_perms.event_tags %}
       {label:"Tags",               category:"Meta",                             href:"{% url 'edit_event_tags' %}",    keywords:"event labels categories"},
@@ -298,6 +301,11 @@ body {
           {% if feature_perms.programming_queue_read %}
           <li class="nav-item">
             <a class="nav-link" href="{% url "programming-queue" %}" data-nav-key="q">Queue <span class="labs-tag">labs</span></a>
+          </li>
+          {% endif %}
+          {% if site_config.hire_enquiries_enabled and feature_perms.hire_enquiries %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url "hires:queue" %}" data-nav-key="e">Hires <span class="labs-tag">labs</span></a>
           </li>
           {% endif %}
 

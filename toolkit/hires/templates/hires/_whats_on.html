@@ -1,0 +1,38 @@
+{# What else is on within a week of each requested date. Needs wo; optional full. #}
+{% for pd in wo %}
+<details class="hq-around"{% if full %} open{% endif %}>
+  <summary>
+    <strong>{{ pd.hire_date.start|date:"D j M" }}:</strong>
+    {% if pd.clashes %}<span class="badge text-bg-danger">Clash: {{ pd.clashes }} in the same space at the same time</span>{% endif %}
+    {% if pd.checks %}<span class="badge text-bg-warning">{{ pd.checks }} to check</span>{% endif %}
+    {% if not pd.clashes and not pd.checks %}<span class="badge text-bg-success">Clear schedule</span>{% if pd.same_day %} <span class="hq-meta">({{ pd.same_day }} other thing{{ pd.same_day|pluralize }} that day, with time between or in other spaces)</span>{% endif %}{% endif %}
+    <span class="hq-meta">{{ pd.week }} within a week either side</span>
+  </summary>
+  <table class="table table-sm hq-around-table mb-2">
+    <caption class="visually-hidden">Everything else on within 7 days of {{ pd.hire_date.start|date:"j F" }}</caption>
+    <thead><tr><th scope="col">Day</th><th scope="col">Time</th><th scope="col">What</th><th scope="col">Where</th></tr></thead>
+    <tbody>
+    {% for day in pd.days %}
+      {% if day.items %}
+        {% for it in day.items %}
+        <tr{% if day.target %} class="table-active"{% endif %}>
+          {% if forloop.first %}<th scope="row" rowspan="{{ day.items|length }}" class="text-nowrap">{{ day.date|date:"D j M" }}{% if day.target %}<br><span class="small">requested day</span>{% else %}<br><span class="small text-muted">{{ day.offset|stringformat:"+d" }} day{{ day.offset|cut:"-"|pluralize }}</span>{% endif %}</th>{% endif %}
+          <td class="text-nowrap">{{ it.from|date:"H:i" }}&ndash;{{ it.to|date:"H:i" }}</td>
+          <td>
+            {% if it.event_id %}<a href="{% url 'edit-event-details-view' event_id=it.event_id %}">{{ it.title }}</a>{% elif it.enquiry_pk %}<a href="{% url 'hires:detail' it.enquiry_pk %}">{{ it.title }}</a>{% else %}{{ it.title }}{% endif %}
+            {% if it.tier == "clash" %}<span class="badge text-bg-danger">Clash: {{ it.reason }}</span>{% elif it.tier == "check" %}<span class="badge text-bg-warning">Check: {{ it.reason }}</span>{% endif %}
+            {% if it.kind == "hire" %}<span class="badge text-bg-secondary">Hire</span>{% endif %}
+            {% if it.status %}<span class="badge text-bg-light border">{{ it.status }}</span>{% endif %}
+            {% if it.event_id and not it.confirmed %}<span class="badge text-bg-light border">Unconfirmed</span>{% endif %}
+          </td>
+          <td>{{ it.rooms|default:"" }}</td>
+        </tr>
+        {% endfor %}
+      {% elif day.target %}
+        <tr class="table-active"><th scope="row" class="text-nowrap">{{ day.date|date:"D j M" }}<br><span class="small">requested day</span></th><td colspan="3">Nothing else on.</td></tr>
+      {% endif %}
+    {% endfor %}
+    </tbody>
+  </table>
+</details>
+{% endfor %}

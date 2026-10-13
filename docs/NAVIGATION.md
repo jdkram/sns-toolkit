@@ -134,6 +134,10 @@ volunteer by design, so people considering programming can see the process. The 
 deliberately left without it, per the curated-subset rule above; the dashboard card and the
 Event Hub panel also link to it.
 
+## Hire enquiries link (2026-10-09)
+
+"Hire enquiries" appears in the People dropdown of the toolkit navbar and in the command palette, only when `site_config.hire_enquiries_enabled` and `feature_perms.hire_enquiries` are both true. Not yet in the sidebar (`fragment_navmenu.html`); add it there if hires moves out of labs.
+
 ## Maintenance checklist
 
 Before adding a nav item, ask:

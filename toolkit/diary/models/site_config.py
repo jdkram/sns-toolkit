@@ -774,6 +774,30 @@ class SiteConfiguration(models.Model):
         verbose_name="Rota — vacancies page",
         help_text="Who can see the rota vacancies page.",
     )
+    hire_enquiries_enabled = models.BooleanField(
+        default=False,
+        verbose_name="Hire enquiries (feature flag)",
+        help_text=(
+            "Master switch for the whole outside-hire enquiry system "
+            "(9.175): public form, queue, emails and the reply clock. While "
+            "off, none of it is reachable, no clocks run, and the old "
+            "Wagtail enquiry form keeps working."
+        ),
+    )
+    perm_hire_enquiries = models.CharField(
+        max_length=12,
+        choices=PERMISSION_LEVEL_CHOICES,
+        default=PERM_PROGRAMMER,
+        verbose_name="Hires — enquiries (view and act)",
+        help_text="Who can see and decide hire enquiries, and write goodwill notes.",
+    )
+    perm_hire_settings = models.CharField(
+        max_length=12,
+        choices=PERMISSION_LEVEL_CHOICES,
+        default=PERM_PROGRAMMER,
+        verbose_name="Hires — settings",
+        help_text="Who can edit hire types, meetings, emails, windows and the approved-tech list.",
+    )
     perm_donations_manage = models.CharField(
         max_length=12,
         choices=PERMISSION_LEVEL_CHOICES,
@@ -1137,6 +1161,7 @@ SITE_CONFIG_FIELD_GROUPS = {
         "collectives_intro",
         "collectives_mailing_list_signup_url",
     ],
+    "Hire enquiries": ["hire_enquiries_enabled"],
     "Donations page": [
         "donations_enabled",
         "donations_intro",

@@ -1,0 +1,24 @@
+{% extends "base_admin.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block body %}
+<div class="container py-3" style="max-width:900px">
+  <p><a href="{% url 'hires:queue' %}">&larr; Hire enquiries</a></p>
+  <h1 class="h3">{{ title }}</h1>
+  {% if intro %}<p class="text-muted">{{ intro }}</p>{% endif %}
+  <form method="post">{% csrf_token %}{{ formset.management_form }}
+    {{ formset.non_form_errors }}
+    {% for form in formset %}
+    <fieldset class="border rounded p-3 mb-3">
+      {{ form.non_field_errors }}
+      {% for f in form %}{% if f.name != "id" %}
+      <div class="mb-2"><label class="form-label small fw-semibold" for="{{ f.id_for_label }}">{{ f.label }}</label> {{ f }}
+        {% if f.help_text %}<div class="form-text">{{ f.help_text }}</div>{% endif %}
+        {% for err in f.errors %}<div class="text-danger small" role="alert">{{ err }}</div>{% endfor %}</div>
+      {% else %}{{ f }}{% endif %}{% endfor %}
+    </fieldset>
+    {% endfor %}
+    <button class="btn btn-primary">Save</button>
+  </form>
+</div>
+<script>document.querySelectorAll('fieldset input[type=text],fieldset input[type=number],fieldset input[type=email],fieldset textarea,fieldset select').forEach(function(el){el.classList.add(el.tagName==='SELECT'?'form-select':'form-control','form-control-sm');});</script>
+{% endblock %}

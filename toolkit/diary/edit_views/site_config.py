@@ -114,6 +114,8 @@ def edit_site_configuration(request):
         ),
         ("Community — other features", _fixed("All volunteers")),
         ("Website — donations manage", _configurable("perm_donations_manage")),
+        ("Hires — enquiries", _configurable("perm_hire_enquiries")),
+        ("Hires — settings", _configurable("perm_hire_settings")),
         ("Website — Wagtail CMS", _fixed("Panopticon only")),
         ("People — volunteer profiles / training", _fixed("Panopticon only")),
         ("People — export CSV / audit log", _fixed("Panopticon only")),

@@ -20,6 +20,14 @@ function setup_page(index_page) {
             threshold: 0
         });
 
+        /* Mark the current page in the sidebar (wayfinding) ------------------- */
+        $('#site-nav a[href]').each(function() {
+            var href = this.getAttribute('href');
+            if (href.charAt(0) === '/' && href === window.location.pathname) {
+                this.setAttribute('aria-current', 'page');
+            }
+        });
+
         /* Set up nav menu ----------------------------------------------------- */
         $('#navmenu > ul > li:has(ul)').addClass("has-sub");
 

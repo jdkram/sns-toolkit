@@ -181,6 +181,18 @@ class EmailFormPage(AbstractEmailForm):
         blank=True,
     )
 
+    def serve(self, request, *args, **kwargs):
+        # 9.175: once hire enquiries are switched on, the old hire form (an
+        # email that nobody is obliged to answer) must stop taking
+        # submissions. Other EmailFormPages (contact forms) are untouched.
+        from toolkit.hires.models import hires_enabled
+
+        if hires_enabled() and "hire" in (self.url_path or ""):
+            from django.shortcuts import redirect
+
+            return redirect("hires:enquire")
+        return super().serve(request, *args, **kwargs)
+
     content_panels = AbstractEmailForm.content_panels + [
         FormSubmissionsPanel(),
         FieldPanel("intro"),

@@ -17,6 +17,8 @@ the collective sees what hires are worth against the volunteer programme they fu
 
 #### Resume protocol (read first)
 
+**Build status (2026-10-09):** Phase A is built on `feature/9.175-hire-enquiries` behind the `hire_enquiries_enabled` site-settings flag; see CURRENT_WORK.md for the list of deviations and what is not built. The paragraph below is the pre-build scoping state, kept for context.
+
 **State as of 2026-10-08 (late):** spec scoped across one long session with Jonny and one
 external review. Not built, nothing committed yet (this file, the `docs/TASKS.md` index row and
 the `CURRENT_WORK.md` row are uncommitted on `sns_2026_overhaul`). Every row in "Decisions taken"
@@ -68,9 +70,12 @@ that let us do it".
    honest "we don't have capacity" by a date the hirer was told in advance.
 2. **Resilient to low volunteer capacity.** The honest outcome happens even if nobody acts. The
    system warns first, then sends.
-3. **Explicit about what is guaranteed.** The space and a keyholder are guaranteed. Bar, door and
-   other volunteer roles are best-effort, because nobody is paid to be there. Hirers are told this
-   before they enquire, when they enquire, and when they are accepted.
+3. **Explicit about what is guaranteed, and what costs extra.** The space and a keyholder are
+   guaranteed. Bar and every other volunteer role are best-effort, because nobody is paid to be
+   there. **Door staff are an expectation and an additional cost, not a perk:** late club nights
+   (a hire type flagged `provides_door_staff` that runs past the late-night time) need door staff,
+   we arrange them, and the hirer is charged for them on top of the hire fee (corrected by Jonny
+   2026-10-09). Door staff at any other kind of hire are best-effort.
 4. **Make the money legible.** Show what a hire is worth in volunteer events it funds, at the
    moment the meeting is deciding.
 5. **Plan ahead.** Booking windows and recurring holds push conversations towards whole seasons.
@@ -536,17 +541,16 @@ addresses: `{privacy_contact}` and `{venue}` come from venue settings.
 >
 > Hi {name},
 >
-> Thank you for getting in touch about {title}. We owe you a straight answer, so here it is: we
-> haven't been able to take your enquiry on, and we're sorry it has taken until now to tell you.
+> Thank you for getting in touch about {title}, and sorry it has taken until now to reply. We
+> haven't been able to take your enquiry on.
 >
 > {venue} is run entirely by volunteers. Nobody is paid to answer enquiries or to staff events,
 > and at the moment most of our volunteers' time is going on our own programme. Your enquiry was
-> due to be discussed at our meeting on {meeting_date}, and nobody was able to take it on. That
-> says more about our capacity than about your event.
+> due to be discussed at our meeting on {meeting_date}, and nobody was able to take it on. It
+> isn't a judgement on your event.
 >
-> We'd rather tell you this honestly than leave you waiting. If your plans are flexible, you're
-> welcome to enquire again for a later season, or to come along to one of our open meetings,
-> where the people who decide these things are in the room.
+> If your plans are flexible, you're welcome to enquire again for a later date, or to come along
+> to one of our open meetings, where hires get talked over in person.
 >
 > There is one other route, if it ever appeals. Anyone can volunteer here, and once you've
 > helped out at ten of other people's events you can programme your own, with {venue} taking on
@@ -626,6 +630,76 @@ addresses: `{privacy_contact}` and `{venue}` come from venue settings.
   Rejected because they reverse decisions taken explicitly on 2026-10-08: replacing recurring
   holds with static text, removing the income-figure provenance, and collapsing goodwill notes
   into one text field.
+
+**Message history (added 2026-10-09).** Each enquiry's detail page lists every email sent to the hirer's address since the enquiry arrived, read from the audit `SentEmailLog` (body-free by design). A failed send with no later success of the same kind shows a red banner with a retry button and a "Hirer email failed" badge on the queue, so a failed acknowledgement can't turn into silence. Matches the exact address, so two enquiries from one shared inbox will see each other's later emails (the panel says so). Internal digest, last-call and callout times come from fields on the enquiry itself.
+
+**Retention built (2026-10-09).** `toolkit/hires/purge.py` / `manage.py purge_hire_data [--dry-run]`, run daily at 03:40. Declined, withdrawn and timed-out enquiries are anonymised `declined_purge_months` (6) after closing; booked or completed hires lose contact details, free text and the agreement IP `hirer_purge_years` (3) after the hire itself (never before it has happened), keeping the frozen terms, fee and linked event as the financial record; `Hirer` rows go after the same period without activity unless an enquiry is open; open enquiries are never touched. Each purge writes a `DeletionLog` row with no personal data. Deliberately not gated by the feature flag. Not covered: `Event.hire_name` (diary-owned; holds a personal name if the hirer gave no organisation), `SentEmailLog` (own retention via `email_log_retain_days`), mailing-list copies of the digest, and backups. The terms snapshot now records the organisation, or "an individual hirer", never a personal name.
+
+**Late nights and door staff (built 2026-10-09).** Late finishes are discouraged, not banned.
+- **Shown to the hirer:** that late finishes are the exception; that late nights are limited each
+  year, cost extra, ask a lot of volunteers, and that we must get volunteers home safely; a
+  request to consider finishing earlier; the extra fee; that availability isn't promised; and,
+  for club nights, that door staff are required and charged on top. A live note on the form
+  appears once a get-out passes the late-night time, and a tickbox must be ticked before a late
+  request is accepted (enforced server-side too). The same facts reappear in the confirmation.
+- **Kept internal, deliberately:** what a late licence, security and taxis cost us
+  (`late_night_security_cost_gbp`), and how many licences remain (`late_night_licences_per_year`).
+  The fee is the price; exposing our costs invites bargaining and isn't something the hirer needs
+  to decide. The queue shows the meeting "N late-night hires already accepted this year, of M"
+  (hires only, so the figure is a floor) plus a Late night badge.
+- **Venue-specific, therefore settings:** the late-night time, both fees, the licence limit, the
+  notice wording (`late_night_notice_text`, placeholders `{late_from}` `{late_fee}`), the door
+  staff wording (`door_staff_notice_text`, `{door_fee}`), the tickbox wording, and which hire
+  types need door staff. Defaults name no venue.
+- **Money:** `charge_gbp()` is what a hirer is quoted (price-list fee plus late fee). The internal
+  net estimate subtracts security. The agreed fee previously defaulted to the net figure, which
+  would have under-quoted every late-night hire; fixed 2026-10-09. Door staff are a separate
+  line (`HireEnquiry.door_staff_fee_gbp`, default from settings, overridable when accepting) and
+  count as a pass-through, not income.
+
+**Two-stage intake (changed 2026-10-09).** The first form was asking for too much of a stranger's
+time for an enquiry we may not answer. First contact now asks only what the meeting needs to say
+yes, no or maybe: who, type and community/corporate, a name and description, roughly how many,
+one preferred date with *building open* and *everything out by* times (an optional alternative
+date and a flexibility note), and the late-night tickbox if it applies. The event's own start and
+end are provisional: building-open plus `default_setup_minutes` to everything-out minus
+`default_teardown_minutes`. The minimum building time and the late-night note are kept because
+they are the "think it through" part. After a yes in principle, the accepted email carries a
+signed link (`/hires/details/<token>/`) to a short second form: rooms, attendance, link, sound
+tech, what they offer volunteers, and exact event times (which must sit inside the access
+window). That page notifies the list, updates the event's showings and room bookings, and
+unlocks "Send booking confirmation"; a coordinator can bypass it with "Details received another
+way". The details link locks once terms are out, so what was quoted can't be edited from under
+the hirer. The "bar staff are not guaranteed" acknowledgements moved from the enquiry form to
+the terms page, where the hirer must tick every one before agreeing, and the ticks are frozen
+with the agreed terms.
+
+**Branch review fixes (2026-10-11).** A review against the user story found, and probes confirmed, these defects; all are fixed with tests.
+- **Promised dates are kept.** Re-homing an enquiry (meeting cancelled, or a meeting entered after the fact) now emails the hirer whenever the reply date moves later, never picks a meeting already past, and counts the no-meeting fallback from today for an old enquiry. Before, a cancelled meeting with no replacement made a 40-day-old enquiry's deadline fall in the past, and it was auto-declined next morning with "meeting on TBC". The capacity email's meeting sentence is now the `{meeting_line}` placeholder, which drops the meeting when there isn't one.
+- **No auto-decline without anyone to warn.** `services.readiness()` closes the public form (the closed message shows) when there is no valid notification address or no active hire type, and says so on the queue and settings pages. Warnings (not closing): no future meeting, no keyholder role, no privacy contact.
+- **Stale decisions are refused.** `decline`, `mark_maybe` (only before a decision), `withdraw` and `replied_outside_toolkit` check the current status, so a stale tab can no longer decline a booked hire or revive a declined one. No row locking: a genuinely simultaneous double-click can still race.
+- **Rate limit** counts successful submissions only, so fixing mistakes on the form can't lock a hirer out. Still keyed on `REMOTE_ADDR`: check it is the real client IP behind the production proxy.
+- **Promises to volunteers.** Accepting creates a keyholder rota slot on each showing (first `keyholder_only` role); a rota note says the keyholder is guaranteed and the rest best-effort; the hirer's offers to volunteers are copied into it when they send their details. The detail page and queue warn "No keyholder yet" until someone signs up. Not built: hirer-requested support roles.
+- **Old form retired.** With the flag on, any Wagtail `EmailFormPage` whose URL contains "hire" redirects to `/hires/enquire/`. Someone must still link to the new form from the public hire page. A fresh deploy has no hire types: add them (and a notification address) before switching on.
+- **Decided by Jonny 2026-10-11:** the app is exposed directly to the web (no proxy), so `REMOTE_ADDR` is the real client address and the rate limit and the recorded agreement IP are sound. Agreeing the terms makes the event `active` on purpose (assumption 3 below is superseded: the hirer's agreement is the confirmation step). The draft decline emails and privacy notice stay as they are for now.
+- **Indicative fee.** What stopped it before: there was no single place fees were worked out (the maths lived in `charge_gbp` against saved dates) and the hire types hold no real prices until an admin enters them. Now `models.quote_gbp` is the one calculation; the form shows a price list from the hire types (works without JavaScript) and a live "roughly what it will cost" line from `/hires/quote/` (same maths as the real quote, including the late-night charge, never the internal security cost); the acknowledgement email carries the same sentence. A type with a £0 fee says "we'll confirm the fee when we reply". Prices live only in Hire types: keep numbers out of the Wagtail info page, or they will drift.
+- **Hirer information is a Wagtail page.** `HireSettings.info_page_url` (default `/hire-and-enquire/about-hiring/`) is linked from the form and the acknowledgement email. The page is edited in the CMS by editors, no developer. The public menu is the existing Wagtail "Hire & Enquire" dropdown: the live site has an FAQs child page and an Enquire child page. To go live, an editor adds a link to `/hires/enquire/` (a Link in that section's "Links" panel) or leaves the old Enquire page, which now redirects. The collectives link is the other pattern (a hardcoded menu item behind a site flag); it suits Django-only pages with no editable content, so it was not used here. `seed_hire_dev_data` builds the same dropdown for local dev, in reading order: an "About hiring" page (who we are, what we can offer, what we can't do, a price list generated from the seeded hire types, how it works), a technical information page, then the Enquire link (Wagtail lists a section's child pages before its links, so Enquire always comes last). It was called "FAQs" until 2026-10-13, renamed because it is the main source of hire information rather than miscellaneous questions; the seed renames an existing `faqs` page in place. **Go-live step:** the live site's page is still called FAQs at `/hire-and-enquire/faqs/`; either an editor renames it to match, or the hire settings page's information URL is pointed at the old slug. The seed also adds the old Wagtail hire form (hidden from the menu; it redirects to the new form while the flag is on). `seed_dev_data` now calls `seed_hire_dev_data`, so a fresh dev site has the hires feature switched on, and also seeds Visit and Contact pages (rebuilding the Wagtail home page if the tree was empty).
+- **What else is on (for the meeting).** The queue cards and the detail page show, for each requested date, everything in the diary within 7 days either side, grouped by day, with the requested day highlighted. Same-day items whose times overlap the building access window are flagged as a clash (events use their room bookings, else start plus duration); other undecided hire enquiries are included, since they are not in the diary yet. `services.whats_on` does it in two queries however many cards are shown. Not built: matching by room (rooms are only known after the second stage) and the pairing-opportunity signal.
+- **Community rate is an application, not a default (2026-10-11).** The community rate is a subsidy from the volunteer pool, for causes the collective wants to support, so the form no longer pre-selects it: the hirer must choose, and choosing community requires a short statement of why it fits (`community_case`) plus an optional website or charity number (`community_evidence`). Both explanatory texts are editable in Hire settings (`community_rate_text`, `community_case_prompt`). The meeting sees the case on the queue card and the detail page, with the subsidy in pounds (`HireEnquiry.subsidy_gbp()`: full-rate charge minus community-rate charge, before VAT), and chooses the rate when accepting (`tier_agreed`). The hirer is told the full-rate figure up front (form estimate, acknowledgement) so a refusal is no surprise, and the terms say which rate applies and, if refused, that the community rate wasn't offered. The case is free text about an identifiable person or group, so it is purged with the other free text. Not built: any rule that stops the meeting granting it too often (no cap or running subsidy total); the season summary doesn't yet show total subsidy.
+- **Still open from the review:** a link-in-acknowledgement is done, but nothing moves booked to completed; the "ten events" wording in the decline emails is hard-coded; hirer-requested support roles.
+
+**Tidy-ups (2026-10-13).** The "FAQs" hire page is now "About hiring" (see above). Seeded meetings follow the live cycle: every meeting is a Monday at 6pm (1st Open Meeting, 2nd Open Programming, 3rd Caretaking, 4th Programme Development, quarterly General Meeting in the 1st Monday slot), and only the 2nd and 4th Mondays are entered as `ProgrammingMeeting` rows, because those are the meetings that take hires. Before this the seed made meetings 2, 6 and 10 weeks from whatever day it ran, so re-runs piled up meetings on random weekdays. Three made-up approved sound techs are seeded (one not yet cleared to share with hirers). The Emails page groups its fourteen emails by stage of an enquiry (`EMAIL_STAGES` in `defaults.py`), each marked "to hirer" or "to volunteers". `HireSettings.min_duration_enabled` lets a site have no minimum hire length; a hire type's own minimum still applies. The no-capacity decline email lost three lines that read as machine-written.
+
+**Triage, meeting slots and human takeover (designed and built 2026-10-13; browser-checked the same day at phone width only, the window would not go wider).** Decided with Jonny after the seed fixes above. The realities it answers: Monday meetings are already full of our own programming; the 2nd Monday Open Programming meeting is the one mainly given over to external hire proposals (and could get through ten in a well-run meeting); hires should never be shoehorned into Caretaking; and enquiries that arrive by email tend to sit in inboxes and be forgotten, which is the main thing this system is for. Just as important, a programmer usually champions a hire and does the logistics by hand, so the machine should be the safety net, not the default route.
+
+- **Hire slots per meeting.** `ProgrammingMeeting.hire_slots` (blank = the default for its kind: Open Programming 10, Programme Development 3, Open Meeting 0; Caretaking is never entered). New enquiries go to the next meeting with a free slot, so the hirer is told the real date. Championed enquiries don't use a slot. Moving one by hand can go over the cap, with a warning.
+- **Form closes when full.** `HireSettings.full_horizon_weeks` (default 8, blank = never close): if meetings are entered but none within that many weeks has a free slot, the form shows a "we're full until..." message (editable) instead of taking enquiries.
+- **Meeting agendas.** The Meetings page lists each meeting's hire enquiries against its slots, soonest hire date first, with an editable slot count, a "move" control, and a flag when a hire date falls before its meeting.
+- **Champion an enquiry at any stage.** "I'll take this one" sets the enquiry's coordinator before any decision. While championed, nothing automatic goes to the hirer: no auto-decline. If the reply date passes, the champion and the notification list get one nudge (`champion_nudge`) instead. Releasing it puts it back in the meeting queue.
+- **Hire before its answer.** If the first hire date falls on or before the promised reply date, the agenda, queue and enquiry page flag it: the meeting can't help in time, so it needs a champion or an earlier decision. Found in browser testing, when handing an enquiry back pushed its answer past its own hire date.
+- **Decision emails are drafts first.** Accept, Maybe and Decline each show the email to the hirer as editable text before anything is sent, with a "Don't email them, I'll be in touch myself" option, which sends nothing and records that in the notes. The acknowledgement and the timed emails stay automatic.
+
+**Clash tiers in "What else is on" (2026-10-13).** The panel called anything on the same day with overlapping times a clash, which was overeager. Each other use of the building is now tiered against the hire date. **Clash (red):** same time, same space, so it is only shown when both sides' rooms are known. **Check (amber):** same time in a different space (shared keyholder, foyer, sound); same time with rooms not known yet, which covers most first enquiries because rooms are asked at the details stage; a tight changeover in the same space (under `HireSettings.changeover_minutes`, default 60); and late-night clean-up, where anything finishing after `late_night_from` is assumed to hold its space until `cleanup_until` (default noon) the next day, so a club night the night before a morning hire, or a late hire before something the next morning, gets flagged. **Clear (green):** nothing else, or other uses with time between or in other spaces. Also, the "I replied by email myself" box now has a visible label and explanation instead of a truncated placeholder.
 
 **Related:** 9.4 (inductions custom questions, to be extracted and shared), 9.30 (`hire_name`),
 9.73 (outside-hire badge on rota), 9.113/9.162 (programming queue), 9.49 (runtime perms),

@@ -223,3 +223,17 @@ Claude and MiniMax before anyone grepped the templates).
   UI change on pages (`edit_rota.html`, `form_event.html`) this session couldn't browser-test —
   migrate file-by-file when next touched, with an actual look at the rendered page.
 - **The `event.css`/`static_pages.css` masonry duplication** (C4) — logged, not extracted.
+
+---
+
+## Readable content pages (October 2026)
+
+A usability pass on the public Wagtail pages added, in `static_pages.css` and `layout.css`:
+
+- **Body copy floor.** `.article-page .copy` and `.copy--readable` (the email form page) use `font-size: max(14px, 0.7857em)`: at least 14px, and the wide-screen sizes are unchanged. Programme cards also use `.copy` and are deliberately excluded.
+- **Links in content** are brand-colour with a solid underline (not the old dotted rule), thicker on hover.
+- **`a.btn`** is the call-to-action style (44px minimum height, brand fill, inverts on hover). The Wagtail rich-text editor cannot add classes, so editors can only get it through a raw HTML block; seeded content uses it directly.
+- **Current page** is marked in the sidebar by `site-common.js` (`aria-current="page"`, bold and underlined).
+- **Focus** rings on buttons, inputs, selects, textareas and `summary`; `prefers-reduced-motion` disables transitions.
+- **Bug fixed:** `.grid` had `width: 100%` plus the sidebar `margin-left`, so any page without a fixed grid width (`/inductions/`) scrolled sideways by the sidebar's width at desktop sizes.
+- **Forms:** `.site-form` is the shared label-above-field style (see the email form page).

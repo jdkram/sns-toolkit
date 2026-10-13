@@ -80,11 +80,13 @@ case "$COMMAND" in
         echo "Scheduler started."
         echo "  auto_dormancy:                  daily at 03:00"
         echo "  purge_induction_signups:        daily at 03:30"
+        echo "  purge_hire_data:                daily at 03:40 (runs even when hires are switched off)"
         echo "  purge_audit_logs:               daily at 03:45"
         echo "  send_induction_reminders:       daily at 08:00"
         echo "  send_consent_renewal_reminders: daily at 08:30"
         echo "  send_volunteer_digest:          daily at 09:00 (day controlled by SiteConfiguration)"
         echo "  purge_email_archive:            daily after auto_dormancy (60-day retention)"
+        echo "  process_hire_enquiries:         daily at 08:15 (no-op while hire_enquiries_enabled is off)"
 
         _sleep_until() {
             # Sleep until the next occurrence of HH:MM today (or tomorrow if past).
@@ -124,11 +126,17 @@ case "$COMMAND" in
             _sleep_until "purge_induction_signups" "03:30"
             _run "purge_induction_signups" /venv/bin/python3 /site/manage.py purge_induction_signups
 
+            _sleep_until "purge_hire_data" "03:40"
+            _run "purge_hire_data" /venv/bin/python3 /site/manage.py purge_hire_data
+
             _sleep_until "purge_audit_logs" "03:45"
             _run "purge_audit_logs" /venv/bin/python3 /site/manage.py purge_audit_logs
 
             _sleep_until "send_induction_reminders" "08:00"
             _run "send_induction_reminders" /venv/bin/python3 /site/manage.py send_induction_reminders
+
+            _sleep_until "process_hire_enquiries" "08:15"
+            _run "process_hire_enquiries" /venv/bin/python3 /site/manage.py process_hire_enquiries
 
             _sleep_until "send_consent_renewal_reminders" "08:30"
             _run "send_consent_renewal_reminders" /venv/bin/python3 /site/manage.py send_consent_renewal_reminders

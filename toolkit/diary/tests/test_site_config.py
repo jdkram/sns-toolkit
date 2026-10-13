@@ -207,6 +207,8 @@ class SiteConfigurationViewTests(DiaryTestsMixin, TestCase):
             "perm_printed_programmes": config.perm_printed_programmes,
             "perm_rota_vacancies": config.perm_rota_vacancies,
             "perm_donations_manage": config.perm_donations_manage,
+            "perm_hire_enquiries": config.perm_hire_enquiries,
+            "perm_hire_settings": config.perm_hire_settings,
             "eventlink_extra_allowed_domains": "",
             "community_exchange_enabled": "",
             "age_rating_choices_value_0": "U",

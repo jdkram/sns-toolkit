@@ -450,3 +450,211 @@ p.action {
     margin: 0 auto;
     padding: 0 1.5rem;
 }
+
+
+/* Forms on Wagtail pages (.site-form)
+ * Stacked label-above-field layout with room to breathe. Used by the email
+ * form page; any other public form can opt in by adding the class and
+ * rendering with {{ form.as_div }}. Colours come from layout.css tokens.
+-------------------------------------------------------------------------------*/
+
+.form-banner img {
+    aspect-ratio: 3 / 1;
+    object-fit: cover;
+}
+
+.site-form {
+    margin-top: 1.5em;
+}
+
+.site-form > div {
+    margin-bottom: 1.5em;
+}
+
+.site-form label {
+    display: block;
+    margin-bottom: 0.4em;
+    font-weight: bold;
+}
+
+.site-form > div:has(> [required]) > label::after {
+    content: " *";
+}
+
+.site-form input:not([type=checkbox]):not([type=radio]),
+.site-form select,
+.site-form textarea {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.7em 0.8em;
+    font: inherit;
+    color: inherit;
+    background: #fff;
+    border: 2px solid var(--colour-brand);
+    border-radius: 0;
+}
+
+.site-form textarea {
+    min-height: 9em;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.site-form input:focus-visible,
+.site-form select:focus-visible,
+.site-form textarea:focus-visible,
+.site-form button:focus-visible {
+    outline: 3px solid var(--colour-brand);
+    outline-offset: 2px;
+}
+
+/* Checkbox rows: box first, label beside it */
+.site-form > div:has(> input[type=checkbox]) {
+    display: flex;
+    align-items: center;
+    gap: 0.7em;
+}
+
+.site-form > div:has(> input[type=checkbox]) > input {
+    order: -1;
+    width: 1.3em;
+    height: 1.3em;
+    margin: 0;
+    flex: none;
+}
+
+.site-form > div:has(> input[type=checkbox]) > label {
+    margin: 0;
+    font-weight: normal;
+}
+
+.site-form .helptext {
+    margin: 0 0 0.4em;
+    opacity: 0.8;
+}
+
+.site-form .errorlist {
+    margin: 0 0 0.4em;
+    padding: 0;
+    list-style: none;
+    color: #b00020;
+    font-weight: bold;
+}
+
+.site-form__summary {
+    padding: 0.8em 1em;
+    border: 2px solid #b00020;
+    color: #b00020;
+    font-weight: bold;
+}
+
+.site-form > div:has(.errorlist) input,
+.site-form > div:has(.errorlist) select,
+.site-form > div:has(.errorlist) textarea {
+    border-color: #b00020;
+}
+
+.site-form__note {
+    margin: 0 0 1.2em;
+    opacity: 0.8;
+}
+
+.site-form__submit {
+    padding: 0.8em 2em;
+    font: inherit;
+    font-weight: bold;
+    color: #fff;
+    background: var(--colour-brand);
+    border: 2px solid var(--colour-brand);
+    border-radius: 0;
+    cursor: pointer;
+}
+
+.site-form__submit:hover {
+    background: #fff;
+    color: var(--colour-brand);
+}
+
+
+/* Readable content pages
+ * Applies to article pages and to form pages (.copy--readable). The older
+ * rules above leave body copy at 11-13px on most screens; this raises the
+ * floor to 14px without touching the larger sizes set for wide screens, and
+ * gives lists and links the same treatment as paragraphs. Programme cards,
+ * which also use .copy, are deliberately left alone.
+-------------------------------------------------------------------------------*/
+
+.article-page .copy p,
+.article-page .copy li,
+.copy--readable p,
+.copy--readable li {
+    font-size: max(14px, 0.7857em);
+    line-height: 1.6;
+}
+
+.article-page .copy ul,
+.article-page .copy ol,
+.copy--readable ul,
+.copy--readable ol {
+    margin: 1em 0;
+    padding-left: 1.6em;
+}
+
+.article-page .copy li,
+.copy--readable li {
+    margin-top: 0.4em;
+}
+
+/* Links: a visible underline, not a faint dotted rule, in the brand colour */
+.article-page .copy a:not(.btn),
+.copy--readable a:not(.btn) {
+    color: var(--colour-brand);
+    border-bottom: 0;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+}
+
+.article-page .copy a:not(.btn):visited,
+.copy--readable a:not(.btn):visited {
+    color: var(--colour-brand);
+}
+
+.article-page .copy a:not(.btn):hover,
+.copy--readable a:not(.btn):hover {
+    text-decoration-thickness: 3px;
+}
+
+/* Call-to-action link: <a class="btn"> in a page's HTML (the rich-text editor
+ * cannot add classes, so this is for raw HTML blocks and seeded content). */
+.copy a.btn {
+    display: inline-block;
+    box-sizing: border-box;
+    min-height: 44px;
+    padding: 0.8em 1.6em;
+    font-weight: bold;
+    line-height: 1.3;
+    color: #fff;
+    background: var(--colour-brand);
+    border: 2px solid var(--colour-brand);
+    text-decoration: none;
+}
+
+.copy a.btn:visited {
+    color: #fff;
+}
+
+.copy a.btn:hover {
+    color: var(--colour-brand);
+    background: #fff;
+}
+
+.copy a.btn-lg {
+    padding: 1em 2em;
+}
+
+.copy a.btn:focus-visible {
+    outline: 3px solid var(--colour-brand);
+    outline-offset: 3px;
+}
