@@ -153,3 +153,7 @@ Before adding a nav item, ask:
 5. If the destination is behind a `site_config.*_enabled` flag, gate the nav item on it
    everywhere the item appears — check the view's own `@_feature_enabled_or_404` decorator
    to find the exact flag name if unsure.
+
+## Seat views link (2026-10-17)
+
+"Seat views" (9.176) appears in the public sidebar (`data-nav-key="s"`, the first free letter there), in the toolkit navbar's Website dropdown and in the command palette, all gated on `site_config.seat_views_enabled` and nothing else, since the page is public.

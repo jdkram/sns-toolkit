@@ -40,6 +40,7 @@ urlpatterns = [
         views.donation_manage,
         name="labs-donations-manage",
     ),
+    re_path(r"^seat-views/$", views.seat_views, name="labs-seat-views"),
     re_path(r"^jobs/$", views.job_list, name="labs-jobs"),
     re_path(r"^jobs/add/$", views.job_add, name="labs-job-add"),
     re_path(

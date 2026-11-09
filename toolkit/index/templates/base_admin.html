@@ -157,6 +157,9 @@ body {
       {% if site_config.donations_enabled %}
       {label:"Donations wishlist",  category:"Website",                         href:"{% url 'labs-donations' %}",     keywords:"want list labs"},
       {% endif %}
+      {% if site_config.seat_views_enabled %}
+      {label:"Seat views",         category:"Website",                          href:"{% url 'labs-seat-views' %}",    keywords:"seating plan view screen cinema labs"},
+      {% endif %}
       {% if feature_perms.donations_manage %}
       {label:"Manage donations",   category:"Website",                          href:"{% url 'labs-donations-manage' %}", keywords:"wishlist labs"},
       {% endif %}
@@ -318,6 +321,9 @@ body {
               {% endif %}
               {% if site_config.donations_enabled %}
               <a class="dropdown-item" href="{% url "labs-donations" %}">Donations wishlist <span class="labs-tag">labs</span></a>
+              {% endif %}
+              {% if site_config.seat_views_enabled %}
+              <a class="dropdown-item" href="{% url "labs-seat-views" %}">Seat views <span class="labs-tag">labs</span></a>
               {% endif %}
               {% if feature_perms.donations_manage %}
               <a class="dropdown-item" href="{% url "labs-donations-manage" %}">Manage donations <span class="labs-tag">labs</span></a>

@@ -41,6 +41,9 @@
     {% if site_config.donations_enabled and site_config.show_donations_in_public_nav %}
     <li><a href="{% url "labs-donations" %}" data-nav-key="d">Donations wishlist</a></li>
     {% endif %}
+    {% if site_config.seat_views_enabled %}
+    <li><a href="{% url "labs-seat-views" %}" data-nav-key="s">Seat views</a></li>
+    {% endif %}
     {% if user.is_authenticated %}
     <li class="nav-vol-divider" aria-hidden="true"></li>
     <li><a href="{% url "toolkit-index" %}" data-nav-key="t">Toolkit</a></li>

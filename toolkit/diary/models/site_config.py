@@ -586,6 +586,17 @@ class SiteConfiguration(models.Model):
         ),
     )
 
+    # --- Seat views ---
+    seat_views_enabled = models.BooleanField(
+        default=True,
+        help_text=(
+            "Enable the public seat views page (/labs/seat-views/): a seating "
+            "plan of the cinema where visitors pick a seat and see a photo of "
+            "the screen from it. When off, the page 404s and the nav links "
+            "are hidden."
+        ),
+    )
+
     # --- Building map ---
     building_map_enabled = models.BooleanField(
         default=True,
@@ -1168,6 +1179,7 @@ SITE_CONFIG_FIELD_GROUPS = {
         "show_donations_in_public_nav",
     ],
     "Printed programme archive": ["printed_programme_archive_enabled"],
+    "Seat views": ["seat_views_enabled"],
     "Site-wide banner": [
         "banner_active",
         "banner_level",

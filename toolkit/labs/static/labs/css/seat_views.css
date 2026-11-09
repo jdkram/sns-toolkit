@@ -1,0 +1,185 @@
+/* human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Opus 5.5"]; status: "#ai-written" */
+/* Public seat views page (9.176). Mobile-first: plan above preview, side by
+ * side from 1000px. Seats with a photo use the brand blue; selected and
+ * "nearest photo" seats are marked by outline, so the state never relies on
+ * colour alone. */
+
+.seat-views {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    min-width: 0;
+}
+
+.seat-views__plan,
+.seat-views__preview {
+    min-width: 0;
+}
+
+.seat-views__title {
+    font-size: 1.5rem;
+    margin: 0 0 0.5rem;
+}
+
+.seat-views__intro {
+    margin: 0 0 1rem;
+    max-width: 38rem;
+}
+
+.seat-views__svg {
+    display: block;
+    width: 100%;
+    max-width: 34rem;
+    height: auto;
+}
+
+.seat-views__row-label {
+    fill: #444;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.seat-views__seat {
+    cursor: pointer;
+}
+
+.seat-views__seat circle,
+.seat-views__seat rect {
+    fill: #fff;
+    stroke: #666;
+    stroke-width: 1.5;
+}
+
+.seat-views__seat text {
+    fill: #222;
+    font-size: 13px;
+    font-weight: 600;
+    pointer-events: none;
+}
+
+.seat-views__seat--photo circle,
+.seat-views__seat--photo rect {
+    fill: var(--colour-brand);
+    stroke: var(--colour-brand);
+}
+
+.seat-views__seat--photo text {
+    fill: #fff;
+}
+
+.seat-views__seat:hover circle,
+.seat-views__seat:hover rect {
+    stroke: #000;
+    stroke-width: 2.5;
+}
+
+.seat-views__seat:focus {
+    outline: none;
+}
+
+.seat-views__seat:focus-visible circle,
+.seat-views__seat:focus-visible rect {
+    stroke: #000;
+    stroke-width: 5;
+}
+
+.seat-views__seat--selected circle,
+.seat-views__seat--selected rect {
+    stroke: #000;
+    stroke-width: 4;
+}
+
+.seat-views__seat--source circle,
+.seat-views__seat--source rect {
+    stroke: #000;
+    stroke-width: 3;
+    stroke-dasharray: 4 3;
+}
+
+.seat-views__screen {
+    fill: #222;
+}
+
+.seat-views__screen-label {
+    fill: #fff;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.3em;
+}
+
+.seat-views__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    list-style: none;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    font-size: 0.9rem;
+}
+
+.seat-views__legend-item::before {
+    content: "";
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    margin-right: 6px;
+    vertical-align: -2px;
+    border-radius: 50%;
+    border: 1.5px solid #666;
+    background: #fff;
+}
+
+.seat-views__legend-item--photo::before {
+    background: var(--colour-brand);
+    border-color: var(--colour-brand);
+}
+
+.seat-views__preview-title {
+    font-size: 1.25rem;
+    margin: 0 0 0.5rem;
+}
+
+.seat-views__photo,
+.seat-views__placeholder {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    border-radius: 4px;
+}
+
+.seat-views__photo {
+    object-fit: cover;
+    background: #000;
+}
+
+.seat-views__placeholder {
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    text-align: center;
+    border: 2px dashed #666;
+    color: #444;
+}
+
+.seat-views__note {
+    margin: 0.5rem 0 0;
+    min-height: 1.5em;
+}
+
+.seat-views__caveat {
+    margin: 0.75rem 0 0;
+    font-size: 0.9rem;
+    color: #444;
+}
+
+@media screen and (min-width: 1000px) {
+    .seat-views {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+        align-items: start;
+    }
+
+    .seat-views__preview {
+        position: sticky;
+        top: 1rem;
+    }
+}

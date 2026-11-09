@@ -74,6 +74,7 @@ from .lost_found import (
     found_item_list,
     found_item_log,
 )
+from .seat_views import seat_views
 from .shopping import (
     shopping_buy,
     shopping_buy_add,
@@ -113,6 +114,7 @@ __all__ = [
     "room_note",
     "donation_list",
     "donation_manage",
+    "seat_views",
     "job_list",
     "job_add",
     "job_edit",

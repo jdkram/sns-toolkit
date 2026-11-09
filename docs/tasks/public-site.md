@@ -677,3 +677,19 @@ The gallery can also be embedded on the public programme page, replacing or supp
 
 ---
 
+
+### 9.176 — Seat views: pick a seat, see the screen from it — ✅ Done 2026-10-17
+
+**Problem.** People booking a seat, or deciding whether the comfy row or the back is better for them, have no way to see what the screen looks like from where they will sit. The box office plan shows seat numbers only.
+
+**Built.** A public page at `/labs/seat-views/` (URL name `labs-seat-views`, no login). The seating plan is drawn as SVG from a seat list transcribed from the Ticketsolve plan: rows A to I with their half-seat offsets, the gaps and two wheelchair spaces in row E, the wheelchair space ending row A, and the seven comfy seats in front of the screen. Clicking or keyboard-selecting a seat shows the photo taken from it. Seats without a photo show the view from the nearest photographed seat (straight-line distance on the plan), with that seat given a dashed outline and a sentence saying so, so every seat gives an answer. Links like `/labs/seat-views/#C5` open with that seat selected.
+
+**Files.** View `toolkit/labs/views/seat_views.py`, template `labs/seat_views.html` (extends `base_public.html`), JS `labs/js/seat_views.js` (one `seatViews(opts)` setup function, the extracted-JS pattern), CSS `labs/css/seat_views.css`, photos `toolkit/labs/static/labs/seat_views/<SEAT>.jpg`. Tests in `toolkit/labs/tests/test_seat_views.py`.
+
+**Adding a photo needs no code change.** A seat counts as photographed when `<SEAT ID>.jpg` exists in the photo folder (`C5.jpg`, `COMFY4.jpg`); the view globs the folder and passes each file through `static()` individually, because production's manifest storage hashes filenames. Shrink and strip metadata first, since phone photos carry GPS: `convert IN.jpg -auto-orient -strip -resize '1600x1600>' -quality 80 D3.jpg`. Changing the layout means editing `ROWS` in the JS.
+
+**Gate.** `SiteConfiguration.seat_views_enabled` (migration `diary/0054`, Site settings > "Seat views"), default **on**, matching the other public labs pages (collectives, donations): it is static content with no data or emails behind it. Linked from the public sidebar (`data-nav-key="s"`), the toolkit navbar's Website dropdown and the command palette, all gated on the flag.
+
+**Known quirks.** The 30 photos (three per row, plus three comfy seats) were taken during a screening in October 2026, so the picture on screen varies. The Ticketsolve plan has no seat A11; the A11 photo is attached to the wheelchair space at the end of row A. Prototyped as a standalone page in `~/code/sns-seat-previewer` before being folded in here; the same photos are on aviewfrommyseat.co.uk under the `sns_boxoffice` account.
+
+---
