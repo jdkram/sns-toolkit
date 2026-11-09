@@ -19,6 +19,7 @@ from toolkit.diary.models import (
     Event,
     EventTag,
     PrintedProgramme,
+    RoomBooking,
     get_site_config,
 )
 from toolkit.diary.daterange import get_date_range
@@ -410,8 +411,23 @@ def view_event(
         "show_archive_images": _show_archive_images(request, showings),
         "films_start_on_time": show_films_banner,
         "films_start_on_time_banner_text": site_config.films_start_on_time_banner_text,
+        "in_cinema_room": _in_cinema_room(showings),
     }
     return render(request, "view_event.html", context)
+
+
+def _in_cinema_room(showings):
+    """Whether any showing is booked into the cinema room (9.176).
+
+    The seat views photos only make sense for that room, so the "See the
+    view from your seat" link is shown only for events there. The room is
+    matched by name or by its floorplan slug, so renaming one of the two
+    does not silently drop the link.
+    """
+    return RoomBooking.objects.filter(
+        Q(room__name__iexact="cinema") | Q(room__map_slug="room-cinema"),
+        showing__in=showings,
+    ).exists()
 
 
 def redirect_legacy_event(request, event_type=None, legacy_id=None):

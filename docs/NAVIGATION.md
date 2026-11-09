@@ -156,4 +156,4 @@ Before adding a nav item, ask:
 
 ## Seat views link (2026-10-17)
 
-"Seat views" (9.176) appears in the public sidebar (`data-nav-key="s"`, the first free letter there), in the toolkit navbar's Website dropdown and in the command palette, all gated on `site_config.seat_views_enabled` and nothing else, since the page is public.
+"Seat views" (9.176) appears in the public sidebar under the Programme dropdown (`data-nav-key="s"`, the first free letter there; moved from top level 2026-11-09), next to Book tickets on event pages in the cinema room, in the toolkit navbar's Website dropdown and in the command palette, all gated on `site_config.seat_views_enabled` and nothing else, since the page is public.

@@ -286,6 +286,44 @@ class PublicDiaryViews(DiaryTestsMixin, TestCase):
         self._assert_ticket_link_present(self.e2.pk, ticket_link)
 
     @patch("django.utils.timezone.now")
+    def test_view_event_seat_views_link_follows_flag(self, now_patch):
+        # 9.176: "See the view from your seat" sits next to Book tickets,
+        # gated on seat_views_enabled and on the event being in the cinema.
+        from toolkit.diary.models import Room, RoomBooking, get_site_config
+
+        first_public_showing = self.e2.showings.public()[0]
+        now_patch.return_value = first_public_showing.start - timedelta(
+            seconds=1
+        )
+        self.e2.ticket_link = "http://www.example.com/thing/"
+        self.e2.save()
+        url = reverse("single-event-view", kwargs={"event_id": "2"})
+        seat_link = '<a href="{0}">See the view from your seat</a>'.format(
+            reverse("labs-seat-views")
+        )
+
+        # Only for events in the cinema room: none booked yet, so no link.
+        response = self.client.get(url)
+        self.assertNotContains(response, "See the view from your seat")
+
+        cinema = Room.objects.create(name="Cinema")
+        for showing in self.e2.showings.all():
+            RoomBooking.objects.create(
+                showing=showing,
+                room=cinema,
+                start=showing.start,
+                end=showing.start + timedelta(hours=2),
+            )
+        response = self.client.get(url)
+        self.assertContains(response, seat_link, html=True)
+
+        cfg = get_site_config()
+        cfg.seat_views_enabled = False
+        cfg.save()
+        response = self.client.get(url)
+        self.assertNotContains(response, "See the view from your seat")
+
+    @patch("django.utils.timezone.now")
     def test_view_event_buy_ticket_link_some_showings_finished(
         self, now_patch
     ):
@@ -333,6 +371,8 @@ class PublicDiaryViews(DiaryTestsMixin, TestCase):
             '<li><a href="/programme/view/tag-two/"><span>Tag Two</span></a></li>'
             '<li><a href="/programme/"><span>All</span></a></li>'
             '<li><a href="/programme/archive/"><span>Archive</span></a></li>'
+            '<li><a href="/labs/seat-views/" data-nav-key="s">'
+            "<span>Seat views</span></a></li>"
             "</ul>",
             html=True,
         )

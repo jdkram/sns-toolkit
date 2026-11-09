@@ -1,6 +1,6 @@
 /* human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Opus 5.5"]; status: "#ai-written" */
-/* Public seat views page (9.176). Mobile-first: plan above preview, side by
- * side from 1000px. Seats with a photo use the brand blue; selected and
+/* Public seat views page (9.176). Mobile-first: photo above plan so a tap's
+ * result is in view, side by side (plan left) from 1000px. Seats with a photo use the brand blue; selected and
  * "nearest photo" seats are marked by outline, so the state never relies on
  * colour alone. */
 
@@ -39,13 +39,27 @@
     font-weight: 700;
 }
 
-.seat-views__seat {
+.seat-views__svg {
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+.seat-views__sightline {
+    fill: var(--colour-brand);
+    opacity: 0.12;
+    pointer-events: none;
+    transition: all 0.2s ease;
 }
 
 .seat-views__seat circle,
 .seat-views__seat rect {
-    fill: #fff;
+    transition: stroke-width 0.1s ease;
+}
+
+.seat-views__seat circle,
+.seat-views__seat rect {
+    fill: #f2f2f2;
     stroke: #666;
     stroke-width: 1.5;
 }
@@ -67,8 +81,8 @@
     fill: #fff;
 }
 
-.seat-views__seat:hover circle,
-.seat-views__seat:hover rect {
+.seat-views__seat--hover circle,
+.seat-views__seat--hover rect {
     stroke: #000;
     stroke-width: 2.5;
 }
@@ -139,6 +153,17 @@
     margin: 0 0 0.5rem;
 }
 
+.seat-views__header {
+    grid-column: 1 / -1;
+}
+
+.seat-views__media {
+    aspect-ratio: 4 / 3;
+    background: #000;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
 .seat-views__photo,
 .seat-views__placeholder {
     display: block;
@@ -172,13 +197,24 @@
     color: #444;
 }
 
+.seat-views__preview {
+    scroll-margin-top: 0.5rem;
+}
+
 @media screen and (min-width: 1000px) {
     .seat-views {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
         align-items: start;
     }
 
+    .seat-views__plan {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
     .seat-views__preview {
+        grid-column: 2;
+        grid-row: 2;
         position: sticky;
         top: 1rem;
     }

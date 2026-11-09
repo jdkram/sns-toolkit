@@ -11,21 +11,24 @@
 {% block body %}
 {# base_public.html already opens .grid > main#main-content around this block, so no extra .grid here. #}
 <div class="seat-views">
-  <section class="seat-views__plan" aria-labelledby="seat-views-title">
+  <header class="seat-views__header">
     <h1 id="seat-views-title" class="seat-views__title">Seat views</h1>
-    <p class="seat-views__intro">Pick a seat on the plan to see the view of the screen from there.</p>
-    <svg id="seat-views-plan" class="seat-views__svg" role="group" aria-label="Seating plan, screen at the bottom"></svg>
+    <p class="seat-views__intro">Pick any spot on the seating plan to see the screen from there.</p>
+  </header>
+
+  <section id="seat-views-preview" class="seat-views__preview" aria-live="polite" aria-labelledby="seat-views-preview-title">
+    <h2 id="seat-views-preview-title" class="seat-views__preview-title">Seat views</h2>
+    <div id="seat-views-preview-media" class="seat-views__media"></div>
+    <p id="seat-views-preview-note" class="seat-views__note"></p>
+  </section>
+
+  <section class="seat-views__plan" aria-labelledby="seat-views-title">
+    <svg id="seat-views-plan" class="seat-views__svg" role="group" aria-label="Seating plan, screen at the bottom. Use the arrow keys to move between seats."></svg>
     <ul class="seat-views__legend">
       <li class="seat-views__legend-item seat-views__legend-item--photo">Photo from this seat</li>
       <li class="seat-views__legend-item">Shows the nearest photo</li>
     </ul>
-  </section>
-
-  <section class="seat-views__preview" aria-live="polite">
-    <h2 id="seat-views-preview-title" class="seat-views__preview-title">No seat chosen</h2>
-    <div id="seat-views-preview-media"><div class="seat-views__placeholder">Choose a seat on the plan</div></div>
-    <p id="seat-views-preview-note" class="seat-views__note"></p>
-    <p class="seat-views__caveat">Photos were taken during a screening, so the picture on screen varies from seat to seat.</p>
+    <p class="seat-views__caveat">The photos were taken during a screening, so what's on screen changes from one to the next.</p>
   </section>
 </div>
 
@@ -38,6 +41,8 @@ seatViews({
   title: document.getElementById("seat-views-preview-title"),
   media: document.getElementById("seat-views-preview-media"),
   note: document.getElementById("seat-views-preview-note"),
+  preview: document.getElementById("seat-views-preview"),
+  start: "D6",
 });
 </script>
 {% endblock body %}

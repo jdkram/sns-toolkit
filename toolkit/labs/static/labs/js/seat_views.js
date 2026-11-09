@@ -1,6 +1,7 @@
 // human-contributors: ["Jonny Kram"]; ai-contributors: ["Claude Opus 5.5"]; status: "#ai-written"
 // Public seat views page (9.176): draws the seating plan as SVG and shows the
-// photo for whichever seat is picked. Seats without a photo of their own show
+// photo for whichever seat is picked (by click or tap anywhere on the plan,
+// snapping to the nearest seat, or by arrow keys). Seats without a photo of their own show
 // the nearest photographed seat's view instead, with that seat outlined.
 // Called once from labs/seat_views.html with the page's elements and a
 // { seatId: url } map of the photos that exist.
@@ -59,6 +60,10 @@ function seatViews(opts) {
         return (label ? label + " seat " : "Row " + row + ", seat ") + s.n;
     }
 
+    // Faint wedge from the chosen seat to the two edges of the screen, drawn
+    // first so it sits underneath the seats.
+    var sightline = el("polygon", { class: "seat-views__sightline", points: "" }, svg);
+
     var y = TOP;
     ROWS.forEach(function (r) {
         if (r.aisleBefore) { y += AISLE; }
@@ -72,7 +77,7 @@ function seatViews(opts) {
             var name = seatName(r.row, r.label, s);
             var g = el("g", {
                 class: "seat-views__seat" + (photo ? " seat-views__seat--photo" : ""),
-                tabindex: 0,
+                tabindex: -1,
                 role: "button",
                 "aria-label": name + (photo ? " (photo)" : ""),
             }, svg);
@@ -83,7 +88,7 @@ function seatViews(opts) {
                 el("circle", { cx: cx, cy: cy, r: R }, g);
                 el("text", { x: cx, y: cy + 4.5, "text-anchor": "middle" }, g).textContent = s.n;
             }
-            seats.push({ id: id, name: name, photo: photo, x: s.x, y: cy / PITCH, g: g });
+            seats.push({ id: id, name: name, photo: photo, x: s.x, y: cy / PITCH, cx: cx, cy: cy, row: r.row, g: g });
         });
         y += ROW_GAP;
     });
@@ -91,6 +96,7 @@ function seatViews(opts) {
     el("rect", { x: LEFT - R, y: y + 10, width: 10 * PITCH + R * 2, height: 34, rx: 4, class: "seat-views__screen" }, svg);
     el("text", { x: LEFT + 5 * PITCH, y: y + 33, "text-anchor": "middle", class: "seat-views__screen-label" }, svg).textContent = "SCREEN";
     svg.setAttribute("viewBox", "0 0 " + (LEFT + 11 * PITCH) + " " + (y + 54));
+    var screenY = y + 10, screenL = LEFT - R, screenR = LEFT + 10 * PITCH + R;
 
     // A seat with no photo of its own borrows the closest photographed seat,
     // by straight-line distance on the plan.
@@ -102,11 +108,17 @@ function seatViews(opts) {
 
     var lowerFirst = function (s) { return s.charAt(0).toLowerCase() + s.slice(1); };
 
+    var current = null;
+
     function select(seat, updateHash) {
         seats.forEach(function (s) {
             s.g.classList.remove("seat-views__seat--selected", "seat-views__seat--source");
+            s.g.setAttribute("tabindex", -1);
         });
         seat.g.classList.add("seat-views__seat--selected");
+        seat.g.setAttribute("tabindex", 0);
+        current = seat;
+        sightline.setAttribute("points", [seat.cx, seat.cy, screenL, screenY, screenR, screenY].join(" "));
         var source = seat.photo ? seat : nearest(seat);
         if (source !== seat) { source.g.classList.add("seat-views__seat--source"); }
 
@@ -117,23 +129,78 @@ function seatViews(opts) {
         img.alt = "View of the screen from " + lowerFirst(source.name);
         opts.media.replaceChildren(img);
         opts.note.textContent = source === seat
-            ? "Photo taken from this seat."
-            : "No photo from this exact seat yet. This is the view from " + lowerFirst(source.name)
-              + ", the nearest one (dashed outline).";
-        if (updateHash) { history.replaceState(null, "", "#" + seat.id); }
+            ? "Taken from this seat."
+            : "We don't have a photo from this seat yet, so this one is from "
+              + lowerFirst(source.name) + " (dashed outline), the nearest we have.";
+        if (updateHash) {
+            history.replaceState(null, "", "#" + seat.id);
+            // On a phone the photo can be scrolled out of sight while you tap
+            // the plan; bring it back.
+            var box = opts.preview.getBoundingClientRect();
+            if (box.top < 0 || box.top > window.innerHeight * 0.6) {
+                opts.preview.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        }
     }
 
     if (!withPhotos.length) { return; }
 
-    seats.forEach(function (seat) {
-        seat.g.addEventListener("click", function () { select(seat, true); });
-        seat.g.addEventListener("keydown", function (e) {
-            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(seat, true); }
-        });
+    // Clicking anywhere on the plan, not just on a seat, picks the seat
+    // nearest to that point, so near misses on a phone still land.
+    function seatAt(evt) {
+        var pt = svg.createSVGPoint();
+        pt.x = evt.clientX;
+        pt.y = evt.clientY;
+        var p = pt.matrixTransform(svg.getScreenCTM().inverse());
+        return seats.reduce(function (best, s) {
+            var d = Math.hypot(s.cx - p.x, s.cy - p.y);
+            return d < best.d ? { s: s, d: d } : best;
+        }, { s: null, d: Infinity }).s;
+    }
+
+    svg.addEventListener("click", function (e) { select(seatAt(e), true); });
+
+    // With a mouse, show which seat a click would pick.
+    var hovered = null;
+    svg.addEventListener("pointermove", function (e) {
+        if (e.pointerType !== "mouse") { return; }
+        var s = seatAt(e);
+        if (s === hovered) { return; }
+        if (hovered) { hovered.g.classList.remove("seat-views__seat--hover"); }
+        hovered = s;
+        s.g.classList.add("seat-views__seat--hover");
+    });
+    svg.addEventListener("pointerleave", function () {
+        if (hovered) { hovered.g.classList.remove("seat-views__seat--hover"); }
+        hovered = null;
     });
 
-    // Deep links like /labs/seat-views/#C5 open with that seat selected.
+    // Keyboard: one tab stop for the whole plan, arrow keys to move around it.
+    function step(dx, dy) {
+        if (!current) { return null; }
+        var rowsOrder = ROWS.map(function (r) { return r.row; });
+        if (dx) {
+            var row = seats.filter(function (s) { return s.row === current.row; });
+            return row[row.indexOf(current) + dx] || null;
+        }
+        var next = rowsOrder[rowsOrder.indexOf(current.row) + dy];
+        var candidates = seats.filter(function (s) { return s.row === next; });
+        return candidates.reduce(function (best, s) {
+            return !best || Math.abs(s.x - current.x) < Math.abs(best.x - current.x) ? s : best;
+        }, null);
+    }
+    var KEYS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    svg.addEventListener("keydown", function (e) {
+        var move = KEYS[e.key];
+        if (!move) { return; }
+        e.preventDefault();
+        var s = step(move[0], move[1]);
+        if (s) { select(s, true); s.g.focus(); }
+    });
+
+    // Deep links like /labs/seat-views/#C5 open with that seat selected;
+    // otherwise start somewhere in the middle so the page is never empty.
     var hashId = decodeURIComponent(location.hash.slice(1));
-    var fromHash = seats.filter(function (s) { return s.id === hashId; })[0];
-    if (fromHash) { select(fromHash, false); }
+    var byId = function (id) { return seats.filter(function (s) { return s.id === id; })[0]; };
+    select(byId(hashId) || byId(opts.start) || withPhotos[0], false);
 }

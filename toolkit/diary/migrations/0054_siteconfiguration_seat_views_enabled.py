@@ -15,7 +15,8 @@ class Migration(migrations.Migration):
             name="seat_views_enabled",
             field=models.BooleanField(
                 default=True,
-                help_text="Enable the public seat views page (/labs/seat-views/): a seating plan of the cinema where visitors pick a seat and see a photo of the screen from it. When off, the page 404s and the nav links are hidden.",
+                help_text="Adds a 'See the view from your seat' link next to Book tickets on event pages, and the public seat views page (/labs/seat-views/) under Programme in the menu. When off, the page 404s and every link to it is hidden.",
+                verbose_name="Show seatmap and seat view previews on ticket booking pages",
             ),
         ),
     ]

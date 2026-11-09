@@ -38,7 +38,8 @@ class SeatViewsTests(LabsTestsMixin, TestCase):
 
 
 class SeatViewsNavTests(LabsTestsMixin, TestCase):
-    """The public sidebar link follows the same flag as the page."""
+    """The public sidebar link (under Programme) follows the same flag as
+    the page."""
 
     def test_sidebar_link_shown_when_enabled(self):
         response = self.client.get(reverse("labs-seat-views"))

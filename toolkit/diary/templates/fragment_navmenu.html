@@ -15,6 +15,9 @@
             {% if site_config.printed_programme_archive_enabled %}
             <li><a href="{% url "printed-programme-archive" %}"><span>Printed programme archive</span></a></li>
             {% endif %}
+            {% if site_config.seat_views_enabled %}
+            <li><a href="{% url "labs-seat-views" %}" data-nav-key="s"><span>Seat views</span></a></li>
+            {% endif %}
         </ul>
     </li>
     {% for top_level_child in current_site.root_page.get_children.live.in_menu %}
@@ -40,9 +43,6 @@
     {% endif %}
     {% if site_config.donations_enabled and site_config.show_donations_in_public_nav %}
     <li><a href="{% url "labs-donations" %}" data-nav-key="d">Donations wishlist</a></li>
-    {% endif %}
-    {% if site_config.seat_views_enabled %}
-    <li><a href="{% url "labs-seat-views" %}" data-nav-key="s">Seat views</a></li>
     {% endif %}
     {% if user.is_authenticated %}
     <li class="nav-vol-divider" aria-hidden="true"></li>

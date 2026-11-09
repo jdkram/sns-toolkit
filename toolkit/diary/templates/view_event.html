@@ -63,6 +63,9 @@
         {% endif %}
         {% if event.ticket_link and not all_showings_finished %}
            <p class="action"><a href="{{ event.ticket_link }}" rel="noopener noreferrer" target="_blank">Book tickets</a></p>
+           {% if site_config.seat_views_enabled and in_cinema_room %}
+           <p class="action"><a href="{% url "labs-seat-views" %}">See the view from your seat</a></p>
+           {% endif %}
         {% endif %}
         {% if event.trailer_url %}
            <p class="action"><a href="{{ event.trailer_url }}" rel="noopener noreferrer" target="_blank"><i class="fa-solid fa-circle-play" aria-hidden="true"></i> Watch trailer</a></p>
